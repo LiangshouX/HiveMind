@@ -1,0 +1,28 @@
+# Server configuration
+server:
+  port: ${SERVER_PORT:8080}
+
+# Spring configuration
+spring:
+  application:
+    name: auto-ai-movie
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+    include: backend
+    group:
+      dev:
+        - backend-dev
+      prod:
+        - backend-prod
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+  # Database Configuration
+
+# Logging configuration
+logging:
+  level:
+    com.liangshou: info
+    com.liangshou.movie.scripts: info
+    org.springframework: info
+    org.springframework.ai: info

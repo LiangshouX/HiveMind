@@ -1,0 +1,6 @@
+# Development logging
+logging:
+  level:
+    com.liangshou: info
+    org.springframework.web: info
+    org.springframework.security: info

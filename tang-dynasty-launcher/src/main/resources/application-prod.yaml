@@ -1,0 +1,34 @@
+# Production-specific configuration
+#spring:
+#  datasource:
+#    url: ${DATABASE_URL:jdbc:mysql://localhost:3306/auto_ai_movie}
+#    username: ${DATABASE_USERNAME:root}
+#    password: ${LOCAL_MYSQL_PWD}
+#    driver-class-name: com.mysql.cj.jdbc.Driver
+#    hikari:
+#      maximum-pool-size: 20
+#      minimum-idle: 5
+#      connection-timeout: 20000
+#      idle-timeout: 300000
+#      max-lifetime: 1200000
+
+# Security settings for production
+server:
+  error:
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+    include-exception: false
+
+# Production logging
+logging:
+  level:
+    com.liangshou: info
+    org.springframework: info
+    org.springframework.web: info
+  file:
+    name: logs/app.log
+  logback:
+    rollingpolicy:
+      max-file-size: 10MB
+      max-history: 30
