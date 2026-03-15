@@ -1,167 +1,217 @@
-import React, { useEffect, useState } from 'react';
-import { Card, Select, Button, Typography, Space, Row, Col, Empty, List, Tag, message } from 'antd';
-import { useStore } from '../../store';
-import { api } from '../../api';
+import React, { useState } from 'react';
+import { Typography, Card, Button, Row, Col, Modal, Form, Input, Tag, message, Badge, Space } from 'antd';
+import { PlusOutlined, EditOutlined, DeleteOutlined, SettingOutlined } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
 
-const FALLBACK_MODELS = [
-  { id: 'anthropic/claude-sonnet-4-6', l: 'Claude Sonnet 4.6', p: 'Anthropic' },
-  { id: 'anthropic/claude-opus-4-5', l: 'Claude Opus 4.5', p: 'Anthropic' },
-  { id: 'anthropic/claude-haiku-3-5', l: 'Claude Haiku 3.5', p: 'Anthropic' },
-  { id: 'openai/gpt-4o', l: 'GPT-4o', p: 'OpenAI' },
-  { id: 'openai/gpt-4o-mini', l: 'GPT-4o Mini', p: 'OpenAI' },
-  { id: 'google/gemini-2.5-pro', l: 'Gemini 2.5 Pro', p: 'Google' },
-  { id: 'copilot/claude-sonnet-4', l: 'Claude Sonnet 4', p: 'Copilot' },
-  { id: 'copilot/claude-opus-4.5', l: 'Claude Opus 4.5', p: 'Copilot' },
-  { id: 'copilot/gpt-4o', l: 'GPT-4o', p: 'Copilot' },
-  { id: 'copilot/gemini-2.5-pro', l: 'Gemini 2.5 Pro', p: 'Copilot' },
+interface Provider {
+  id: string;
+  name: string;
+  type: 'builtin' | 'custom';
+  baseUrl: string;
+  apiKey?: string;
+  models: Model[];
+  status: 'active' | 'inactive' | 'unconfigured';
+}
+
+interface Model {
+  id: string;
+  name: string;
+  type: 'builtin' | 'custom';
+}
+
+const initialProviders: Provider[] = [
+  { 
+    id: 'dashscope', 
+    name: 'DashScope', 
+    type: 'builtin', 
+    baseUrl: 'https://dashscope.aliyuncs.com/api/v1', 
+    models: [
+      { id: 'qwen-max', name: 'Qwen Max', type: 'builtin' },
+      { id: 'qwen-plus', name: 'Qwen Plus', type: 'builtin' },
+    ],
+    status: 'active'
+  },
+  { 
+    id: 'openai', 
+    name: 'OpenAI', 
+    type: 'builtin', 
+    baseUrl: 'https://api.openai.com/v1', 
+    models: [
+      { id: 'gpt-4o', name: 'GPT-4o', type: 'builtin' },
+      { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo', type: 'builtin' },
+    ],
+    status: 'unconfigured'
+  },
+  { 
+    id: 'azure', 
+    name: 'Azure OpenAI', 
+    type: 'builtin', 
+    baseUrl: '', 
+    models: [],
+    status: 'unconfigured'
+  },
+  { 
+    id: 'anthropic', 
+    name: 'Anthropic', 
+    type: 'builtin', 
+    baseUrl: 'https://api.anthropic.com', 
+    models: [],
+    status: 'unconfigured'
+  },
 ];
 
 const Models: React.FC = () => {
-  const agentConfig = useStore((s) => s.agentConfig);
-  const changeLog = useStore((s) => s.changeLog);
-  const loadAgentConfig = useStore((s) => s.loadAgentConfig);
+  const [providers, setProviders] = useState<Provider[]>(initialProviders);
+  const [settingModalVisible, setSettingModalVisible] = useState(false);
+  const [modelModalVisible, setModelModalVisible] = useState(false);
+  const [currentProvider, setCurrentProvider] = useState<Provider | null>(null);
+  const [form] = Form.useForm();
+  const [modelForm] = Form.useForm();
 
-  const [selMap, setSelMap] = useState<Record<string, string>>({});
-  const [loadingMap, setLoadingMap] = useState<Record<string, boolean>>({});
-
-  useEffect(() => {
-    loadAgentConfig();
-  }, [loadAgentConfig]);
-
-  useEffect(() => {
-    if (agentConfig?.agents) {
-      const m: Record<string, string> = {};
-      agentConfig.agents.forEach((ag) => {
-        m[ag.id] = ag.model;
-      });
-      setSelMap(m);
-    }
-  }, [agentConfig]);
-
-  if (!agentConfig?.agents) {
-    return <Empty description="⚠️ 请先启动本地服务器" style={{ marginTop: 60 }} />;
-  }
-
-  const models = agentConfig.knownModels?.length
-    ? agentConfig.knownModels.map((m) => ({ id: m.id, l: m.label, p: m.provider }))
-    : FALLBACK_MODELS;
-
-  const handleSelect = (agentId: string, val: string) => {
-    setSelMap((p) => ({ ...p, [agentId]: val }));
+  const handleOpenSettings = (provider: Provider) => {
+    setCurrentProvider(provider);
+    form.setFieldsValue(provider);
+    setSettingModalVisible(true);
   };
 
-  const resetMC = (agentId: string) => {
-    const ag = agentConfig.agents.find((a) => a.id === agentId);
-    if (ag) setSelMap((p) => ({ ...p, [agentId]: ag.model }));
+  const handleOpenModels = (provider: Provider) => {
+    setCurrentProvider(provider);
+    setModelModalVisible(true);
   };
 
-  const applyModel = async (agentId: string) => {
-    const model = selMap[agentId];
-    if (!model) return;
-    setLoadingMap(p => ({ ...p, [agentId]: true }));
-    try {
-      const r = await api.setModel(agentId, model);
-      if (r.ok) {
-        message.success(`${agentId} 模型已更改，Gateway 重启中`);
-        setTimeout(() => loadAgentConfig(), 5500);
-      } else {
-        message.error('❌ ' + (r.error || '错误'));
+  const saveSettings = () => {
+    form.validateFields().then(values => {
+      if (currentProvider) {
+        setProviders(providers.map(p => p.id === currentProvider.id ? { ...p, ...values, status: 'active' } : p));
+        message.success(`${currentProvider.name} 配置已保存`);
+        setSettingModalVisible(false);
       }
-    } catch {
-      message.error('❌ 无法连接服务器');
-    } finally {
-      setLoadingMap(p => ({ ...p, [agentId]: false }));
-    }
+    });
+  };
+
+  const addModel = () => {
+    modelForm.validateFields().then(values => {
+      if (currentProvider) {
+        const newModel = { ...values, type: 'custom' };
+        const updatedProvider = {
+          ...currentProvider,
+          models: [...currentProvider.models, newModel]
+        };
+        setProviders(providers.map(p => p.id === currentProvider.id ? updatedProvider : p));
+        setCurrentProvider(updatedProvider); // Update local state for modal re-render
+        modelForm.resetFields();
+        message.success('模型已添加');
+      }
+    });
   };
 
   return (
-    <div>
+    <div style={{ height: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column' }}>
       <div style={{ marginBottom: 24 }}>
-        <Title level={4}>大理寺 - 模型</Title>
-        <Text type="secondary">配置 LLM 提供商并选择各部门 AI 助手使用的模型。</Text>
+        <Title level={4} style={{ margin: 0 }}>LLM</Title>
+        <Text type="secondary">从已授权的提供商中选择活动的 LLM 模型。</Text>
       </div>
 
-      <Row gutter={[16, 16]}>
-        {agentConfig.agents.map((ag) => {
-          const sel = selMap[ag.id] || ag.model;
-          const changed = sel !== ag.model;
-          const isLoading = loadingMap[ag.id];
+      <div style={{ flex: 1, overflowY: 'auto' }}>
+        <Row gutter={[16, 16]}>
+          {providers.map(provider => (
+            <Col xs={24} sm={12} md={12} lg={12} xl={8} key={provider.id}>
+              <Card 
+                hoverable 
+                style={{ height: '100%' }}
+                bodyStyle={{ height: '100%', display: 'flex', flexDirection: 'column' }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+                  <Space>
+                    <Title level={5} style={{ margin: 0 }}>{provider.name}</Title>
+                    {provider.type === 'builtin' && <Tag color="green">内置</Tag>}
+                  </Space>
+                  <Badge status={provider.status === 'active' ? 'success' : 'default'} text={provider.status === 'active' ? '已就绪' : '未配置'} />
+                </div>
 
-          return (
-            <Col xs={24} sm={12} lg={8} xl={6} key={ag.id}>
-              <Card>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-                  <div style={{ fontSize: 32 }}>{ag.emoji || '🏛️'}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ marginBottom: 8 }}>
+                    <Text type="secondary" style={{ fontSize: 12 }}>基础 URL:</Text>
+                    <div style={{ fontSize: 12, color: '#666' }}>{provider.baseUrl || '未设置'}</div>
+                  </div>
+                  <div style={{ marginBottom: 8 }}>
+                    <Text type="secondary" style={{ fontSize: 12 }}>API 密钥:</Text>
+                    <div style={{ fontSize: 12, color: '#666' }}>{provider.apiKey ? '****************' : '未设置'}</div>
+                  </div>
                   <div>
-                    <div style={{ fontSize: 16, fontWeight: 'bold' }}>
-                      {ag.label} <Text type="secondary" style={{ fontSize: 12, fontWeight: 'normal' }}>{ag.id}</Text>
-                    </div>
-                    <Text type="secondary" style={{ fontSize: 12 }}>{ag.role}</Text>
+                    <Text type="secondary" style={{ fontSize: 12 }}>模型: </Text>
+                    <Text style={{ fontSize: 12 }}>{provider.models.length} 个模型</Text>
                   </div>
                 </div>
 
-                <div style={{ marginBottom: 8 }}>
-                  <Text type="secondary">当前模型: </Text>
-                  <Text strong>{ag.model}</Text>
+                <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                   <Button size="small" icon={<SettingOutlined />} onClick={() => handleOpenModels(provider)}>模型</Button>
+                   <Button size="small" type="primary" icon={<EditOutlined />} onClick={() => handleOpenSettings(provider)}>设置</Button>
                 </div>
-
-                <Select
-                  style={{ width: '100%', marginBottom: 16 }}
-                  value={sel}
-                  onChange={(val) => handleSelect(ag.id, val)}
-                  options={models.map(m => ({ label: `${m.l} (${m.p})`, value: m.id }))}
-                />
-
-                <Space>
-                  <Button 
-                    type="primary" 
-                    disabled={!changed} 
-                    loading={isLoading}
-                    onClick={() => applyModel(ag.id)}
-                  >
-                    应用
-                  </Button>
-                  <Button onClick={() => resetMC(ag.id)}>
-                    重置
-                  </Button>
-                </Space>
               </Card>
             </Col>
-          );
-        })}
-      </Row>
-
-      <div style={{ marginTop: 32 }}>
-        <Title level={5}>变更日志</Title>
-        <Card bodyStyle={{ padding: 0 }}>
-          <List
-            dataSource={[...(changeLog || [])].reverse().slice(0, 15)}
-            locale={{ emptyText: '暂无变更' }}
-            renderItem={e => (
-              <List.Item style={{ padding: '12px 24px' }}>
-                <Row style={{ width: '100%' }} align="middle">
-                  <Col span={6}>
-                    <Text type="secondary">{(e.at || '').substring(0, 16).replace('T', ' ')}</Text>
-                  </Col>
-                  <Col span={4}>
-                    <Text strong style={{ color: '#1677ff' }}>{e.agentId}</Text>
-                  </Col>
-                  <Col span={14}>
-                    <Space>
-                      <Text strong>{e.oldModel}</Text>
-                      <Text type="secondary">→</Text>
-                      <Text strong>{e.newModel}</Text>
-                      {e.rolledBack && <Tag color="error">⚠ 已回滚</Tag>}
-                    </Space>
-                  </Col>
-                </Row>
-              </List.Item>
-            )}
-          />
-        </Card>
+          ))}
+          <Col xs={24} sm={12} md={12} lg={12} xl={8}>
+            <Button type="dashed" style={{ width: '100%', height: '100%', minHeight: 200 }} icon={<PlusOutlined />}>
+              添加提供商
+            </Button>
+          </Col>
+        </Row>
       </div>
+
+      {/* Settings Modal */}
+      <Modal
+        title={`${currentProvider?.name} - 配置`}
+        open={settingModalVisible}
+        onCancel={() => setSettingModalVisible(false)}
+        onOk={saveSettings}
+      >
+        <Form form={form} layout="vertical">
+          <Form.Item name="baseUrl" label="Base URL">
+            <Input placeholder="https://api.example.com/v1" />
+          </Form.Item>
+          <Form.Item name="apiKey" label="API Key">
+            <Input.Password placeholder="sk-..." />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Models Management Modal */}
+      <Modal
+        title={`${currentProvider?.name} - 模型管理`}
+        open={modelModalVisible}
+        onCancel={() => setModelModalVisible(false)}
+        footer={null}
+        width={700}
+      >
+        <div style={{ maxHeight: 400, overflowY: 'auto', marginBottom: 24 }}>
+          {currentProvider?.models.map(model => (
+             <div key={model.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #f0f0f0' }}>
+               <div>
+                 <div style={{ fontWeight: 'bold' }}>{model.name}</div>
+                 <Text type="secondary" style={{ fontSize: 12 }}>{model.id}</Text>
+               </div>
+               <Space>
+                 {model.type === 'builtin' ? <Tag color="green">内置</Tag> : <Tag color="blue">自定义</Tag>}
+                 <Button type="text" danger icon={<DeleteOutlined />} disabled={model.type === 'builtin'} />
+               </Space>
+             </div>
+          ))}
+        </div>
+
+        <div style={{ background: '#f9f9f9', padding: 16, borderRadius: 8 }}>
+           <Form form={modelForm} layout="inline" onFinish={addModel}>
+             <Form.Item name="id" rules={[{ required: true, message: 'ID必填' }]} style={{ flex: 1 }}>
+               <Input placeholder="模型 ID (e.g. gpt-4)" />
+             </Form.Item>
+             <Form.Item name="name" rules={[{ required: true, message: '名称必填' }]} style={{ flex: 1 }}>
+               <Input placeholder="模型名称" />
+             </Form.Item>
+             <Button type="primary" htmlType="submit">添加模型</Button>
+           </Form>
+        </div>
+      </Modal>
     </div>
   );
 };

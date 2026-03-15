@@ -1,56 +1,85 @@
 import React, { useState } from 'react';
-import { Table, Typography, Switch, Tag, message } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
+import { Typography, Card, Row, Col, Switch, Space, message, Badge, Button } from 'antd';
 
-const { Title, Text } = Typography;
+const { Title, Text, Paragraph } = Typography;
 
 interface Tool {
   id: string;
   name: string;
   description: string;
   enabled: boolean;
-  category: string;
 }
 
 const initialTools: Tool[] = [
-  { id: 't1', name: 'WebSearch', description: '进行浏览器Web搜索，获取实时信息', enabled: true, category: '搜索' },
-  { id: 't2', name: 'ExecuteCommand', description: '在安全沙箱内执行命令行指令', enabled: false, category: '系统' },
-  { id: 't3', name: 'ReadFile', description: '读取本地文件内容', enabled: true, category: '文件系统' },
-  { id: 't4', name: 'WriteFile', description: '写入或覆盖本地文件', enabled: false, category: '文件系统' },
+  { id: '1', name: 'execute_shell_command', description: 'Execute shell commands', enabled: true },
+  { id: '2', name: 'read_file', description: 'Read file contents', enabled: true },
+  { id: '3', name: 'write_file', description: 'Write content to file', enabled: true },
+  { id: '4', name: 'edit_file', description: 'Edit file using find-and-replace', enabled: true },
+  { id: '5', name: 'browser_use', description: 'Browser automation and web interaction', enabled: true },
+  { id: '6', name: 'desktop_screenshot', description: 'Capture desktop screenshots', enabled: true },
+  { id: '7', name: 'send_file_to_user', description: 'Send files to user', enabled: true },
+  { id: '8', name: 'get_current_time', description: 'Get current date and time', enabled: true },
+  { id: '9', name: 'get_token_usage', description: 'Get llm token usage', enabled: true },
 ];
 
 const ToolLibrary: React.FC = () => {
   const [tools, setTools] = useState<Tool[]>(initialTools);
 
-  const handleToggle = (id: string, checked: boolean) => {
+  const toggleEnable = (id: string, checked: boolean) => {
     setTools(tools.map(t => t.id === id ? { ...t, enabled: checked } : t));
-    const tool = tools.find(t => t.id === id);
-    message.success(`${tool?.name} 已${checked ? '启用' : '禁用'}`);
+    message.success(`工具已${checked ? '启用' : '禁用'}`);
   };
 
-  const columns: ColumnsType<Tool> = [
-    { title: '工具名称', dataIndex: 'name', key: 'name', render: (text) => <Text strong>{text}</Text> },
-    { title: '描述', dataIndex: 'description', key: 'description' },
-    { title: '分类', dataIndex: 'category', key: 'category', render: (text) => <Tag color="blue">{text}</Tag> },
-    { 
-      title: '状态', 
-      dataIndex: 'enabled', 
-      key: 'enabled',
-      render: (enabled: boolean, record) => (
-        <Switch checked={enabled} onChange={(checked) => handleToggle(record.id, checked)} />
-      )
-    },
-  ];
-
   return (
-    <div style={{ padding: 24, background: '#fff', minHeight: '100%', borderRadius: 8 }}>
-      <div style={{ marginBottom: 24 }}>
-        <Title level={4} style={{ margin: 0 }}>工具库 (Tool Library)</Title>
-        <Text type="secondary">管理 AI 助手使用的系统工具，开启或关闭特定的能力。</Text>
+    <div style={{ height: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+           <div>
+            <Title level={4} style={{ margin: 0 }}>内置工具</Title>
+            <Text type="secondary">管理内置工具及其启用状态。禁用的工具将不会提供给智能体使用。</Text>
+           </div>
+           <Space>
+             <Button type="text" style={{ color: '#1890ff' }} onClick={() => { setTools(tools.map(t => ({...t, enabled: true}))); message.success('全部启用'); }}>全部启用</Button>
+             <Button type="text" style={{ color: '#ff4d4f' }} onClick={() => { setTools(tools.map(t => ({...t, enabled: false}))); message.success('全部禁用'); }}>全部禁用</Button>
+           </Space>
+        </div>
       </div>
-      <Table columns={columns} dataSource={tools} rowKey="id" pagination={false} />
+
+      <div style={{ flex: 1, overflowY: 'auto' }}>
+        <Row gutter={[16, 16]}>
+          {tools.map(tool => (
+            <Col xs={24} sm={12} md={8} lg={6} key={tool.id}>
+              <Card 
+                hoverable
+                style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
+                bodyStyle={{ flex: 1, display: 'flex', flexDirection: 'column' }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                  <Text strong style={{ fontSize: 16 }}>{tool.name}</Text>
+                  <Space>
+                     <Badge status="success" text="已启用" style={{ display: tool.enabled ? 'block' : 'none' }} />
+                  </Space>
+                </div>
+                
+                <div style={{ flex: 1, marginBottom: 16 }}>
+                  <Paragraph type="secondary" ellipsis={{ rows: 2 }}>
+                    {tool.description}
+                  </Paragraph>
+                </div>
+
+                <div style={{ marginTop: 'auto', textAlign: 'right' }}>
+                  <Switch checked={tool.enabled} onChange={checked => toggleEnable(tool.id, checked)} />
+                </div>
+              </Card>
+            </Col>
+          ))}
+        </Row>
+      </div>
     </div>
   );
 };
+
+// Add Button import that was missing
+// import { Button } from 'antd';
 
 export default ToolLibrary;

@@ -83,10 +83,15 @@ const MainLayout: React.FC = () => {
     .map(item => item?.key as string);
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
-      <Sider collapsible collapsed={collapsed} onCollapse={(value) => setCollapsed(value)}>
-        <div style={{ height: 32, margin: 16, background: 'rgba(255, 255, 255, 0.2)', textAlign: 'center', color: 'white', lineHeight: '32px', fontWeight: 'bold' }}>
-          Tang Dynasty
+    <Layout style={{ height: '100vh' }}>
+      <Sider 
+        collapsible 
+        collapsed={collapsed} 
+        onCollapse={(value) => setCollapsed(value)}
+        style={{ overflow: 'auto', height: '100vh', position: 'fixed', left: 0, top: 0, bottom: 0 }}
+      >
+        <div style={{ height: 32, margin: 16, background: 'rgba(255, 255, 255, 0.2)', textAlign: 'center', color: 'white', lineHeight: '32px', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden' }}>
+          {collapsed ? 'TD' : 'Tang Dynasty'}
         </div>
         <Menu 
           theme="dark" 
@@ -96,19 +101,19 @@ const MainLayout: React.FC = () => {
           items={items} 
           onClick={onClick}
           selectedKeys={selectedKeys}
+          style={{ paddingBottom: 48 }}
         />
       </Sider>
-      <Layout>
+      <Layout style={{ marginLeft: collapsed ? 80 : 200, transition: 'all 0.2s' }}>
         {/* <Header style={{ padding: 0, background: colorBgContainer }} /> */}
-        <Content style={{ margin: '0 16px' }}>
+        <Content style={{ margin: '16px 16px 0', overflow: 'initial' }}>
           {/* Breadcrumb could go here */}
           <div
             style={{
               padding: 24,
-              minHeight: 360,
+              minHeight: 'calc(100vh - 110px)',
               background: colorBgContainer,
               borderRadius: borderRadiusLG,
-              marginTop: 16,
             }}
           >
             <Outlet />
