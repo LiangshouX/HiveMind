@@ -1,15 +1,15 @@
 package com.liangshou;
 
+import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.ComponentScan;
 
 @SpringBootApplication
-@ComponentScan
+@ComponentScan("com.liangshou")
+@MapperScan("com.liangshou.infrastructure.datasource.mapper")
 public class TangApplication {
     public static void main(String[] args) {
         SpringApplication.run(TangApplication.class, args);
     }
-
 }
-
