@@ -1,35 +1,38 @@
 {
-  "name": "copaw-website",
+  "name": "website",
   "private": true,
+  "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && node scripts/build-search-index.mjs && vite build && node scripts/spa-fallback-pages.mjs",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
-    "fuse.js": "^7.0.0",
-    "highlight.js": "^11.11.1",
-    "lucide-react": "^0.468.0",
-    "mermaid": "^11.12.2",
-    "motion": "^11.11.17",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "react-markdown": "^9.0.1",
-    "react-router-dom": "^7.0.1",
-    "rehype-highlight": "^7.0.2",
-    "rehype-raw": "^7.0.0",
-    "remark-gfm": "^4.0.1"
+    "@ant-design/icons": "^6.1.0",
+    "@ant-design/x": "^2.4.0",
+    "antd": "^6.3.2",
+    "axios": "^1.13.6",
+    "classnames": "^2.5.1",
+    "dayjs": "^1.11.20",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-router-dom": "^7.13.1",
+    "zustand": "^5.0.11"
   },
   "devDependencies": {
-    "@types/highlight.js": "^10.1.0",
-    "@types/react": "^18.3.12",
-    "@types/react-dom": "^18.3.1",
-    "@vitejs/plugin-react": "^4.3.4",
-    "prettier": "3.0.0",
-    "typescript": "~5.6.2",
-    "vite": "^6.0.1"
+    "@eslint/js": "^9.39.4",
+    "@types/node": "^24.12.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^4.7.0",
+    "eslint": "^9.39.4",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "globals": "^17.4.0",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.56.1",
+    "vite": "^5.4.21"
   }
 }

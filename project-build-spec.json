@@ -1,0 +1,400 @@
+{
+  "project": {
+    "name": "tang-dynasty-assistant",
+    "version": "1.0.0",
+    "description": "基于三省六部制的AI多Agent协作个人助理系统",
+    "type": "fullstack",
+    "architecture": "microservices"
+  },
+  "build": {
+    "stages": [
+      {
+        "name": "environment-setup",
+        "description": "环境初始化和依赖安装",
+        "steps": [
+          {
+            "type": "command",
+            "command": "npm install -g @vue/cli @angular/cli create-react-app",
+            "description": "安装前端开发工具"
+          },
+          {
+            "type": "command", 
+            "command": "npm install -g typescript vite",
+            "description": "安装TypeScript和Vite"
+          },
+          {
+            "type": "command",
+            "command": "docker --version && docker-compose --version",
+            "description": "验证Docker环境"
+          }
+        ]
+      },
+      {
+        "name": "frontend-scaffold",
+        "description": "前端项目脚手架搭建",
+        "steps": [
+          {
+            "type": "command",
+            "command": "cd d:\\Code\\Java\\TangDynasty && npm create vite@latest tang-dynasty-frontend -- --template react-ts",
+            "description": "创建React+TypeScript项目"
+          },
+          {
+            "type": "file-edit",
+            "file": "tang-dynasty-frontend/package.json",
+            "operations": [
+              {
+                "type": "add-dependencies",
+                "dependencies": {
+                  "antd": "^5.12.0",
+                  "@ant-design/x": "^1.0.0",
+                  "axios": "^1.6.0",
+                  "react-router-dom": "^6.20.0",
+                  "@reduxjs/toolkit": "^2.0.0",
+                  "react-redux": "^9.0.0",
+                  "dayjs": "^1.11.0",
+                  "lodash": "^4.17.21",
+                  "recharts": "^2.8.0"
+                },
+                "devDependencies": {
+                  "@types/lodash": "^4.14.0",
+                  "@types/react": "^18.2.0",
+                  "@types/react-dom": "^18.2.0",
+                  "@vitejs/plugin-react": "^4.2.0",
+                  "eslint": "^8.55.0",
+                  "eslint-plugin-react": "^7.33.0",
+                  "eslint-plugin-react-hooks": "^4.6.0",
+                  "prettier": "^3.1.0"
+                }
+              }
+            ]
+          },
+          {
+            "type": "directory-create",
+            "path": "tang-dynasty-frontend/src/{components,pages,hooks,store,utils,types,assets}",
+            "description": "创建标准目录结构"
+          },
+          {
+            "type": "file-create",
+            "files": [
+              {
+                "path": "tang-dynasty-frontend/src/types/task.ts",
+                "content": "export interface Task {\n  taskId: string;\n  title: string;\n  content: string;\n  status: TaskStatus;\n  priority: TaskPriority;\n  metadata?: Record<string, any>;\n  createdAt: string;\n  updatedAt: string;\n}\n\nexport type TaskStatus = \n  | 'Pending' | 'ChengXiang' | 'Zhongshu' | 'Menxia' \n  | 'Assigned' | 'Doing' | 'Review' | 'Done';\n\nexport type TaskPriority = 'low' | 'normal' | 'high' | 'critical';"
+              },
+              {
+                "path": "tang-dynasty-frontend/src/store/index.ts",
+                "content": "import { configureStore } from '@reduxjs/toolkit';\nimport taskReducer from './taskSlice';\n\nexport const store = configureStore({\n  reducer: {\n    tasks: taskReducer,\n  },\n});\n\nexport type RootState = ReturnType<typeof store.getState>;\nexport type AppDispatch = typeof store.dispatch;"
+              },
+              {
+                "path": "tang-dynasty-frontend/src/utils/request.ts",
+                "content": "import axios from 'axios';\n\nconst request = axios.create({\n  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1',\n  timeout: 10000,\n});\n\nrequest.interceptors.request.use(\n  (config) => {\n    const token = localStorage.getItem('token');\n    if (token) {\n      config.headers.Authorization = `Bearer ${token}`;\n    }\n    return config;\n  },\n  (error) => Promise.reject(error)\n);\n\nrequest.interceptors.response.use(\n  (response) => response.data,\n  (error) => {\n    if (error.response?.status === 401) {\n      localStorage.removeItem('token');\n      window.location.href = '/login';\n    }\n    return Promise.reject(error);\n  }\n);\n\nexport default request;"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "backend-scaffold",
+        "description": "后端Spring Boot项目搭建",
+        "steps": [
+          {
+            "type": "command",
+            "command": "cd d:\\Code\\Java\\TangDynasty && curl https://start.spring.io/starter.zip -d dependencies=web,data-jpa,data-redis,data-mongodb,validation,security -d language=java -d bootVersion=3.2.0 -d baseDir=tang-dynasty-backend -d groupId=com.tangdynasty -d artifactId=tang-dynasty-backend -d name='Tang Dynasty Backend' -d description='Tang Dynasty Assistant Backend' -d packageName=com.tangdynasty.backend -o tang-dynasty-backend.zip",
+            "description": "下载Spring Boot项目模板"
+          },
+          {
+            "type": "command",
+            "command": "cd d:\\Code\\Java\\TangDynasty && unzip tang-dynasty-backend.zip && rm tang-dynasty-backend.zip",
+            "description": "解压Spring Boot项目"
+          },
+          {
+            "type": "file-edit",
+            "file": "tang-dynasty-backend/pom.xml",
+            "operations": [
+              {
+                "type": "add-dependencies",
+                "dependencies": [
+                  "mysql:mysql-connector-java:8.0.33",
+                  "com.baomidou:mybatis-plus-boot-starter:3.5.4",
+                  "org.springframework.boot:spring-boot-starter-websocket",
+                  "io.jsonwebtoken:jjwt-api:0.11.5",
+                  "io.jsonwebtoken:jjwt-impl:0.11.5",
+                  "io.jsonwebtoken:jjwt-jackson:0.11.5",
+                  "org.springdoc:springdoc-openapi-starter-webmvc-ui:2.2.0",
+                  "org.mapstruct:mapstruct:1.5.5.Final",
+                  "org.mapstruct:mapstruct-processor:1.5.5.Final"
+                ]
+              }
+            ]
+          },
+          {
+            "type": "directory-create",
+            "path": "tang-dynasty-backend/src/main/java/com/tangdynasty/backend/{adapter,service,infrastructure,common,config}",
+            "description": "创建分层架构目录"
+          }
+        ]
+      },
+      {
+        "name": "database-setup",
+        "description": "数据库初始化",
+        "steps": [
+          {
+            "type": "file-create",
+            "files": [
+              {
+                "path": "tang-dynasty-backend/src/main/resources/db/migration/V1.0.0__init.sql",
+                "content": "-- 初始化数据库\nCREATE DATABASE IF NOT EXISTS tang_dynasty DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;\n\nUSE tang_dynasty;\n\n-- 用户表\nCREATE TABLE users (\n    user_id VARCHAR(32) PRIMARY KEY COMMENT '用户ID',\n    username VARCHAR(50) UNIQUE NOT NULL COMMENT '用户名',\n    email VARCHAR(100) UNIQUE NOT NULL COMMENT '邮箱',\n    password_hash VARCHAR(255) NOT NULL COMMENT '密码哈希',\n    role VARCHAR(50) DEFAULT 'user' COMMENT '角色',\n    status TINYINT DEFAULT 1 COMMENT '状态：1-启用，0-禁用',\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户表';\n\n-- 任务表\nCREATE TABLE tasks (\n    task_id VARCHAR(32) PRIMARY KEY COMMENT '任务ID',\n    user_id VARCHAR(32) NOT NULL COMMENT '用户ID',\n    title VARCHAR(200) NOT NULL COMMENT '任务标题',\n    content TEXT COMMENT '任务内容',\n    status ENUM('Pending', 'ChengXiang', 'Zhongshu', 'Menxia', 'Assigned', 'Doing', 'Review', 'Done') DEFAULT 'Pending',\n    priority ENUM('low', 'normal', 'high', 'critical') DEFAULT 'normal',\n    metadata JSON COMMENT '扩展元数据',\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n    INDEX idx_user_id (user_id),\n    INDEX idx_status (status),\n    INDEX idx_priority (priority),\n    FOREIGN KEY (user_id) REFERENCES users(user_id)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='任务主表';\n\n-- 任务流转日志表\nCREATE TABLE task_logs (\n    log_id BIGINT AUTO_INCREMENT PRIMARY KEY,\n    task_id VARCHAR(32) NOT NULL,\n    from_state VARCHAR(50) NOT NULL,\n    to_state VARCHAR(50) NOT NULL,\n    actor VARCHAR(100) NOT NULL,\n    remark TEXT,\n    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    INDEX idx_task_id (task_id),\n    INDEX idx_timestamp (timestamp),\n    FOREIGN KEY (task_id) REFERENCES tasks(task_id)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='任务状态流转日志';\n\n-- Agent表\nCREATE TABLE agents (\n    agent_id VARCHAR(32) PRIMARY KEY COMMENT 'Agent ID',\n    name VARCHAR(100) NOT NULL COMMENT 'Agent名称',\n    type VARCHAR(50) NOT NULL COMMENT 'Agent类型',\n    department VARCHAR(50) NOT NULL COMMENT '所属部门',\n    status VARCHAR(50) DEFAULT 'active' COMMENT '状态',\n    config JSON COMMENT '配置信息',\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Agent表';\n\n-- 初始化数据\nINSERT INTO users (user_id, username, email, password_hash, role) VALUES\n('U001', 'admin', 'admin@tangdynasty.com', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8i atu6R5XxPHM./MyCNozRzXw8m', 'admin');\n\nINSERT INTO agents (agent_id, name, type, department, config) VALUES\n('CX001', '丞相', 'ChengXiang', '丞相府', '{\"description\":\"消息分拣官\"}'),\n('ZS001', '中书令', 'Zhongshu', '中书省', '{\"description\":\"规划官\"}'),\n('MX001', '门下侍中', 'Menxia', '门下省', '{\"description\":\"审议官\"}'),\n('SS001', '尚书令', 'Shangshu', '尚书省', '{\"description\":\"执行总指挥\"}'),\n('LB001', '礼部尚书', 'Libu', '礼部', '{\"description\":\"文档编制官\"}'),\n('HB001', '户部尚书', 'Hubu', '户部', '{\"description\":\"数据分析官\"}'),\n('BB001', '兵部尚书', 'Bingbu', '兵部', '{\"description\":\"代码实现官\"}'),\n('XB001', '刑部尚书', 'Xingbu', '刑部', '{\"description\":\"测试审查官\"}'),\n('GB001', '工部尚书', 'Gongbu', '工部', '{\"description\":\"基础设施官\"}'),\n('LB002', '吏部尚书', 'Libu_hr', '吏部', '{\"description\":\"人力资源官\"}');"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "ci-cd-setup",
+        "description": "CI/CD流水线配置",
+        "steps": [
+          {
+            "type": "file-create",
+            "files": [
+              {
+                "path": ".github/workflows/ci-cd.yml",
+                "content": "name: CI/CD Pipeline\n\non:\n  push:\n    branches: [ main, develop ]\n  pull_request:\n    branches: [ main ]\n\njobs:\n  test:\n    runs-on: ubuntu-latest\n    strategy:\n      matrix:\n        node-version: [18.x, 20.x]\n        java-version: [17, 21]\n    \n    steps:\n    - uses: actions/checkout@v4\n    \n    - name: Setup Node.js\n      uses: actions/setup-node@v4\n      with:\n        node-version: ${{ matrix.node-version }}\n        cache: 'npm'\n        cache-dependency-path: tang-dynasty-frontend/package-lock.json\n    \n    - name: Setup Java\n      uses: actions/setup-java@v4\n      with:\n        java-version: ${{ matrix.java-version }}\n        distribution: 'temurin'\n        cache: maven\n    \n    - name: Install frontend dependencies\n      run: |\n        cd tang-dynasty-frontend\n        npm ci\n    \n    - name: Run frontend tests\n      run: |\n        cd tang-dynasty-frontend\n        npm run test:ci\n    \n    - name: Build frontend\n      run: |\n        cd tang-dynasty-frontend\n        npm run build\n    \n    - name: Install backend dependencies\n      run: |\n        cd tang-dynasty-backend\n        mvn dependency:go-offline\n    \n    - name: Run backend tests\n      run: |\n        cd tang-dynasty-backend\n        mvn test\n    \n    - name: Build backend\n      run: |\n        cd tang-dynasty-backend\n        mvn package -DskipTests\n\n  security-scan:\n    runs-on: ubuntu-latest\n    needs: test\n    \n    steps:\n    - uses: actions/checkout@v4\n    \n    - name: Run security audit\n      run: |\n        cd tang-dynasty-frontend\n        npm audit --audit-level moderate\n    \n    - name: Run OWASP dependency check\n      uses: dependency-check/Dependency-Check_Action@main\n      with:\n        project: 'tang-dynasty-backend'\n        path: 'tang-dynasty-backend'\n        format: 'HTML'\n\n  deploy:\n    runs-on: ubuntu-latest\n    needs: [test, security-scan]\n    if: github.ref == 'refs/heads/main'\n    \n    steps:\n    - uses: actions/checkout@v4\n    \n    - name: Build Docker images\n      run: |\n        docker build -t tang-dynasty/frontend:latest ./tang-dynasty-frontend\n        docker build -t tang-dynasty/backend:latest ./tang-dynasty-backend\n    \n    - name: Deploy to staging\n      run: |\n        docker-compose -f docker-compose.yml up -d"
+              },
+              {
+                "path": "tang-dynasty-frontend/package.json",
+                "content": "{\n  \"name\": \"tang-dynasty-frontend\",\n  \"private\": true,\n  \"version\": \"1.0.0\",\n  \"type\": \"module\",\n  \"scripts\": {\n    \"dev\": \"vite\",\n    \"build\": \"tsc && vite build\",\n    \"lint\": \"eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0\",\n    \"preview\": \"vite preview\",\n    \"test\": \"vitest\",\n    \"test:ci\": \"vitest run\",\n    \"test:coverage\": \"vitest run --coverage\"\n  },\n  \"dependencies\": {\n    \"antd\": \"^5.12.0\",\n    \"@ant-design/x\": \"^1.0.0\",\n    \"axios\": \"^1.6.0\",\n    \"react\": \"^18.2.0\",\n    \"react-dom\": \"^18.2.0\",\n    \"react-router-dom\": \"^6.20.0\",\n    \"@reduxjs/toolkit\": \"^2.0.0\",\n    \"react-redux\": \"^9.0.0\",\n    \"dayjs\": \"^1.11.0\",\n    \"lodash\": \"^4.17.21\",\n    \"recharts\": \"^2.8.0\"\n  },\n  \"devDependencies\": {\n    \"@types/lodash\": \"^4.14.0\",\n    \"@types/react\": \"^18.2.0\",\n    \"@types/react-dom\": \"^18.2.0\",\n    \"@typescript-eslint/eslint-plugin\": \"^6.14.0\",\n    \"@typescript-eslint/parser\": \"^6.14.0\",\n    \"@vitejs/plugin-react\": \"^4.2.0\",\n    \"@vitest/coverage-v8\": \"^1.0.0\",\n    \"eslint\": \"^8.55.0\",\n    \"eslint-plugin-react\": \"^7.33.0\",\n    \"eslint-plugin-react-hooks\": \"^4.6.0\",\n    \"eslint-plugin-react-refresh\": \"^0.4.5\",\n    \"prettier\": \"^3.1.0\",\n    \"typescript\": \"^5.2.2\",\n    \"vite\": \"^5.0.0\",\n    \"vitest\": \"^1.0.0\"\n  }\n}"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "testing-setup",
+        "description": "测试套件初始化",
+        "steps": [
+          {
+            "type": "file-create",
+            "files": [
+              {
+                "path": "tang-dynasty-frontend/src/__tests__/App.test.tsx",
+                "content": "import { describe, it, expect } from 'vitest';\nimport { render, screen } from '@testing-library/react';\nimport App from '../App';\n\ndescribe('App', () => {\n  it('renders headline', () => {\n    render(<App />);\n    expect(screen.getByText('唐潮个人助理系统')).toBeDefined();\n  });\n});"
+              },
+              {
+                "path": "tang-dynasty-frontend/vitest.config.ts",
+                "content": "import { defineConfig } from 'vitest/config';\nimport react from '@vitejs/plugin-react';\n\nexport default defineConfig({\n  plugins: [react()],\n  test: {\n    environment: 'jsdom',\n    globals: true,\n    setupFiles: './src/test/setup.ts',\n    coverage: {\n      reporter: ['text', 'json', 'html'],\n      exclude: [\n        'node_modules/',\n        'src/test/',\n        '**/*.d.ts',\n        '**/*.config.*',\n        '**/mockData/**',\n      ],\n      thresholds: {\n        statements: 90,\n        branches: 90,\n        functions: 90,\n        lines: 90,\n      },\n    },\n  },\n});"
+              },
+              {
+                "path": "tang-dynasty-frontend/src/test/setup.ts",
+                "content": "import '@testing-library/jest-dom';\nimport { vi } from 'vitest';\n\n// Mock window.matchMedia\nObject.defineProperty(window, 'matchMedia', {\n  writable: true,\n  value: vi.fn().mockImplementation(query => ({\n    matches: false,\n    media: query,\n    onchange: null,\n    addListener: vi.fn(),\n    removeListener: vi.fn(),\n    addEventListener: vi.fn(),\n    removeEventListener: vi.fn(),\n    dispatchEvent: vi.fn(),\n  })),\n});"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "configurations": {
+      "development": {
+        "frontend": {
+          "port": 5173,
+          "proxy": {
+            "/api": "http://localhost:8080"
+          },
+          "env": {
+            "VITE_API_BASE_URL": "http://localhost:8080/api/v1",
+            "VITE_WS_URL": "ws://localhost:8080/ws"
+          }
+        },
+        "backend": {
+          "port": 8080,
+          "database": {
+            "url": "jdbc:mysql://localhost:3306/tang_dynasty",
+            "username": "root",
+            "password": "root123"
+          },
+          "redis": {
+            "host": "localhost",
+            "port": 6379
+          }
+        }
+      },
+      "production": {
+        "frontend": {
+          "build": {
+            "target": "es2015",
+            "minify": true,
+            "sourcemap": false
+          }
+        },
+        "backend": {
+          "profile": "prod",
+          "logging": {
+            "level": "INFO"
+          }
+        }
+      }
+    },
+    "quality-gates": {
+      "frontend": {
+        "test-coverage": {
+          "threshold": 90,
+          "statements": 90,
+          "branches": 90,
+          "functions": 90,
+          "lines": 90
+        },
+        "linting": {
+          "eslint": true,
+          "prettier": true,
+          "max-warnings": 0
+        },
+        "build": {
+          "no-errors": true,
+          "bundle-size-limit": "2MB"
+        }
+      },
+      "backend": {
+        "test-coverage": {
+          "threshold": 80,
+          "line-coverage": 80,
+          "branch-coverage": 75
+        },
+        "code-quality": {
+          "sonar": true,
+          "spotbugs": true
+        },
+        "security": {
+          "owasp-dependency-check": true,
+          "snyk-scan": true
+        }
+      }
+    },
+    "deployment": {
+      "docker": {
+        "frontend": {
+          "dockerfile": "tang-dynasty-frontend/Dockerfile",
+          "image": "tang-dynasty/frontend",
+          "tag": "latest"
+        },
+        "backend": {
+          "dockerfile": "tang-dynasty-backend/Dockerfile",
+          "image": "tang-dynasty/backend", 
+          "tag": "latest"
+        }
+      },
+      "kubernetes": {
+        "namespace": "tang-dynasty",
+        "replicas": {
+          "frontend": 2,
+          "backend": 3
+        },
+        "resources": {
+          "frontend": {
+            "requests": {
+              "memory": "128Mi",
+              "cpu": "100m"
+            },
+            "limits": {
+              "memory": "256Mi",
+              "cpu": "200m"
+            }
+          },
+          "backend": {
+            "requests": {
+              "memory": "512Mi",
+              "cpu": "250m"
+            },
+            "limits": {
+              "memory": "1Gi",
+              "cpu": "500m"
+            }
+          }
+        }
+      }
+    },
+    "monitoring": {
+      "metrics": {
+        "enabled": true,
+        "endpoints": [
+          "prometheus",
+          "grafana"
+        ],
+        "alerts": {
+          "response-time": {
+            "threshold": 200,
+            "duration": "5m"
+          },
+          "error-rate": {
+            "threshold": 0.01,
+            "duration": "5m"
+          },
+          "cpu-usage": {
+            "threshold": 80,
+            "duration": "10m"
+          },
+          "memory-usage": {
+            "threshold": 85,
+            "duration": "10m"
+          }
+        }
+      },
+      "logging": {
+        "level": "info",
+        "format": "json",
+        "retention": "30d"
+      }
+    }
+  },
+  "scripts": {
+    "dev": {
+      "description": "启动开发环境",
+      "commands": [
+        "docker-compose up -d mysql redis",
+        "cd tang-dynasty-backend && mvn spring-boot:run",
+        "cd tang-dynasty-frontend && npm run dev"
+      ]
+    },
+    "build": {
+      "description": "构建生产版本",
+      "commands": [
+        "cd tang-dynasty-frontend && npm run build",
+        "cd tang-dynasty-backend && mvn clean package -DskipTests"
+      ]
+    },
+    "test": {
+      "description": "运行所有测试",
+      "commands": [
+        "cd tang-dynasty-frontend && npm run test:coverage",
+        "cd tang-dynasty-backend && mvn test"
+      ]
+    },
+    "lint": {
+      "description": "代码质量检查",
+      "commands": [
+        "cd tang-dynasty-frontend && npm run lint",
+        "cd tang-dynasty-backend && mvn spotbugs:check"
+      ]
+    },
+    "deploy": {
+      "description": "部署到生产环境",
+      "commands": [
+        "docker-compose build",
+        "docker-compose push",
+        "kubectl apply -f k8s/"
+      ]
+    }
+  },
+  "documentation": {
+    "api": {
+      "openapi": "tang-dynasty-backend/src/main/resources/openapi.yaml",
+      "redoc": true,
+      "swagger-ui": true
+    },
+    "database": {
+      "er-diagram": "docs/er-diagram.png",
+      "schema": "docs/database-schema.md"
+    },
+    "architecture": {
+      "system-design": "docs/architecture.md",
+      "deployment": "docs/deployment.md"
+    }
+  }
+}

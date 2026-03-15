@@ -1,66 +1,47 @@
-import { useEffect, useState } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
-import { loadSiteConfig, type SiteConfig } from "./config";
-import { type Lang, t } from "./i18n";
-import { Home } from "./pages/Home";
-import { Docs } from "./pages/Docs";
-import { ReleaseNotes } from "./pages/ReleaseNotes";
-import "./index.css";
+import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import MainLayout from './layouts/MainLayout';
+import Chat from './pages/MorningCourt/Chat';
+import EdictLibrary from './pages/MorningCourt/EdictLibrary';
+import Channels from './pages/ImperialStudy/Channels';
+import EdictBoard from './pages/ImperialStudy/EdictBoard';
+import Memorials from './pages/ImperialStudy/Memorials';
+import ScheduledTasks from './pages/ImperialStudy/ScheduledTasks';
+import CourtRules from './pages/Censorate/CourtRules';
+import SkillLibrary from './pages/Censorate/SkillLibrary';
+import ToolLibrary from './pages/Censorate/ToolLibrary';
+import MCP from './pages/Censorate/MCP';
+import OfficialManagement from './pages/Censorate/OfficialManagement';
+import Models from './pages/Dalisi/Models';
+import EnvVars from './pages/Dalisi/EnvVars';
+import Security from './pages/Dalisi/Security';
+import TokenUsage from './pages/Dalisi/TokenUsage';
 
-const LANG_KEY = "site-lang";
-
-function getStoredLang(): Lang {
-  const v = localStorage.getItem(LANG_KEY);
-  return v === "en" ? "en" : "zh";
-}
-
-export default function App() {
-  const [config, setConfig] = useState<SiteConfig | null>(null);
-  const [lang, setLang] = useState<Lang>(getStoredLang);
-
-  useEffect(() => {
-    loadSiteConfig().then(setConfig);
-  }, []);
-
-  const toggleLang = () => {
-    const next: Lang = lang === "zh" ? "en" : "zh";
-    setLang(next);
-    localStorage.setItem(LANG_KEY, next);
-  };
-
-  if (!config) {
-    return (
-      <div
-        style={{
-          minHeight: "100vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: "var(--text-muted)",
-        }}
-      >
-        {t(lang, "nav.docs")}
-      </div>
-    );
-  }
-
+const App: React.FC = () => {
   return (
-    <Routes>
-      <Route
-        path="/"
-        element={<Home config={config} lang={lang} onLangClick={toggleLang} />}
-      />
-      <Route path="/docs" element={<Navigate to="/docs/intro" replace />} />
-      <Route
-        path="/docs/:slug"
-        element={<Docs config={config} lang={lang} onLangClick={toggleLang} />}
-      />
-      <Route
-        path="/release-notes"
-        element={
-          <ReleaseNotes config={config} lang={lang} onLangClick={toggleLang} />
-        }
-      />
-    </Routes>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<MainLayout />}>
+          <Route index element={<Navigate to="/chat" replace />} />
+          <Route path="chat" element={<Chat />} />
+          <Route path="edict-library" element={<EdictLibrary />} />
+          <Route path="channels" element={<Channels />} />
+          <Route path="edict-board" element={<EdictBoard />} />
+          <Route path="memorials" element={<Memorials />} />
+          <Route path="scheduled-tasks" element={<ScheduledTasks />} />
+          <Route path="court-rules" element={<CourtRules />} />
+          <Route path="skill-library" element={<SkillLibrary />} />
+          <Route path="tool-library" element={<ToolLibrary />} />
+          <Route path="mcp" element={<MCP />} />
+          <Route path="official-management" element={<OfficialManagement />} />
+          <Route path="models" element={<Models />} />
+          <Route path="env-vars" element={<EnvVars />} />
+          <Route path="security" element={<Security />} />
+          <Route path="token-usage" element={<TokenUsage />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
   );
-}
+};
+
+export default App;
