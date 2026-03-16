@@ -1,0 +1,217 @@
+openapi: 3.0.3
+info:
+  title: Tang Dynasty Agent Engine API
+  description: |
+    三省六部多 Agent 协作系统 API
+    
+    ## 架构说明
+    - **丞相**：消息分拣，判断是闲聊还是任务
+    - **中书省**：方案规划，任务拆解
+    - **门下省**：审议方案，质量控制
+    - **尚书省**：任务派发，结果汇总
+    - **六部**：具体执行（礼、户、兵、刑、工、吏）
+  version: 1.0.0
+  contact:
+    name: Tang Dynasty Team
+
+servers:
+  - url: http://localhost:8081/api/workflow
+    description: Local development server
+
+tags:
+  - name: Workflow
+    description: 工作流执行相关接口
+
+paths:
+  /execute:
+    post:
+      tags:
+        - Workflow
+      summary: 同步执行工作流
+      description: |
+        提交一个任务到三省六部系统，等待执行完成并返回结果
+        
+        **适用场景**：
+        - 需要立即获取结果的短任务
+        - 实时交互场景
+      
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExecuteRequest'
+      
+      responses:
+        '200':
+          description: 执行成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecuteResponse'
+        '400':
+          description: 请求参数错误
+        '500':
+          description: 服务器内部错误
+  
+  /execute/async:
+    post:
+      tags:
+        - Workflow
+      summary: 异步执行工作流
+      description: |
+        异步提交任务，立即返回任务 ID，通过轮询或 WebSocket 获取进度
+      
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExecuteRequest'
+      
+      responses:
+        '200':
+          description: 已接受任务
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AsyncExecuteResponse'
+  
+  /stream:
+    get:
+      tags:
+        - Workflow
+      summary: 流式输出（SSE）
+      description: |
+        使用 Server-Sent Events 实时推送执行进度
+        
+        **事件类型**：
+        - `node-start`: 节点开始执行
+        - `node-progress`: 节点执行进度
+        - `node-complete`: 节点执行完成
+        - `workflow-complete`: 工作流执行完成
+      
+      parameters:
+        - name: content
+          in: query
+          required: true
+          schema:
+            type: string
+          description: 用户输入内容
+          example: 帮我写一份项目计划书
+      
+      responses:
+        '200':
+          description: SSE 流
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                example: |
+                  event: node-start
+                  data: {"node": "chengxiang", "timestamp": 1234567890}
+                  
+                  event: node-progress
+                  data: {"node": "zhongshu", "progress": 50}
+                  
+                  event: workflow-complete
+                  data: {"response": "...", "plan": "..."}
+
+components:
+  schemas:
+    ExecuteRequest:
+      type: object
+      required:
+        - content
+      properties:
+        content:
+          type: string
+          description: 用户输入的任务或问题
+          example: 帮我分析这个项目的风险点
+        options:
+          $ref: '#/components/schemas/ExecutionOptions'
+    
+    ExecutionOptions:
+      type: object
+      properties:
+        departments:
+          type: array
+          items:
+            type: string
+            enum: [libu, hubu, bingbu, xingbu, gongbu, libu_hr]
+          description: 指定执行部门（可选，默认自动分配）
+        priority:
+          type: string
+          enum: [LOW, NORMAL, HIGH, URGENT]
+          default: NORMAL
+          description: 任务优先级
+        timeout:
+          type: integer
+          description: 超时时间（秒）
+          default: 300
+    
+    ExecuteResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/WorkflowResult'
+        message:
+          type: string
+          example: 执行成功
+    
+    WorkflowResult:
+      type: object
+      properties:
+        response:
+          type: string
+          description: AI 回复内容（闲聊场景）
+        plan:
+          type: string
+          description: 执行方案
+        todos:
+          type: array
+          items:
+            $ref: '#/components/schemas/TodoItem'
+          description: 待办任务列表
+        status:
+          type: string
+          enum: [SUCCESS, FAILED, PARTIAL]
+          example: SUCCESS
+        executionTime:
+          type: number
+          description: 执行耗时（毫秒）
+    
+    TodoItem:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "1"
+        title:
+          type: string
+          example: 需求分析
+        department:
+          type: string
+          example: 礼部
+        estimatedTime:
+          type: string
+          example: 1h
+        status:
+          type: string
+          enum: [pending, in_progress, completed, failed]
+    
+    AsyncExecuteResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        taskId:
+          type: string
+          example: "task_123456"
+        message:
+          type: string
+          example: 任务已提交，请稍后查询

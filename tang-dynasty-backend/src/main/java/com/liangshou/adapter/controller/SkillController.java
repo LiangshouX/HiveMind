@@ -5,6 +5,7 @@ import com.liangshou.common.Result;
 import com.liangshou.infrastructure.datasource.po.SkillPO;
 import com.liangshou.service.SkillService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -13,9 +14,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Skill 管理控制器
+ */
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
+@Slf4j
 public class SkillController {
 
     private final SkillService skillService;
@@ -78,5 +83,50 @@ public class SkillController {
             res.put("script", "# Skill not found");
         }
         return Result.success(res);
+    }
+    
+    // --- Execute Skill ---
+    @PostMapping("/skills/{skillName}/execute")
+    public Result<Object> executeSkill(
+            @PathVariable String skillName,
+            @RequestBody(required = false) Map<String, Object> context
+    ) {
+        try {
+            log.info("Executing skill: {}", skillName);
+            Object result = skillService.executeSkill(skillName, context != null ? context : new HashMap<>());
+            return Result.success(result);
+        } catch (Exception e) {
+            log.error("Failed to execute skill: {}", skillName, e);
+            return Result.error("Failed to execute skill: " + e.getMessage());
+        }
+    }
+    
+    // --- Enable/Disable Skill ---
+    @PostMapping("/skills/{id}/enable")
+    public Result<Boolean> enableSkill(@PathVariable Long id) {
+        try {
+            skillService.enableSkill(id);
+            return Result.success(true);
+        } catch (Exception e) {
+            log.error("Failed to enable skill: {}", id, e);
+            return Result.error("Failed to enable skill: " + e.getMessage());
+        }
+    }
+    
+    @PostMapping("/skills/{id}/disable")
+    public Result<Boolean> disableSkill(@PathVariable Long id) {
+        try {
+            skillService.disableSkill(id);
+            return Result.success(true);
+        } catch (Exception e) {
+            log.error("Failed to disable skill: {}", id, e);
+            return Result.error("Failed to disable skill: " + e.getMessage());
+        }
+    }
+    
+    // --- Get Loaded Skills ---
+    @GetMapping("/skills/loaded")
+    public Result<List<String>> getLoadedSkills() {
+        return Result.success(skillService.getLoadedSkills());
     }
 }
