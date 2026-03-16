@@ -286,7 +286,7 @@ stateDiagram-v2
 
 后端服务基于Spring Boot实现，位于 Module `D:\Code\Java\TangDynasty\tang-dynasty-backend`，启动由launcher `D:\Code\Java\TangDynasty\tang-dynasty-launcher` 统一启动
 
-此Module仅负责项目的后端服务，不涉及AI Agent相关的逻辑，仅保留AI Agent Module的API槽
+### 架构说明
 
 ```txt
 tang-dynasty-backend/
@@ -296,6 +296,9 @@ tang-dynasty-backend/
 │   ├── enums/                        # 枚举类目录：按业务分包存放各类枚举（如状态码、类型等）
 │   ├── constants/                    # 常量类目录：按功能分包存放全局常量值（如系统标识、默认值等）
 │   └── config/                       # 配置类目录：集中管理 Spring Boot 相关配置
+│       ├── aimodelconfig/            # AI 模型相关配置
+│       │   ├── properties/           # 利用 @ConfigurationProperties 读取 application.yaml 中的 AI 模型参数
+│       │   └── modelclientconfig/    # 基于 properties 创建 Spring AI 的 Model 和 Client Bean
 │       ├── mybatisconfig/            # MyBatis-Plus 配置：如分页插件、SQL 日志、类型处理器等
 │       └── redisconfig/              # Redis 客户端配置：连接池、序列化方式、自定义 RedisTemplate 等
 ├── service/                          # 业务逻辑层：封装核心业务规则
@@ -309,6 +312,15 @@ tang-dynasty-backend/
     │   ├── po/                       # Persistent Object：与数据库表一一对应的实体类（通常由 MyBatis Plus 使用）
     │   ├── mapper/                   # MyBatis Mapper 接口：定义数据库操作方法
     │   └── support/                  # 数据库相关辅助类：如自定义 TypeHandler、MetaObjectHandler 等
-    └── /                 
+    └── agentsupport/                 # AI Agent 基础设施支持
+        ├── context/                  # 上下文管理：维护 Agent 执行过程中的会话、状态、记忆等
+        ├── tools/                    # 自定义 Tool 实现：供 Agent 调用的函数工具（如查询数据库、调用 API）
+        └── mcp/                      # Model Context Protocol 相关实现（待定）：可能用于多模型协作或上下文协议 
 ```
+
+### 重要要求
+
+- 所有与数据库CRUD相关的逻辑均放到 `infrastructure.datasource.support` 包下，参考 `D:\Code\Java\auto-ai-movie\ai-movie-scripts\src\main\java\com\liangshou\movie\scripts\infrastructure\datasource\support`，确保数据访问逻辑与业务逻辑分离，不得在service层与Controller层中进行数据库操作。
+- 确保数据库以及service职责单一，禁止将数据库操作逻辑与业务逻辑混在一起，禁止业务逻辑混杂；
+- 严格按照分层架构、模块化、单一职责原则进行编码，禁止将多个功能逻辑混在一起，禁止业务逻辑混杂。
 

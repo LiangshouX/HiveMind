@@ -1,0 +1,858 @@
+openapi: 3.1.0
+info:
+  title: Tang Dynasty Backend API
+  version: "1.0.0"
+  description: |
+    三省六部多 Agent 协作个人助理后端 API。
+
+    兼容约束：
+    - 保持 website/src/api.ts 现有路径与字段不变（/api/*）。
+    - 新增能力建议走 /api/v1/*（本规范在 paths 中以 x-alias 标注）。
+
+servers:
+  - url: http://localhost:8080
+    description: Local
+
+tags:
+  - name: Dashboard
+  - name: Chat
+  - name: Tasks
+  - name: Agents
+  - name: Skills
+  - name: Tools
+  - name: MCP
+  - name: Models
+  - name: Officials
+  - name: Morning
+  - name: Security
+  - name: EnvVars
+  - name: TokenUsage
+  - name: Jobs
+  - name: Memorials
+  - name: Workspace
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    oauth2:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: https://example.com/oauth2/authorize
+          tokenUrl: https://example.com/oauth2/token
+          scopes:
+            openid: OpenID
+            profile: Profile
+            email: Email
+
+  schemas:
+    Result:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: integer
+          description: 业务码，成功为 200
+        message:
+          type: string
+        data:
+          description: 业务数据
+          nullable: true
+
+    FlowEntry:
+      type: object
+      required: [at, from, to, remark]
+      properties:
+        at: { type: string, format: date-time }
+        from: { type: string }
+        to: { type: string }
+        remark: { type: string }
+
+    TodoItem:
+      type: object
+      required: [id, title, status]
+      properties:
+        id:
+          oneOf:
+            - type: string
+            - type: integer
+        title: { type: string }
+        status:
+          type: string
+          enum: [not-started, in-progress, completed]
+        detail: { type: string }
+
+    Heartbeat:
+      type: object
+      required: [status, label]
+      properties:
+        status:
+          type: string
+          enum: [active, warn, stalled, unknown, idle]
+        label: { type: string }
+
+    Task:
+      type: object
+      required: [id, title, state, org, now, eta, block, ac, output, heartbeat, flow_log, todos, review_round, archived]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        state: { type: string }
+        org: { type: string }
+        now: { type: string }
+        eta: { type: string }
+        block: { type: string }
+        ac: { type: string }
+        output: { type: string }
+        heartbeat: { $ref: "#/components/schemas/Heartbeat" }
+        flow_log:
+          type: array
+          items: { $ref: "#/components/schemas/FlowEntry" }
+        todos:
+          type: array
+          items: { $ref: "#/components/schemas/TodoItem" }
+        review_round: { type: integer }
+        archived: { type: boolean }
+        archivedAt: { type: string, nullable: true }
+        updatedAt: { type: string, nullable: true }
+        sourceMeta:
+          type: object
+          additionalProperties: true
+        activity:
+          type: array
+          items: { type: object, additionalProperties: true }
+        _prev_state: { type: string, nullable: true }
+
+    LiveStatus:
+      type: object
+      required: [tasks, syncStatus]
+      properties:
+        tasks:
+          type: array
+          items: { $ref: "#/components/schemas/Task" }
+        syncStatus:
+          type: object
+          additionalProperties: true
+
+    ChatMessage:
+      type: object
+      required: [role, content]
+      properties:
+        role: { type: string, enum: [user, assistant, system] }
+        content: { type: string }
+
+    ChatRequest:
+      type: object
+      required: [messages]
+      properties:
+        sessionId: { type: string, nullable: true }
+        messages:
+          type: array
+          items: { $ref: "#/components/schemas/ChatMessage" }
+
+    AgentConfig:
+      type: object
+      required: [agents, knownModels]
+      properties:
+        agents:
+          type: array
+          items: { type: object, additionalProperties: true }
+        knownModels:
+          type: array
+          items: { type: string }
+
+    ActionRequest:
+      type: object
+      required: [taskId, action]
+      properties:
+        taskId: { type: string }
+        action: { type: string }
+        reason: { type: string }
+
+    SetModelRequest:
+      type: object
+      required: [agentId, model]
+      properties:
+        agentId: { type: string }
+        model: { type: string }
+
+    WakeAgentRequest:
+      type: object
+      required: [agentId]
+      properties:
+        agentId: { type: string }
+
+    CreateTaskRequest:
+      type: object
+      additionalProperties: true
+
+    Skill:
+      type: object
+      additionalProperties: true
+
+    Tool:
+      type: object
+      additionalProperties: true
+
+    McpClient:
+      type: object
+      additionalProperties: true
+
+    Model:
+      type: object
+      additionalProperties: true
+
+    Official:
+      type: object
+      additionalProperties: true
+
+  responses:
+    Unauthorized:
+      description: Unauthorized
+    Forbidden:
+      description: Forbidden
+
+paths:
+  /health:
+    get:
+      tags: [Dashboard]
+      security: []
+      operationId: health
+      responses:
+        "200":
+          description: OK
+
+  /api:
+    get:
+      tags: [Dashboard]
+      security: []
+      operationId: apiRoot
+      responses:
+        "200":
+          description: OK
+
+  /api/live-status:
+    get:
+      tags: [Dashboard]
+      operationId: liveStatus
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Result"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/LiveStatus" }
+
+  /api/agent-config:
+    get:
+      tags: [Agents]
+      operationId: agentConfig
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Result"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/AgentConfig" }
+
+  /api/agents-status:
+    get:
+      tags: [Agents]
+      operationId: agentsStatus
+      responses:
+        "200":
+          description: OK
+
+  /api/model-change-log:
+    get:
+      tags: [Agents]
+      operationId: modelChangeLog
+      responses:
+        "200":
+          description: OK
+
+  /api/officials-stats:
+    get:
+      tags: [Agents]
+      operationId: officialsStats
+      responses:
+        "200":
+          description: OK
+
+  /api/morning-brief:
+    get:
+      tags: [Morning]
+      operationId: morningBrief
+      responses:
+        "200":
+          description: OK
+    post:
+      tags: [Morning]
+      operationId: refreshMorningBrief
+      x-alias:
+        - method: POST
+          path: /api/morning-brief/refresh
+      responses:
+        "200":
+          description: OK
+
+  /api/morning-brief/refresh:
+    post:
+      tags: [Morning]
+      operationId: refreshMorningBriefLegacy
+      responses:
+        "200":
+          description: OK
+
+  /api/morning-config:
+    get:
+      tags: [Morning]
+      operationId: morningConfig
+      responses:
+        "200":
+          description: OK
+    post:
+      tags: [Morning]
+      operationId: saveMorningConfig
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        "200":
+          description: OK
+
+  /api/task-activity/{taskId}:
+    get:
+      tags: [Tasks]
+      operationId: taskActivity
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+
+  /api/scheduler-state/{taskId}:
+    get:
+      tags: [Tasks]
+      operationId: schedulerState
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+
+  /api/create-task:
+    post:
+      tags: [Tasks]
+      operationId: createTask
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: false
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateTaskRequest" }
+      responses:
+        "200":
+          description: OK
+
+  /api/task-action:
+    post:
+      tags: [Tasks]
+      operationId: taskAction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ActionRequest" }
+      responses:
+        "200":
+          description: OK
+
+  /api/archive-task:
+    post:
+      tags: [Tasks]
+      operationId: archiveTask
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                taskId: { type: string }
+                archived: { type: boolean }
+                archiveAllDone: { type: boolean }
+      responses:
+        "200":
+          description: OK
+
+  /api/scheduler-scan:
+    post:
+      tags: [Tasks]
+      operationId: schedulerScan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                thresholdSec: { type: integer, default: 180 }
+      responses:
+        "200":
+          description: OK
+
+  /api/scheduler-retry:
+    post:
+      tags: [Tasks]
+      operationId: schedulerRetry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [taskId, reason]
+              properties:
+                taskId: { type: string }
+                reason: { type: string }
+      responses:
+        "200":
+          description: OK
+
+  /api/set-model:
+    post:
+      tags: [Agents]
+      operationId: setModel
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SetModelRequest" }
+      responses:
+        "200":
+          description: OK
+
+  /api/agent-wake:
+    post:
+      tags: [Agents]
+      operationId: agentWake
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WakeAgentRequest" }
+      responses:
+        "200":
+          description: OK
+
+  /api/add-skill:
+    post:
+      tags: [Agents]
+      operationId: addSkillToAgent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [agentId, skillName]
+              properties:
+                agentId: { type: string }
+                skillName: { type: string }
+                description: { type: string }
+                trigger: { type: string }
+      responses:
+        "200":
+          description: OK
+
+  /api/skill-content/{agentId}/{skillName}:
+    get:
+      tags: [Skills]
+      operationId: skillContent
+      parameters:
+        - name: agentId
+          in: path
+          required: true
+          schema: { type: string }
+        - name: skillName
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+
+  /api/skills:
+    get:
+      tags: [Skills]
+      operationId: listSkills
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Result"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/Skill" }
+
+  /api/remote-skills:
+    get:
+      tags: [Skills]
+      operationId: listRemoteSkills
+      responses:
+        "200":
+          description: OK
+
+  /api/add-remote-skill:
+    post:
+      tags: [Skills]
+      operationId: addRemoteSkill
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [agentId, skillName, sourceUrl]
+              properties:
+                agentId: { type: string }
+                skillName: { type: string }
+                sourceUrl: { type: string }
+                description: { type: string }
+      responses:
+        "200":
+          description: OK
+
+  /api/update-remote-skill:
+    post:
+      tags: [Skills]
+      operationId: updateRemoteSkill
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [agentId, skillName]
+              properties:
+                agentId: { type: string }
+                skillName: { type: string }
+      responses:
+        "200":
+          description: OK
+
+  /api/remove-remote-skill:
+    post:
+      tags: [Skills]
+      operationId: removeRemoteSkill
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [agentId, skillName]
+              properties:
+                agentId: { type: string }
+                skillName: { type: string }
+      responses:
+        "200":
+          description: OK
+
+  /api/tools:
+    get:
+      tags: [Tools]
+      operationId: listTools
+      responses:
+        "200":
+          description: OK
+    post:
+      tags: [Tools]
+      operationId: saveTool
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Tool" }
+      responses:
+        "200":
+          description: OK
+
+  /api/tools/{id}:
+    delete:
+      tags: [Tools]
+      operationId: deleteTool
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+
+  /api/mcp:
+    get:
+      tags: [MCP]
+      operationId: listMcps
+      responses:
+        "200":
+          description: OK
+    post:
+      tags: [MCP]
+      operationId: saveMcp
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/McpClient" }
+      responses:
+        "200":
+          description: OK
+
+  /api/mcp/{id}:
+    delete:
+      tags: [MCP]
+      operationId: deleteMcp
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+
+  /api/models:
+    get:
+      tags: [Models]
+      operationId: listModels
+      responses:
+        "200":
+          description: OK
+    post:
+      tags: [Models]
+      operationId: saveModel
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Model" }
+      responses:
+        "200":
+          description: OK
+
+  /api/models/{id}:
+    delete:
+      tags: [Models]
+      operationId: deleteModel
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+
+  /api/officials:
+    get:
+      tags: [Officials]
+      operationId: listOfficials
+      responses:
+        "200":
+          description: OK
+    post:
+      tags: [Officials]
+      operationId: saveOfficial
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Official" }
+      responses:
+        "200":
+          description: OK
+
+  /api/chat/completions:
+    post:
+      tags: [Chat]
+      operationId: chatCompletions
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: false
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ChatRequest" }
+      responses:
+        "200":
+          description: OK
+
+  /api/chat/conversations:
+    get:
+      tags: [Chat]
+      operationId: listConversations
+      responses:
+        "200":
+          description: OK
+
+  /api/chat/conversations/{sessionId}/messages:
+    get:
+      tags: [Chat]
+      operationId: listMessages
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+
+  # ---------- 下面为新增模块能力（供前端 Mock/后端落地） ----------
+  /api/envs:
+    get:
+      tags: [EnvVars]
+      operationId: listEnvVars
+      responses:
+        "200":
+          description: OK
+    post:
+      tags: [EnvVars]
+      operationId: upsertEnvVar
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [key, value]
+              properties:
+                key: { type: string }
+                value: { type: string }
+                scope: { type: string, enum: [GLOBAL, OFFICIAL], default: GLOBAL }
+                ownerId: { type: string, nullable: true }
+      responses:
+        "200":
+          description: OK
+
+  /api/envs/{key}:
+    delete:
+      tags: [EnvVars]
+      operationId: deleteEnvVar
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+
+  /api/security/policies:
+    get:
+      tags: [Security]
+      operationId: listSecurityPolicies
+      responses:
+        "200":
+          description: OK
+    post:
+      tags: [Security]
+      operationId: upsertSecurityPolicy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        "200":
+          description: OK
+
+  /api/token-usage:
+    get:
+      tags: [TokenUsage]
+      operationId: tokenUsage
+      parameters:
+        - name: from
+          in: query
+          required: false
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          required: false
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: OK
+
+  /api/jobs:
+    get:
+      tags: [Jobs]
+      operationId: listJobs
+      responses:
+        "200":
+          description: OK
+    post:
+      tags: [Jobs]
+      operationId: upsertJob
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        "200":
+          description: OK
+
+  /api/memorials:
+    get:
+      tags: [Memorials]
+      operationId: listMemorials
+      responses:
+        "200":
+          description: OK
+
+  /api/workspace/files:
+    get:
+      tags: [Workspace]
+      operationId: listWorkspaceFiles
+      responses:
+        "200":
+          description: OK
+

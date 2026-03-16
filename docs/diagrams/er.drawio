@@ -1,0 +1,63 @@
+<mxfile host="app.diagrams.net" modified="2026-03-17T00:00:00.000Z" agent="Trae" version="24.7.8">
+  <diagram id="er" name="er">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <mxCell id="t_task" value="sys_task&#xa;PK id (bigint)&#xa;UK task_id&#xa;status, priority, payload, result" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#6c8ebf;fillColor=#dae8fc;" vertex="1" parent="1">
+          <mxGeometry x="60" y="60" width="260" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_task_log" value="sys_task_log&#xa;PK id&#xa;IDX task_id&#xa;type(flow/progress), content(json)" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#6c8ebf;fillColor=#dae8fc;" vertex="1" parent="1">
+          <mxGeometry x="60" y="220" width="260" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_memorial" value="sys_memorial&#xa;PK id&#xa;UK task_id&#xa;content_md, status" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#6c8ebf;fillColor=#dae8fc;" vertex="1" parent="1">
+          <mxGeometry x="60" y="360" width="260" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_conv" value="sys_conversation&#xa;PK id&#xa;UK session_id&#xa;title, type" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#82b366;fillColor=#d5e8d4;" vertex="1" parent="1">
+          <mxGeometry x="380" y="60" width="260" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_msg" value="sys_message&#xa;PK id&#xa;IDX session_id&#xa;role, content, meta(json)" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#82b366;fillColor=#d5e8d4;" vertex="1" parent="1">
+          <mxGeometry x="380" y="180" width="260" height="100" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="t_official" value="sys_official&#xa;PK id&#xa;UK name&#xa;title, department, prompt, model_config(json), skills(json)" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#d6b656;fillColor=#fff2cc;" vertex="1" parent="1">
+          <mxGeometry x="720" y="60" width="320" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_model" value="sys_model&#xa;PK id&#xa;UK (provider,name)&#xa;config(json), enabled" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#d6b656;fillColor=#fff2cc;" vertex="1" parent="1">
+          <mxGeometry x="720" y="210" width="320" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_skill" value="sys_skill&#xa;PK id&#xa;UK name&#xa;script, enabled" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#d6b656;fillColor=#fff2cc;" vertex="1" parent="1">
+          <mxGeometry x="720" y="330" width="320" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_tool" value="sys_tool&#xa;PK id&#xa;UK name&#xa;config(json), enabled" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#d6b656;fillColor=#fff2cc;" vertex="1" parent="1">
+          <mxGeometry x="720" y="430" width="320" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_mcp" value="sys_mcp&#xa;PK id&#xa;UK name&#xa;config(json), enabled" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#d6b656;fillColor=#fff2cc;" vertex="1" parent="1">
+          <mxGeometry x="720" y="530" width="320" height="80" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="t_channel" value="sys_channel&#xa;PK id&#xa;UK name&#xa;config(json), enabled" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#b85450;fillColor=#f8cecc;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="60" width="260" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_config" value="sys_config&#xa;PK id&#xa;UK key_name&#xa;value(text)" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#b85450;fillColor=#f8cecc;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="170" width="260" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_token" value="sys_token_usage&#xa;PK id&#xa;UK (date,model)&#xa;tokens" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#b85450;fillColor=#f8cecc;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="280" width="260" height="80" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="r1" value="1:N" style="endArrow=block;html=1;strokeWidth=2;" edge="1" parent="1" source="t_task" target="t_task_log">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="r2" value="1:1" style="endArrow=block;html=1;strokeWidth=2;dashed=1;" edge="1" parent="1" source="t_task" target="t_memorial">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="r3" value="1:N" style="endArrow=block;html=1;strokeWidth=2;" edge="1" parent="1" source="t_conv" target="t_msg">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
+
