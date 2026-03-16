@@ -20,6 +20,10 @@ public class OfficialPO {
     private String prompt;
     @TableField(typeHandler = JacksonTypeHandler.class)
     private Map<String, Object> modelConfig;
+    
+    @TableField(typeHandler = JacksonTypeHandler.class)
+    private java.util.List<String> skills;
+
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 }

@@ -75,6 +75,7 @@ CREATE TABLE IF NOT EXISTS `sys_official` (
     `bio` TEXT COMMENT 'Biography / Persona',
     `prompt` TEXT COMMENT 'System Prompt',
     `model_config` JSON DEFAULT NULL COMMENT 'Model Configuration',
+    `skills` JSON DEFAULT NULL COMMENT 'Skills List',
     `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT 'Creation Time',
     `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Update Time',
     PRIMARY KEY (`id`),
