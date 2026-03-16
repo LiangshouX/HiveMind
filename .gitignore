@@ -29,4 +29,5 @@ replay_pid*
 .mvn
 */.mvn
 */target
+example
 
