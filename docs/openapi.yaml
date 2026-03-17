@@ -24,12 +24,17 @@ tags:
   - name: Models
   - name: Officials
   - name: Morning
+  - name: Channels
+  - name: EdictTemplates
+  - name: CourtRules
   - name: Security
+  - name: AuditLogs
   - name: EnvVars
   - name: TokenUsage
   - name: Jobs
   - name: Memorials
   - name: Workspace
+  - name: WebSocket
 
 security:
   - bearerAuth: []
@@ -212,6 +217,94 @@ components:
       type: object
       additionalProperties: true
 
+    Channel:
+      type: object
+      required: [name, enabled]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        enabled: { type: boolean }
+        config: { type: object, additionalProperties: true }
+
+    EdictTemplate:
+      type: object
+      required: [templateKey, name, category, enabled]
+      properties:
+        id: { type: integer }
+        templateKey: { type: string }
+        name: { type: string }
+        category: { type: string }
+        paramSchema: { type: object, additionalProperties: true }
+        promptTemplate: { type: string }
+        estimateTokens: { type: integer }
+        estimateCostCny: { type: number }
+        enabled: { type: boolean }
+        version: { type: integer }
+
+    CourtRule:
+      type: object
+      required: [ruleKey, name, enabled, content]
+      properties:
+        id: { type: integer }
+        ruleKey: { type: string }
+        name: { type: string }
+        enabled: { type: boolean }
+        content: { type: string }
+
+    AuditLog:
+      type: object
+      properties:
+        id: { type: integer }
+        traceId: { type: string }
+        actorUserId: { type: integer, nullable: true }
+        action: { type: string }
+        resource: { type: string }
+        payload: { type: object, additionalProperties: true }
+        result: { type: string }
+        createTime: { type: string, format: date-time }
+
+    Memorial:
+      type: object
+      required: [taskId, title, contentMd, status]
+      properties:
+        id: { type: integer }
+        taskId: { type: string }
+        title: { type: string }
+        contentMd: { type: string }
+        status: { type: string, enum: [DRAFT, SUBMITTED, APPROVED, REJECTED] }
+        updatedAt: { type: string, format: date-time, nullable: true }
+
+    Job:
+      type: object
+      required: [jobKey, name, type, enabled]
+      properties:
+        id: { type: integer }
+        jobKey: { type: string }
+        name: { type: string }
+        type: { type: string, enum: [CRON, ONCE, EVENT] }
+        cron: { type: string, nullable: true }
+        payload: { type: object, additionalProperties: true }
+        enabled: { type: boolean }
+
+    WorkspaceFile:
+      type: object
+      required: [path, content, etag, version]
+      properties:
+        path: { type: string }
+        content: { type: string }
+        etag: { type: string }
+        version: { type: integer }
+
+    WsEvent:
+      type: object
+      required: [type, topic, traceId, ts, data]
+      properties:
+        type: { type: string, enum: [event] }
+        topic: { type: string }
+        traceId: { type: string }
+        ts: { type: string, format: date-time }
+        data: { type: object, additionalProperties: true }
+
   responses:
     Unauthorized:
       description: Unauthorized
@@ -219,6 +312,36 @@ components:
       description: Forbidden
 
 paths:
+  /ws:
+    get:
+      tags: [WebSocket]
+      operationId: wsAll
+      description: WebSocket endpoint. OpenAPI 不原生支持 WS，使用 x-websocket 扩展描述。
+      security:
+        - bearerAuth: []
+      x-websocket:
+        messageSchema: { $ref: "#/components/schemas/WsEvent" }
+      responses:
+        "101":
+          description: Switching Protocols
+
+  /ws/task/{taskId}:
+    get:
+      tags: [WebSocket]
+      operationId: wsTask
+      description: WebSocket endpoint for a single task.
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema: { type: string }
+      security:
+        - bearerAuth: []
+      x-websocket:
+        messageSchema: { $ref: "#/components/schemas/WsEvent" }
+      responses:
+        "101":
+          description: Switching Protocols
   /health:
     get:
       tags: [Dashboard]
@@ -856,3 +979,376 @@ paths:
         "200":
           description: OK
 
+  /api/workspace/files/{path}:
+    get:
+      tags: [Workspace]
+      operationId: getWorkspaceFile
+      parameters:
+        - name: path
+          in: path
+          required: true
+          description: URL-encoded file path (slashes must be encoded).
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Result"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/WorkspaceFile" }
+    put:
+      tags: [Workspace]
+      operationId: putWorkspaceFile
+      parameters:
+        - name: path
+          in: path
+          required: true
+          description: URL-encoded file path (slashes must be encoded).
+          schema: { type: string }
+        - name: If-Match
+          in: header
+          required: false
+          schema: { type: string }
+          description: ETag concurrency control
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content: { type: string }
+      responses:
+        "200":
+          description: OK
+
+  /api/court-rules:
+    get:
+      tags: [CourtRules]
+      operationId: listCourtRules
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Result"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/CourtRule" }
+    post:
+      tags: [CourtRules]
+      operationId: upsertCourtRule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CourtRule" }
+      responses:
+        "200":
+          description: OK
+
+  /api/court-rules/{ruleKey}/toggle:
+    post:
+      tags: [CourtRules]
+      operationId: toggleCourtRule
+      parameters:
+        - name: ruleKey
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [enabled]
+              properties:
+                enabled: { type: boolean }
+      responses:
+        "200":
+          description: OK
+
+  /api/edict-templates:
+    get:
+      tags: [EdictTemplates]
+      operationId: listEdictTemplates
+      parameters:
+        - name: category
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Result"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/EdictTemplate" }
+    post:
+      tags: [EdictTemplates]
+      operationId: createEdictTemplate
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: false
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/EdictTemplate" }
+      responses:
+        "200":
+          description: OK
+
+  /api/edict-templates/{templateKey}/versions:
+    post:
+      tags: [EdictTemplates]
+      operationId: createEdictTemplateVersion
+      parameters:
+        - name: templateKey
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [paramSchema, promptTemplate]
+              properties:
+                paramSchema: { type: object, additionalProperties: true }
+                promptTemplate: { type: string }
+                changelog: { type: string }
+      responses:
+        "200":
+          description: OK
+
+  /api/edict-templates/{templateKey}/activate:
+    post:
+      tags: [EdictTemplates]
+      operationId: activateEdictTemplateVersion
+      parameters:
+        - name: templateKey
+          in: path
+          required: true
+          schema: { type: string }
+        - name: version
+          in: query
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+
+  /api/channels:
+    get:
+      tags: [Channels]
+      operationId: listChannels
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Result"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/Channel" }
+    post:
+      tags: [Channels]
+      operationId: upsertChannel
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: false
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Channel" }
+      responses:
+        "200":
+          description: OK
+
+  /api/channels/{name}/toggle:
+    post:
+      tags: [Channels]
+      operationId: toggleChannel
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [enabled]
+              properties:
+                enabled: { type: boolean }
+      responses:
+        "200":
+          description: OK
+
+  /api/channels/{name}/test:
+    post:
+      tags: [Channels]
+      operationId: testChannel
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+
+  /api/audit-logs:
+    get:
+      tags: [AuditLogs]
+      operationId: listAuditLogs
+      parameters:
+        - name: traceId
+          in: query
+          required: false
+          schema: { type: string }
+        - name: actorUserId
+          in: query
+          required: false
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Result"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/AuditLog" }
+
+  /api/token-usage/by-model:
+    get:
+      tags: [TokenUsage]
+      operationId: tokenUsageByModel
+      parameters:
+        - name: from
+          in: query
+          required: false
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          required: false
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: OK
+
+  /api/jobs/{jobKey}/toggle:
+    post:
+      tags: [Jobs]
+      operationId: toggleJob
+      parameters:
+        - name: jobKey
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [enabled]
+              properties:
+                enabled: { type: boolean }
+      responses:
+        "200":
+          description: OK
+
+  /api/jobs/{jobKey}/runs:
+    get:
+      tags: [Jobs]
+      operationId: listJobRuns
+      parameters:
+        - name: jobKey
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+
+  /api/memorials/{taskId}:
+    get:
+      tags: [Memorials]
+      operationId: getMemorial
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Result"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/Memorial" }
+
+  /api/memorials/{taskId}/generate:
+    post:
+      tags: [Memorials]
+      operationId: generateMemorial
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+
+  /api/memorials/{taskId}/submit:
+    post:
+      tags: [Memorials]
+      operationId: submitMemorial
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK

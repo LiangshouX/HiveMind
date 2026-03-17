@@ -27,7 +27,7 @@ function New-DiagramPng {
     $y += 28
   }
 
-  $g.DrawString('对应 .drawio 为可编辑原图，可用 draw.io 导出高清 PNG。', $bodyFont, [System.Drawing.Brushes]::Gray, 40, ($h - 70))
+  $g.DrawString('Editable source: .drawio (export high-res PNG via draw.io).', $bodyFont, [System.Drawing.Brushes]::Gray, 40, ($h - 70))
 
   $dir = Split-Path -Parent $Path
   if (!(Test-Path $dir)) {
@@ -39,22 +39,21 @@ function New-DiagramPng {
   $bmp.Dispose()
 }
 
-New-DiagramPng -Path 'd:\Code\Java\TangDynasty\docs\diagrams\system_architecture.png' -Title '系统架构图（预览）' -Lines @(
-  'Website → Spring Boot Backend → MySQL/Redis',
-  'Backend 通过 Adapter 零改动集成 CoPaw 与 Edict',
-  'Kafka 作为可选领域事件总线，Redis Pub/Sub 用于 WS 推送'
+New-DiagramPng -Path 'd:\Code\Java\TangDynasty\docs\diagrams\system_architecture.png' -Title 'System Architecture (Preview)' -Lines @(
+  'Website -> Spring Boot Backend -> MySQL/Redis',
+  'Backend integrates CoPaw and Edict via adapters (no changes).',
+  'Kafka optional for domain events; Redis Pub/Sub for WS push.'
 )
 
-New-DiagramPng -Path 'd:\Code\Java\TangDynasty\docs\diagrams\sequence_mainflow.png' -Title '主流程时序图（预览）' -Lines @(
-  '1) 用户下旨/聊天',
-  '2) 后端落库并发布任务事件',
-  '3) 编排器派发 → 调用 CoPaw/OpenClaw',
-  '4) 输出 thoughts/heartbeat → WS 推送前端'
+New-DiagramPng -Path 'd:\Code\Java\TangDynasty\docs\diagrams\sequence_mainflow.png' -Title 'Main Flow Sequence (Preview)' -Lines @(
+  '1) User creates edict or chats',
+  '2) Backend persists and publishes task events',
+  '3) Orchestrator dispatches and calls CoPaw/OpenClaw',
+  '4) Thoughts/heartbeat -> WS push to UI'
 )
 
-New-DiagramPng -Path 'd:\Code\Java\TangDynasty\docs\diagrams\er.png' -Title 'ER 图（预览）' -Lines @(
-  '核心：sys_task ↔ sys_task_log ↔ sys_memorial',
-  '聊天：sys_conversation ↔ sys_message',
-  '配置：sys_official/sys_model/sys_skill/sys_tool/sys_mcp/sys_channel/sys_config/sys_token_usage'
+New-DiagramPng -Path 'd:\Code\Java\TangDynasty\docs\diagrams\er.png' -Title 'ER Diagram (Preview)' -Lines @(
+  'Core: sys_task <-> sys_task_log <-> sys_memorial',
+  'Chat: sys_conversation <-> sys_message',
+  'Config: sys_official/sys_model/sys_skill/sys_tool/sys_mcp/sys_channel/sys_config/sys_token_usage'
 )
-
