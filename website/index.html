@@ -1,10 +1,22 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>website</title>
+    <title>Tang Dynasty AI Assistant</title>
+    <script>
+      // 预先执行脚本，避免闪烁
+      (function() {
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme) {
+          document.documentElement.setAttribute('data-theme', savedTheme);
+        } else {
+          const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

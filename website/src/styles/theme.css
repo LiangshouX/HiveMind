@@ -1,0 +1,107 @@
+:root, [data-theme="light"] {
+  /* 明亮主题 (Light Theme) */
+  /* 主色 (Primary) - 降低饱和度，提升明度，避免刺眼 */
+  --td-primary: #a3222e; /* 绯红 HSL(354, 65%, 39%) */
+  --td-primary-hover: #851a24;
+  --td-primary-active: #66141c;
+  --td-primary-bg: rgba(163, 34, 46, 0.08);
+
+  /* 功能色 (Functional / Highlight) */
+  --td-highlight: #b8912d; /* 琉璃黄 HSL(43, 61%, 45%) */
+  --td-highlight-hover: #997824;
+  --td-highlight-bg: rgba(184, 145, 45, 0.1);
+
+  /* 中性色 / 背景 (Neutral / Background) - 提升整体明度，区分层级 */
+  --td-bg-base: #f0f2f5; /* 整体背景 */
+  --td-bg-container: #ffffff; /* 卡片/容器背景 */
+  --td-bg-elevated: #ffffff; /* 悬浮/弹窗背景 */
+  --td-bg-transparent: rgba(255, 255, 255, 0.85);
+
+  /* 文本 (Text) - 确保高对比度 */
+  --td-text-base: #1f2024; /* 对比度 > 7:1 */
+  --td-text-secondary: #5c5f66; /* 对比度 > 4.5:1 */
+  --td-text-tertiary: #8a8d93;
+  --td-text-inverse: #ffffff; /* 反色文本 */
+  
+  /* 边框 (Border) */
+  --td-border-color: rgba(184, 145, 45, 0.3);
+  --td-border-light: rgba(184, 145, 45, 0.15);
+
+  /* 阴影 (Shadow) */
+  --td-shadow-base: 0 4px 12px rgba(0, 0, 0, 0.05);
+  --td-shadow-elevated: 0 8px 24px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(184, 145, 45, 0.15);
+  --td-shadow-primary: 0 4px 12px rgba(163, 34, 46, 0.2);
+
+  /* 杂项 (Misc) */
+  --td-scrollbar-track: #f0f2f5;
+  --td-scrollbar-thumb: #c0c0c0;
+  --td-scrollbar-thumb-hover: #b8912d;
+  --td-pattern-color: rgba(184, 145, 45, 0.05);
+  
+  /* 交互反馈 (Interactive) - >15% 明度差异 */
+  --td-item-hover-bg: rgba(184, 145, 45, 0.08);
+  --td-item-selected-bg: rgba(163, 34, 46, 0.1);
+  --td-input-bg: #ffffff;
+  
+  --td-msg-user-bg: linear-gradient(135deg, #a3222e 0%, #851a24 100%);
+  --td-msg-user-text: #ffffff;
+  --td-msg-ai-bg: #ffffff;
+  --td-msg-ai-border: rgba(184, 145, 45, 0.3);
+  --td-chat-panel-bg: rgba(255, 255, 255, 0.8);
+  --td-header-bg: rgba(240, 242, 245, 0.85);
+  --td-sider-bg: #ffffff;
+}
+
+[data-theme="dark"] {
+  /* 暗黑主题 (Dark Theme) */
+  /* 主色 (Primary) - 稍微降低饱和度以避免在暗背景上过于刺眼 */
+  --td-primary: #b32934; /* 绯红 HSL(355, 63%, 43%) */
+  --td-primary-hover: #d1323f;
+  --td-primary-active: #8f212a;
+  --td-primary-bg: rgba(179, 41, 52, 0.15);
+
+  /* 功能色 (Functional / Highlight) */
+  --td-highlight: #c7a434; /* 琉璃黄 HSL(43, 59%, 49%) */
+  --td-highlight-hover: #e0bb3f;
+  --td-highlight-bg: rgba(199, 164, 52, 0.1);
+
+  /* 中性色 / 背景 (Neutral / Background) - 提升暗部明度 5-10% */
+  --td-bg-base: #16171a; /* 整体背景 HSL(225, 8%, 9%) */
+  --td-bg-container: #1e1f24; /* 卡片背景 HSL(225, 9%, 13%) */
+  --td-bg-elevated: #282a30; /* 悬浮背景 HSL(225, 9%, 17%) */
+  --td-bg-transparent: rgba(22, 23, 26, 0.85);
+
+  /* 文本 (Text) */
+  --td-text-base: #ececec; /* 对比度 > 7:1 */
+  --td-text-secondary: #a8aab0; /* 对比度 > 4.5:1 */
+  --td-text-tertiary: #75777d;
+  --td-text-inverse: #16171a;
+  
+  /* 边框 (Border) */
+  --td-border-color: rgba(199, 164, 52, 0.2);
+  --td-border-light: rgba(199, 164, 52, 0.08);
+
+  /* 阴影 (Shadow) */
+  --td-shadow-base: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --td-shadow-elevated: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(199, 164, 52, 0.15);
+  --td-shadow-primary: 0 4px 12px rgba(179, 41, 52, 0.3);
+
+  /* 杂项 (Misc) */
+  --td-scrollbar-track: #1e1f24;
+  --td-scrollbar-thumb: #444752;
+  --td-scrollbar-thumb-hover: #c7a434;
+  --td-pattern-color: rgba(199, 164, 52, 0.03);
+  
+  /* 交互反馈 (Interactive) */
+  --td-item-hover-bg: rgba(199, 164, 52, 0.08);
+  --td-item-selected-bg: rgba(179, 41, 52, 0.15);
+  --td-input-bg: #16171a;
+  
+  --td-msg-user-bg: linear-gradient(135deg, #8f212a 0%, #6b1820 100%);
+  --td-msg-user-text: #ffffff;
+  --td-msg-ai-bg: rgba(40, 42, 48, 0.8);
+  --td-msg-ai-border: rgba(199, 164, 52, 0.2);
+  --td-chat-panel-bg: rgba(30, 31, 36, 0.6);
+  --td-header-bg: rgba(22, 23, 26, 0.8);
+  --td-sider-bg: #16171a;
+}

@@ -13,13 +13,17 @@ import {
   ProfileOutlined,
   MessageOutlined,
   BookOutlined,
-  ApiOutlined
+  ApiOutlined,
+  MenuUnfoldOutlined,
+  MenuFoldOutlined
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
-import { Layout, Menu, theme } from 'antd';
+import { Layout, Menu, theme, Button, Typography, Space } from 'antd';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import ThemeToggle from '../components/ThemeToggle';
 
-const { Content, Footer, Sider } = Layout;
+const { Header, Content, Footer, Sider } = Layout;
+const { Title, Text } = Typography;
 
 type MenuItem = Required<MenuProps>['items'][number];
 
@@ -66,7 +70,7 @@ const items: MenuItem[] = [
 const MainLayout: React.FC = () => {
   const [collapsed, setCollapsed] = useState(false);
   const {
-    token: { colorBgContainer, borderRadiusLG },
+    token: { borderRadiusLG },
   } = theme.useToken();
   const navigate = useNavigate();
   const location = useLocation();
@@ -75,52 +79,113 @@ const MainLayout: React.FC = () => {
     navigate(e.key);
   };
 
-  // Determine selected keys based on current path
   const selectedKeys = [location.pathname];
-  // Determine open keys based on current path
   const defaultOpenKeys = items
     .filter(item => item && 'children' in item && item.children?.some((child: any) => child.key === location.pathname))
     .map(item => item?.key as string);
 
   return (
-    <Layout style={{ height: '100vh' }}>
+    <Layout style={{ height: '100vh' }} className="layout-pattern">
       <Sider 
+        trigger={null}
         collapsible 
         collapsed={collapsed} 
-        onCollapse={(value) => setCollapsed(value)}
-        style={{ overflow: 'auto', height: '100vh', position: 'fixed', left: 0, top: 0, bottom: 0 }}
+        width={240}
+        style={{ 
+          overflow: 'auto', 
+          height: '100vh', 
+          position: 'fixed', 
+          left: 0, 
+          top: 0, 
+          bottom: 0,
+          borderRight: '1px solid var(--td-border-light)',
+          boxShadow: 'var(--td-shadow-elevated)',
+          zIndex: 10,
+          background: 'var(--td-sider-bg)'
+        }}
       >
-        <div style={{ height: 32, margin: 16, background: 'rgba(255, 255, 255, 0.2)', textAlign: 'center', color: 'white', lineHeight: '32px', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden' }}>
-          {collapsed ? 'TD' : 'Tang Dynasty'}
+        <div style={{ 
+          height: 80, 
+          margin: '16px', 
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderBottom: '1px solid var(--td-border-light)',
+          paddingBottom: '16px'
+        }}>
+          <Title level={collapsed ? 3 : 2} className="imperial-heading" style={{ margin: 0, color: 'var(--td-primary)', textShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
+            {collapsed ? '唐' : '大唐'}
+          </Title>
+          {!collapsed && (
+            <Text style={{ color: 'var(--td-highlight)', fontSize: '12px', letterSpacing: '4px', marginTop: '4px' }}>
+              TANG DYNASTY
+            </Text>
+          )}
         </div>
         <Menu 
-          theme="dark" 
+          mode="inline" 
           defaultSelectedKeys={selectedKeys} 
           defaultOpenKeys={defaultOpenKeys}
-          mode="inline" 
           items={items} 
           onClick={onClick}
           selectedKeys={selectedKeys}
-          style={{ paddingBottom: 48 }}
+          style={{ 
+            borderRight: 0,
+            padding: '0 8px 48px 8px',
+            background: 'transparent'
+          }}
         />
       </Sider>
-      <Layout style={{ marginLeft: collapsed ? 80 : 200, transition: 'all 0.2s' }}>
-        {/* <Header style={{ padding: 0, background: colorBgContainer }} /> */}
-        <Content style={{ margin: '16px 16px 0', overflow: 'initial' }}>
-          {/* Breadcrumb could go here */}
+      <Layout style={{ marginLeft: collapsed ? 80 : 240, transition: 'all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1)', background: 'transparent' }}>
+        <Header style={{ 
+          padding: 0, 
+          background: 'var(--td-header-bg)', 
+          backdropFilter: 'blur(8px)',
+          borderBottom: '1px solid var(--td-border-light)',
+          display: 'flex',
+          alignItems: 'center',
+          position: 'sticky',
+          top: 0,
+          zIndex: 9
+        }}>
+          <Button
+            type="text"
+            icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+            onClick={() => setCollapsed(!collapsed)}
+            style={{
+              fontSize: '16px',
+              width: 64,
+              height: 64,
+              color: 'var(--td-highlight)'
+            }}
+          />
+          <div style={{ flex: 1 }} />
+          <Space style={{ paddingRight: 24 }} size="large">
+            <ThemeToggle />
+            <Space>
+              <Text style={{ color: 'var(--td-text-secondary)' }}>当前朝代：</Text>
+              <Text strong style={{ color: 'var(--td-highlight)' }}>贞观</Text>
+            </Space>
+          </Space>
+        </Header>
+        <Content style={{ margin: '24px 24px 0', overflow: 'initial' }}>
           <div
             style={{
-              padding: 24,
-              minHeight: 'calc(100vh - 110px)',
-              background: colorBgContainer,
+              minHeight: 'calc(100vh - 150px)',
+              background: 'var(--td-bg-container)',
               borderRadius: borderRadiusLG,
+              border: '1px solid var(--td-border-light)',
+              boxShadow: 'var(--td-shadow-base)',
+              overflow: 'hidden',
+              position: 'relative'
             }}
           >
             <Outlet />
           </div>
         </Content>
-        <Footer style={{ textAlign: 'center' }}>
-          Tang Dynasty AI Assistant ©{new Date().getFullYear()} Created by Agents
+        <Footer style={{ textAlign: 'center', background: 'transparent', borderTop: 'none' }}>
+          <Text style={{ color: 'var(--td-text-tertiary)' }}>Tang Dynasty AI Assistant ©{new Date().getFullYear()} · 三省六部制</Text>
         </Footer>
       </Layout>
     </Layout>

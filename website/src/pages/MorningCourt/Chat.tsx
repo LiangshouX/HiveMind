@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
-import { Layout, List, Input, Button, Avatar, Typography, Space } from 'antd';
+import React, { useState, useEffect, useRef } from 'react';
+import { Layout, Input, Button, Avatar, Typography, Space, Tooltip, Badge } from 'antd';
 import { 
   PlusOutlined, 
   SendOutlined, 
   UserOutlined, 
-  RobotOutlined, 
-  MoreOutlined 
+  MoreOutlined,
+  ThunderboltOutlined,
+  AudioOutlined,
+  PaperClipOutlined,
+  HistoryOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 
@@ -14,18 +17,15 @@ const { Text, Title } = Typography;
 
 // Mock Data
 const MOCK_CHATS = [
-  { id: '1', title: 'AI 早报', lastMsg: '今日科技新闻汇总...', time: '10:00', active: true },
-  { id: '2', title: '拉取早报', lastMsg: '正在获取...', time: 'Yesterday', active: false },
-  { id: '3', title: '使用MCP工具接一下', lastMsg: '好的，正在尝试...', time: 'Yesterday', active: false },
-  { id: '4', title: 'hi', lastMsg: 'Hello!', time: 'Yesterday', active: false },
-  { id: '5', title: '@QH', lastMsg: '有什么可以帮您？', time: 'Yesterday', active: false },
+  { id: '1', title: '批阅奏折：AI 早报', lastMsg: '今日科技新闻汇总...', time: '10:00', active: true },
+  { id: '2', title: '传旨：拉取早报', lastMsg: '正在获取...', time: '昨日', active: false },
+  { id: '3', title: '调用MCP工具', lastMsg: '好的，正在尝试...', time: '昨日', active: false },
 ];
 
 const MOCK_MESSAGES = [
-  { id: '1', role: 'user', content: 'hi', time: '2026-03-12 10:00:00' },
-  { id: '2', role: 'ai', content: 'Hello! How can I help you today?', time: '2026-03-12 10:00:05' },
-  { id: '3', role: 'user', content: 'AI 早报', time: '2026-03-12 10:01:00' },
-  { id: '4', role: 'ai', content: '很抱歉，今日无法直接访问原始指定的两个新闻源 (InfoQ 和 ACM TechNews)，它们都返回了错误或访问被阻止。不过，我通过...', time: '2026-03-12 10:01:10' },
+  { id: '1', role: 'user', content: '朕欲知今日天下大势，速速呈上AI早报。', time: '2026-03-12 10:00:00' },
+  { id: '2', role: 'ai', department: '中书省', content: '臣中书令接旨。已分析陛下需求，现调度【户部】拉取数据，【礼部】排版...', time: '2026-03-12 10:00:05' },
+  { id: '3', role: 'ai', department: '尚书省', content: '臣尚书仆射奉命执行：\n\n1. 户部已获取 InfoQ 最新动态。\n2. 礼部已完成格式化整理。\n\n呈上今日早报：\n- GPT-5 传闻将于下月发布\n- 芯片产能突破...', time: '2026-03-12 10:01:10' },
 ];
 
 const Chat: React.FC = () => {
@@ -33,6 +33,16 @@ const Chat: React.FC = () => {
   const [messages, setMessages] = useState(MOCK_MESSAGES);
   const [chats, setChats] = useState(MOCK_CHATS);
   const [activeChatId, setActiveChatId] = useState('1');
+  const [isTyping, setIsTyping] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isTyping]);
 
   const handleSend = () => {
     if (!inputValue.trim()) return;
@@ -44,8 +54,8 @@ const Chat: React.FC = () => {
     };
     setMessages([...messages, newMsg]);
     setInputValue('');
+    setIsTyping(true);
     
-    // Update chat list last message
     setChats(prevChats => 
       prevChats.map(chat => 
         chat.id === activeChatId 
@@ -59,12 +69,13 @@ const Chat: React.FC = () => {
       const aiMsg = {
         id: (Date.now() + 1).toString(),
         role: 'ai',
-        content: `I received: ${inputValue}`,
+        department: '丞相',
+        content: `臣接旨。关于“${inputValue}”，臣以为...`,
         time: dayjs().format('YYYY-MM-DD HH:mm:ss'),
       };
       setMessages(prev => [...prev, aiMsg]);
+      setIsTyping(false);
       
-      // Update chat list last message again with AI reply
       setChats(prevChats => 
         prevChats.map(chat => 
           chat.id === activeChatId 
@@ -72,117 +83,244 @@ const Chat: React.FC = () => {
             : chat
         )
       );
-    }, 1000);
-  };
-
-  const handleChatSelect = (chatId: string) => {
-    setActiveChatId(chatId);
-    setChats(prevChats => 
-      prevChats.map(chat => ({
-        ...chat,
-        active: chat.id === chatId
-      }))
-    );
-    // In a real app, we would fetch messages for the selected chat here
-    // For now, we'll just clear the input
-    setInputValue('');
-  };
-
-  const handleNewChat = () => {
-    const newChatId = Date.now().toString();
-    const newChat = {
-      id: newChatId,
-      title: 'New Conversation',
-      lastMsg: '...',
-      time: dayjs().format('HH:mm'),
-      active: true
-    };
-    
-    setChats(prevChats => [
-      newChat,
-      ...prevChats.map(chat => ({ ...chat, active: false }))
-    ]);
-    setActiveChatId(newChatId);
-    setMessages([]); // Clear messages for new chat
+    }, 1500);
   };
 
   return (
-    <Layout style={{ height: 'calc(100vh - 100px)', background: '#fff' }}>
-      <Sider width={280} theme="light" style={{ borderRight: '1px solid #f0f0f0' }}>
-        <div style={{ padding: '16px' }}>
-          <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Text strong>Work with CoPaw</Text>
-            <Button type="text" icon={<MoreOutlined />} />
-          </div>
-          <Button type="primary" block icon={<PlusOutlined />} onClick={handleNewChat} style={{ marginBottom: 16, borderRadius: 20 }}>
-            New Chat
+    <Layout style={{ height: '100%', background: 'transparent', display: 'flex', flexDirection: 'row', gap: '24px' }}>
+      {/* Session List */}
+      <Sider 
+        width={300} 
+        style={{ 
+          background: 'var(--td-bg-elevated)', 
+          borderRadius: '12px',
+          border: '1px solid var(--td-border-light)',
+          boxShadow: 'var(--td-shadow-base)',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column'
+        }}
+      >
+        <div style={{ padding: '20px', borderBottom: '1px solid var(--td-border-light)' }}>
+          <Button 
+            type="primary" 
+            block 
+            icon={<PlusOutlined />} 
+            onClick={() => {}} 
+            style={{ 
+              height: '44px', 
+              borderRadius: '8px', 
+              background: 'var(--td-primary)',
+              border: 'none',
+              boxShadow: 'var(--td-shadow-primary)',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              letterSpacing: '2px',
+              color: 'var(--td-text-inverse)'
+            }}
+          >
+            宣召入朝
           </Button>
-          <List
-            itemLayout="horizontal"
-            dataSource={chats}
-            renderItem={(item) => (
-              <List.Item 
-                onClick={() => handleChatSelect(item.id)}
-                style={{ 
-                  padding: '12px', 
-                  cursor: 'pointer',
-                  background: item.active ? '#e6f7ff' : 'transparent',
-                  borderRadius: '8px',
-                  marginBottom: '4px'
-                }}
-              >
-                <List.Item.Meta
-                  title={<Text strong={item.active}>{item.title}</Text>}
-                  description={<Text type="secondary" ellipsis style={{ fontSize: 12 }}>{item.lastMsg}</Text>}
-                />
-                <div style={{ fontSize: 10, color: '#999' }}>{item.time}</div>
-              </List.Item>
-            )}
-          />
         </div>
-      </Sider>
-      
-      <Content style={{ display: 'flex', flexDirection: 'column' }}>
-        <div style={{ padding: '16px', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Title level={4} style={{ margin: 0 }}>{chats.find(c => c.active)?.title || 'Chat'}</Title>
-          <Space>
-             <Button>更新日志</Button>
-             <Button>文档</Button>
-          </Space>
-        </div>
-        
-        <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
-          {messages.map((msg) => (
-            <div key={msg.id} style={{ marginBottom: 24, display: 'flex', flexDirection: 'column', alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
-              <div style={{ display: 'flex', flexDirection: msg.role === 'user' ? 'row-reverse' : 'row', gap: 12, maxWidth: '80%' }}>
-                <Avatar icon={msg.role === 'user' ? <UserOutlined /> : <RobotOutlined />} style={{ backgroundColor: msg.role === 'user' ? '#87d068' : '#1677ff' }} />
-                <div style={{ 
-                  background: msg.role === 'user' ? '#95de64' : '#f0f0f0', 
-                  padding: '12px 16px', 
-                  borderRadius: '12px',
-                  borderTopRightRadius: msg.role === 'user' ? 2 : 12,
-                  borderTopLeftRadius: msg.role === 'ai' ? 2 : 12,
-                }}>
-                  <Text>{msg.content}</Text>
-                </div>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '12px' }}>
+          <Text type="secondary" style={{ fontSize: '12px', padding: '0 8px 8px', display: 'block', color: 'var(--td-text-tertiary)' }}>近期朝会</Text>
+          {chats.map(chat => (
+            <div
+              key={chat.id}
+              onClick={() => setActiveChatId(chat.id)}
+              style={{
+                padding: '16px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                marginBottom: '8px',
+                background: chat.active ? 'var(--td-item-selected-bg)' : 'transparent',
+                border: `1px solid ${chat.active ? 'var(--td-border-color)' : 'transparent'}`,
+                transition: 'all 0.3s ease',
+                position: 'relative',
+                overflow: 'hidden'
+              }}
+              className="chat-session-item"
+            >
+              {chat.active && (
+                <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '3px', background: 'var(--td-highlight)' }} />
+              )}
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <Text strong style={{ color: chat.active ? 'var(--td-highlight)' : 'var(--td-text-base)', fontSize: '14px' }} ellipsis>
+                  {chat.title}
+                </Text>
+                <Text type="secondary" style={{ fontSize: '12px', color: 'var(--td-text-tertiary)' }}>{chat.time}</Text>
               </div>
-              <Text type="secondary" style={{ fontSize: 10, marginTop: 4, marginInline: 44 }}>{msg.time}</Text>
+              <Text type="secondary" style={{ fontSize: '13px', color: 'var(--td-text-secondary)' }} ellipsis>
+                {chat.lastMsg}
+              </Text>
             </div>
           ))}
         </div>
+      </Sider>
+      
+      {/* Chat Area */}
+      <Content style={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        background: 'var(--td-chat-panel-bg)', 
+        borderRadius: '12px',
+        border: '1px solid var(--td-border-light)',
+        backdropFilter: 'blur(10px)',
+        boxShadow: 'var(--td-shadow-base)'
+      }}>
+        {/* Chat Header */}
+        <div style={{ 
+          padding: '20px 24px', 
+          borderBottom: '1px solid var(--td-border-light)', 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          background: 'var(--td-bg-elevated)',
+          borderTopLeftRadius: '12px',
+          borderTopRightRadius: '12px',
+        }}>
+          <div>
+            <Title level={4} style={{ margin: 0, color: 'var(--td-text-base)' }} className="imperial-heading">
+              {chats.find(c => c.active)?.title || '未命名朝会'}
+            </Title>
+            <Space style={{ marginTop: '4px' }}>
+              <Badge status="processing" color="var(--td-highlight)" />
+              <Text type="secondary" style={{ fontSize: '12px', color: 'var(--td-text-secondary)' }}>群臣候旨中</Text>
+            </Space>
+          </div>
+          <Space>
+             <Tooltip title="查看旨意流转">
+               <Button type="text" icon={<HistoryOutlined style={{ color: 'var(--td-highlight)' }} />} />
+             </Tooltip>
+             <Button type="text" icon={<MoreOutlined style={{ color: 'var(--td-text-tertiary)' }} />} />
+          </Space>
+        </div>
+        
+        {/* Messages */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '32px 24px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+            <Text type="secondary" style={{ fontSize: '12px', background: 'var(--td-bg-base)', padding: '4px 12px', borderRadius: '12px', color: 'var(--td-text-secondary)' }}>
+              贞观二十年 三月十二日
+            </Text>
+          </div>
+          
+          {messages.map((msg) => (
+            <div 
+              key={msg.id} 
+              style={{ 
+                marginBottom: '32px', 
+                display: 'flex', 
+                flexDirection: 'column', 
+                alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start' 
+              }}
+            >
+              <div style={{ 
+                display: 'flex', 
+                flexDirection: msg.role === 'user' ? 'row-reverse' : 'row', 
+                gap: '16px', 
+                maxWidth: '85%' 
+              }}>
+                {/* Avatar */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                  <Avatar 
+                    size={48}
+                    icon={msg.role === 'user' ? <UserOutlined /> : <span style={{ fontFamily: 'STZhongsong', fontWeight: 'bold' }}>{msg.department?.[0] || '臣'}</span>} 
+                    style={{ 
+                      backgroundColor: msg.role === 'user' ? 'var(--td-primary)' : 'var(--td-bg-container)',
+                      border: `2px solid ${msg.role === 'user' ? 'var(--td-primary-hover)' : 'var(--td-highlight)'}`,
+                      boxShadow: 'var(--td-shadow-base)',
+                      color: msg.role === 'user' ? 'var(--td-text-inverse)' : 'var(--td-text-base)'
+                    }} 
+                  />
+                  {msg.role === 'ai' && (
+                    <Text style={{ fontSize: '10px', color: 'var(--td-highlight)', fontFamily: 'STZhongsong' }}>
+                      {msg.department}
+                    </Text>
+                  )}
+                </div>
 
-        <div style={{ padding: '24px', borderTop: '1px solid #f0f0f0' }}>
+                {/* Bubble */}
+                <div style={{
+                  position: 'relative',
+                  background: msg.role === 'user' ? 'var(--td-msg-user-bg)' : 'var(--td-msg-ai-bg)',
+                  border: msg.role === 'user' ? '1px solid var(--td-primary-hover)' : `1px solid var(--td-msg-ai-border)`,
+                  padding: '16px 20px',
+                  borderRadius: '12px',
+                  borderTopRightRadius: msg.role === 'user' ? '2px' : '12px',
+                  borderTopLeftRadius: msg.role === 'ai' ? '2px' : '12px',
+                  boxShadow: 'var(--td-shadow-base)',
+                  color: msg.role === 'user' ? 'var(--td-msg-user-text)' : 'var(--td-text-base)',
+                  fontSize: '15px',
+                  lineHeight: '1.6',
+                  whiteSpace: 'pre-wrap',
+                }}>
+                  {/* Subtle texture for imperial edict (user message) */}
+                  {msg.role === 'user' && (
+                    <div style={{
+                      position: 'absolute',
+                      top: 0, left: 0, right: 0, bottom: 0,
+                      backgroundImage: 'radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)',
+                      backgroundSize: '10px 10px',
+                      pointerEvents: 'none',
+                      borderRadius: 'inherit'
+                    }} />
+                  )}
+                  <span style={{ position: 'relative', zIndex: 1 }}>{msg.content}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+          
+          {isTyping && (
+            <div style={{ display: 'flex', gap: '16px', maxWidth: '85%' }}>
+              <Avatar 
+                size={48}
+                style={{ 
+                  backgroundColor: 'var(--td-bg-container)',
+                  border: '2px solid var(--td-highlight)',
+                  color: 'var(--td-text-base)',
+                  fontFamily: 'STZhongsong',
+                  fontWeight: 'bold'
+                }} 
+              >臣</Avatar>
+              <div style={{
+                background: 'var(--td-msg-ai-bg)',
+                border: '1px solid var(--td-msg-ai-border)',
+                padding: '16px 20px',
+                borderRadius: '12px',
+                borderTopLeftRadius: '2px',
+                color: 'var(--td-highlight)',
+                boxShadow: 'var(--td-shadow-base)'
+              }}>
+                <span className="typing-indicator">群臣正在商议...</span>
+              </div>
+            </div>
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Input Area */}
+        <div style={{ 
+          padding: '24px', 
+          background: 'var(--td-bg-elevated)',
+          borderTop: '1px solid var(--td-border-light)',
+          borderBottomLeftRadius: '12px',
+          borderBottomRightRadius: '12px',
+        }}>
            <div style={{ 
-             border: '1px solid #d9d9d9', 
+             background: 'var(--td-input-bg)',
+             border: '1px solid var(--td-border-color)', 
              borderRadius: '12px', 
-             padding: '12px',
-             boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+             padding: '12px 16px',
+             boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.02), 0 2px 8px var(--td-pattern-color)',
+             transition: 'border-color 0.3s',
+             position: 'relative'
            }}>
              <Input.TextArea 
                value={inputValue}
                onChange={e => setInputValue(e.target.value)}
-               placeholder="输入消息..." 
-               autoSize={{ minRows: 1, maxRows: 6 }}
+               placeholder="朕有旨意..." 
+               autoSize={{ minRows: 2, maxRows: 8 }}
                bordered={false}
                onPressEnter={(e) => {
                  if (!e.shiftKey) {
@@ -190,17 +328,66 @@ const Chat: React.FC = () => {
                    handleSend();
                  }
                }}
-               style={{ resize: 'none', marginBottom: 8 }}
+               style={{ 
+                 resize: 'none', 
+                 color: 'var(--td-text-base)',
+                 fontSize: '15px',
+                 padding: '0 0 16px 0',
+                 boxShadow: 'none',
+                 background: 'transparent'
+               }}
              />
-             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-               <Button type="primary" icon={<SendOutlined />} onClick={handleSend} disabled={!inputValue.trim()} />
+             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+               <Space>
+                 <Tooltip title="附件">
+                   <Button type="text" icon={<PaperClipOutlined />} style={{ color: 'var(--td-text-tertiary)' }} />
+                 </Tooltip>
+                 <Tooltip title="语音">
+                   <Button type="text" icon={<AudioOutlined />} style={{ color: 'var(--td-text-tertiary)' }} />
+                 </Tooltip>
+                 <Tooltip title="快捷指令">
+                   <Button type="text" icon={<ThunderboltOutlined />} style={{ color: 'var(--td-highlight)' }} />
+                 </Tooltip>
+               </Space>
+               <Button 
+                 type="primary" 
+                 icon={<SendOutlined />} 
+                 onClick={handleSend} 
+                 disabled={!inputValue.trim()} 
+                 style={{ 
+                   background: inputValue.trim() ? 'var(--td-primary)' : 'var(--td-bg-base)',
+                   borderColor: inputValue.trim() ? 'var(--td-primary)' : 'var(--td-border-light)',
+                   color: inputValue.trim() ? 'var(--td-text-inverse)' : 'var(--td-text-tertiary)',
+                   borderRadius: '8px',
+                   boxShadow: inputValue.trim() ? 'var(--td-shadow-primary)' : 'none'
+                 }}
+               >
+                 钦此
+               </Button>
              </div>
            </div>
-           <Text type="secondary" style={{ fontSize: 12, display: 'block', textAlign: 'center', marginTop: 12 }}>
-             懂你所需，伴你左右
+           <Text type="secondary" style={{ fontSize: '12px', display: 'block', textAlign: 'center', marginTop: '16px', color: 'var(--td-text-tertiary)' }}>
+             三省六部制 AI 协作架构 · 懂你所需，伴你左右
            </Text>
         </div>
       </Content>
+      <style>{`
+        .chat-session-item:hover {
+          background: var(--td-item-hover-bg) !important;
+        }
+        .typing-indicator::after {
+          content: '...';
+          animation: typing 1.5s infinite;
+        }
+        @keyframes typing {
+          0% { content: '.'; }
+          33% { content: '..'; }
+          66% { content: '...'; }
+        }
+        .ant-input-textarea-clear-icon {
+          color: var(--td-highlight) !important;
+        }
+      `}</style>
     </Layout>
   );
 };

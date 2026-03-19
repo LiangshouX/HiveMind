@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { ConfigProvider, App as AntApp } from 'antd';
+import { getTangTheme } from './theme';
 import MainLayout from './layouts/MainLayout';
 import Chat from './pages/MorningCourt/Chat';
 import EdictLibrary from './pages/MorningCourt/EdictLibrary';
@@ -18,29 +20,57 @@ import Security from './pages/Dalisi/Security';
 import TokenUsage from './pages/Dalisi/TokenUsage';
 
 const App: React.FC = () => {
+  const [isDark, setIsDark] = useState(true);
+
+  useEffect(() => {
+    // 初始化检查主题
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 
+                         localStorage.getItem('theme') || 
+                         (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    setIsDark(currentTheme === 'dark');
+
+    // 监听 data-theme 属性变化
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.attributeName === 'data-theme') {
+          const newTheme = document.documentElement.getAttribute('data-theme');
+          setIsDark(newTheme === 'dark');
+        }
+      });
+    });
+
+    observer.observe(document.documentElement, { attributes: true });
+    
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<MainLayout />}>
-          <Route index element={<Navigate to="/chat" replace />} />
-          <Route path="chat" element={<Chat />} />
-          <Route path="edict-library" element={<EdictLibrary />} />
-          <Route path="channels" element={<Channels />} />
-          <Route path="edict-board" element={<EdictBoard />} />
-          <Route path="memorials" element={<Memorials />} />
-          <Route path="scheduled-tasks" element={<ScheduledTasks />} />
-          <Route path="court-rules" element={<CourtRules />} />
-          <Route path="skill-library" element={<SkillLibrary />} />
-          <Route path="tool-library" element={<ToolLibrary />} />
-          <Route path="mcp" element={<MCP />} />
-          <Route path="official-management" element={<OfficialManagement />} />
-          <Route path="models" element={<Models />} />
-          <Route path="env-vars" element={<EnvVars />} />
-          <Route path="security" element={<Security />} />
-          <Route path="token-usage" element={<TokenUsage />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+    <ConfigProvider theme={getTangTheme(isDark)}>
+      <AntApp>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<MainLayout />}>
+              <Route index element={<Navigate to="/chat" replace />} />
+              <Route path="chat" element={<Chat />} />
+              <Route path="edict-library" element={<EdictLibrary />} />
+              <Route path="channels" element={<Channels />} />
+              <Route path="edict-board" element={<EdictBoard />} />
+              <Route path="memorials" element={<Memorials />} />
+              <Route path="scheduled-tasks" element={<ScheduledTasks />} />
+              <Route path="court-rules" element={<CourtRules />} />
+              <Route path="skill-library" element={<SkillLibrary />} />
+              <Route path="tool-library" element={<ToolLibrary />} />
+              <Route path="mcp" element={<MCP />} />
+              <Route path="official-management" element={<OfficialManagement />} />
+              <Route path="models" element={<Models />} />
+              <Route path="env-vars" element={<EnvVars />} />
+              <Route path="security" element={<Security />} />
+              <Route path="token-usage" element={<TokenUsage />} />
+            </Route>
+          </Routes>
+        </BrowserRouter>
+      </AntApp>
+    </ConfigProvider>
   );
 };
 

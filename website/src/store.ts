@@ -248,7 +248,14 @@ export const TPL_CATS = [
 
 // ── Main Store ──
 
+export type ThemeType = 'light' | 'dark';
+
 interface AppStore {
+  // Theme
+  theme: ThemeType;
+  setTheme: (t: ThemeType) => void;
+  toggleTheme: () => void;
+
   // Data
   liveStatus: LiveStatus | null;
   agentConfig: AgentConfig | null;
@@ -293,6 +300,21 @@ interface AppStore {
 let _toastId = 0;
 
 export const useStore = create<AppStore>((set, get) => ({
+  theme: (localStorage.getItem('theme') as ThemeType) || 
+         (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'),
+  
+  setTheme: (t) => {
+    localStorage.setItem('theme', t);
+    document.documentElement.setAttribute('data-theme', t);
+    set({ theme: t });
+  },
+
+  toggleTheme: () => {
+    const s = get();
+    const newTheme = s.theme === 'light' ? 'dark' : 'light';
+    s.setTheme(newTheme);
+  },
+
   liveStatus: null,
   agentConfig: null,
   changeLog: [],
