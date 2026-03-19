@@ -1,11 +1,12 @@
 package com.liangshou.adapter.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.liangshou.common.Result;
-import com.liangshou.infrastructure.datasource.po.TaskLogPO;
 import com.liangshou.infrastructure.datasource.po.TaskPO;
-import com.liangshou.service.TaskLogService;
 import com.liangshou.service.TaskService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,28 +18,40 @@ import java.util.Map;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/v1/tasks")
+@Tag(name = "旨意任务接口", description = "用于皇上下发旨意、任务查询与流转控制")
 @RequiredArgsConstructor
 public class TaskController {
 
     private final TaskService taskService;
-    private final TaskLogService taskLogService;
 
-    // --- Create Task ---
-    @PostMapping("/create-task")
+    @GetMapping
+    @Operation(summary = "分页获取任务列表")
+    public Result<Page<TaskPO>> listTasks(
+            @RequestParam(defaultValue = "1") Integer current,
+            @RequestParam(defaultValue = "10") Integer size,
+            @RequestParam(required = false) String state) {
+        
+        LambdaQueryWrapper<TaskPO> queryWrapper = new LambdaQueryWrapper<>();
+        if (state != null && !state.isEmpty()) {
+            queryWrapper.eq(TaskPO::getState, state);
+        }
+        queryWrapper.orderByDesc(TaskPO::getCreateTime);
+        
+        Page<TaskPO> page = taskService.page(new Page<>(current, size), queryWrapper);
+        return Result.success(page);
+    }
+
+    @PostMapping
+    @Operation(summary = "创建新任务(下旨)")
     public Result<Map<String, String>> createTask(@RequestBody Map<String, Object> payload) {
         TaskPO task = new TaskPO();
         String taskId = "JJC-" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd")) + "-" + UUID.randomUUID().toString().substring(0, 4);
-        task.setTaskId(taskId);
+        task.setId(taskId);
         task.setTitle((String) payload.getOrDefault("title", "New Task"));
-        task.setDescription((String) payload.get("description"));
-        task.setStatus("Pending");
+        task.setState("Pending");
         task.setPriority("normal");
         
-        // Handle payload
-        task.setPayload(payload);
-        
-        task.setCreateTime(LocalDateTime.now());
         taskService.save(task);
         
         Map<String, String> res = new HashMap<>();
@@ -46,79 +59,30 @@ public class TaskController {
         return Result.success(res);
     }
 
-    // --- Task Action ---
-    @PostMapping("/task-action")
-    public Result<Boolean> taskAction(@RequestBody Map<String, String> payload) {
-        String taskId = payload.get("taskId");
-        String action = payload.get("action");
-        String reason = payload.get("reason");
+    @GetMapping("/{id}")
+    @Operation(summary = "获取任务详情")
+    public Result<TaskPO> getTask(@PathVariable String id) {
+        return Result.success(taskService.getById(id));
+    }
 
-        TaskPO task = taskService.getOne(new LambdaQueryWrapper<TaskPO>().eq(TaskPO::getTaskId, taskId));
+    @PostMapping("/{id}/action")
+    @Operation(summary = "任务操作(取消/重试/归档)")
+    public Result<Boolean> taskAction(@PathVariable String id, @RequestBody Map<String, Object> payload) {
+        String action = (String) payload.get("action");
+        
+        TaskPO task = taskService.getById(id);
         if (task != null) {
-            // Update status based on action
             if ("cancel".equalsIgnoreCase(action)) {
-                task.setStatus("Cancelled");
+                task.setState("Cancelled");
             } else if ("retry".equalsIgnoreCase(action)) {
-                task.setStatus("Pending"); // Retry usually resets to pending
-            } else if ("complete".equalsIgnoreCase(action)) {
-                task.setStatus("Done");
+                task.setState("Pending");
+            } else if ("archive".equalsIgnoreCase(action)) {
+                task.setArchived(true);
+                task.setArchivedAt(LocalDateTime.now());
             }
-            task.setUpdateTime(LocalDateTime.now());
             taskService.updateById(task);
-            
-            // Log action
-            TaskLogPO log = new TaskLogPO();
-            log.setTaskId(taskId);
-            log.setType("action");
-            Map<String, Object> content = new HashMap<>();
-            content.put("action", action);
-            content.put("reason", reason);
-            log.setContent(content);
-            log.setCreateTime(LocalDateTime.now());
-            taskLogService.save(log);
-            
             return Result.success(true);
         }
         return Result.error("Task not found");
-    }
-
-    // --- Task Activity ---
-    @GetMapping("/task-activity/{taskId}")
-    public Result<List<TaskLogPO>> getTaskActivity(@PathVariable String taskId) {
-        return Result.success(taskLogService.list(new LambdaQueryWrapper<TaskLogPO>()
-                .eq(TaskLogPO::getTaskId, taskId)
-                .orderByDesc(TaskLogPO::getCreateTime)));
-    }
-    
-    // --- Archive Task ---
-    @PostMapping("/archive-task")
-    public Result<Boolean> archiveTask(@RequestBody Map<String, Object> payload) {
-        String taskId = (String) payload.get("taskId");
-        Boolean archived = (Boolean) payload.get("archived");
-        
-        if (taskId != null) {
-             TaskPO task = taskService.getOne(new LambdaQueryWrapper<TaskPO>().eq(TaskPO::getTaskId, taskId));
-             if (task != null) {
-                 task.setStatus("Archived");
-                 taskService.updateById(task);
-             }
-        }
-        return Result.success(true);
-    }
-    
-    // --- Scheduler Stubs ---
-    @GetMapping("/scheduler-state/{taskId}")
-    public Result<Map<String, Object>> getSchedulerState(@PathVariable String taskId) {
-        return Result.success(new HashMap<>());
-    }
-    
-    @PostMapping("/scheduler-scan")
-    public Result<Boolean> schedulerScan(@RequestBody Map<String, Object> payload) {
-        return Result.success(true);
-    }
-    
-    @PostMapping("/scheduler-retry")
-    public Result<Boolean> schedulerRetry(@RequestBody Map<String, Object> payload) {
-        return taskAction(Map.of("taskId", (String)payload.get("taskId"), "action", "retry", "reason", (String)payload.get("reason")));
     }
 }

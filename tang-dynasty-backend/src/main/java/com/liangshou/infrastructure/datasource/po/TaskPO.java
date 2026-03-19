@@ -1,30 +1,38 @@
 package com.liangshou.infrastructure.datasource.po;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
-import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
+import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
 import java.time.LocalDateTime;
-import java.util.Map;
 
 @Data
-@TableName(value = "sys_task", autoResultMap = true)
+@TableName(value = "td_task")
 public class TaskPO {
-    @TableId(type = IdType.AUTO)
-    private Long id;
-    private String taskId;
+    
+    @TableId(type = IdType.INPUT)
+    private String id;
+    
     private String title;
-    private String description;
-    private String status;
+    private Long officialId;
+    private Long deptId;
+    private String state;
     private String priority;
-    private String official;
-    private String department;
-    @TableField(typeHandler = JacksonTypeHandler.class)
-    private Map<String, Object> payload;
-    @TableField(typeHandler = JacksonTypeHandler.class)
-    private Map<String, Object> result;
+    private String blockReason;
+    private Integer reviewRound;
+    private String prevState;
+    private String outputResult;
+    private String acCriteria;
+    private Boolean archived;
+    private LocalDateTime archivedAt;
+    
+    @TableLogic
+    private Integer deleted;
+    
+    @Version
+    private Integer version;
+    
+    @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
+    
+    @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 }

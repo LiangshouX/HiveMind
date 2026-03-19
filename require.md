@@ -289,7 +289,7 @@ stateDiagram-v2
 ### 架构说明
 
 ```txt
-tang-dynasty-backend/
+src/package/module/
 ├── adapter/                          # 适配器层：负责外部请求的接入与协议转换
 │   └── controller/                   # 控制器层：接收 HTTP 请求，调用 Service 层，返回响应
 ├── common/                           # 公共模块：存放项目中通用的工具、配置和常量
@@ -301,7 +301,7 @@ tang-dynasty-backend/
 │       │   └── modelclientconfig/    # 基于 properties 创建 Spring AI 的 Model 和 Client Bean
 │       ├── mybatisconfig/            # MyBatis-Plus 配置：如分页插件、SQL 日志、类型处理器等
 │       └── redisconfig/              # Redis 客户端配置：连接池、序列化方式、自定义 RedisTemplate 等
-├── service/                          # 业务逻辑层：封装核心业务规则
+├── service/                          # 业务逻辑层：封装核心业务规则，Service以
 │   ├── dto/                          # Data Transfer Object：用于服务间或层间数据传输的模型
 │   ├── vo/                           # View Object：封装返回给前端的数据结构，避免暴露内部字段
 │   └── impl/                         # Service 接口的具体实现类目录
@@ -311,7 +311,8 @@ tang-dynasty-backend/
     ├── datasource/                   # 数据访问基础设施
     │   ├── po/                       # Persistent Object：与数据库表一一对应的实体类（通常由 MyBatis Plus 使用）
     │   ├── mapper/                   # MyBatis Mapper 接口：定义数据库操作方法
-    │   └── support/                  # 数据库相关辅助类：如自定义 TypeHandler、MetaObjectHandler 等
+    │   └── support/                  # 数据库相关辅助接口，继承mybatis plus的IService接口
+    │   	└── impl/ 				  # Support接口的实现类，继承mybatis plus的ServiceImpl，mapper层和po层集成到这里
     └── agentsupport/                 # AI Agent 基础设施支持
         ├── context/                  # 上下文管理：维护 Agent 执行过程中的会话、状态、记忆等
         ├── tools/                    # 自定义 Tool 实现：供 Agent 调用的函数工具（如查询数据库、调用 API）
