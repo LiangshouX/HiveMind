@@ -33,3 +33,6 @@ replay_pid*
 */target
 example
 
+
+# Frontend
+*/package-lock.json
