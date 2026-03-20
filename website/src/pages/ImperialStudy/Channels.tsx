@@ -90,7 +90,7 @@ const Channels: React.FC = () => {
     <div style={{ padding: 24 }}>
       <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <Title level={2} style={{ margin: 0 }}>频道</Title>
+          <Title level={2} style={{ margin: 0 }}>翰林学士</Title>
           <Text type="secondary">管理和配置消息频道</Text>
         </div>
         <Space>

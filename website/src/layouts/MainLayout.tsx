@@ -47,10 +47,10 @@ const items: MenuItem[] = [
     getItem('旨意库', '/edict-library', <BookOutlined />),
   ]),
   getItem('御书房', 'imperial-study', <ReadOutlined />, [
-    getItem('频道', '/channels', <AppstoreOutlined />),
+    getItem('翰林学士', '/channels', <AppstoreOutlined />),
     getItem('旨意看板', '/edict-board', <ProfileOutlined />),
     getItem('奏折', '/memorials', <ReadOutlined />),
-    getItem('定时任务', '/scheduled-tasks', <FieldTimeOutlined />),
+    getItem('司天台', '/scheduled-tasks', <FieldTimeOutlined />),
   ]),
   getItem('御史台', 'censorate', <UserOutlined />, [
     getItem('朝纲', '/court-rules', <ReadOutlined />),

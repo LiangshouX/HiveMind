@@ -90,7 +90,7 @@ const ScheduledTasks: React.FC = () => {
     <div style={{ padding: 24, background: '#fff', minHeight: '100%', borderRadius: 8 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div>
-          <Title level={4} style={{ margin: 0 }}>定时任务</Title>
+          <Title level={4} style={{ margin: 0 }}>司天台</Title>
           <Text type="secondary">创建和管理在指定时间自动执行的定时任务。</Text>
         </div>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => { form.resetFields(); setEditingId(null); setIsModalOpen(true); }}>
