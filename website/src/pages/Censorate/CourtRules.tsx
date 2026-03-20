@@ -16,7 +16,7 @@ const initialFiles = {
 const CourtRules: React.FC = () => {
   const [activeFile, setActiveFile] = useState('SOUL.md');
   const [files, setFiles] = useState(initialFiles);
-  const [preview, setPreview] = useState(false);
+  const [preview, setPreview] = useState(true);
   const [loading, setLoading] = useState(false);
 
   const currentFile = files[activeFile as keyof typeof files];
