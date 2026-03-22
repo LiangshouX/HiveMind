@@ -28,11 +28,14 @@ replay_pid*
 */.idea
 .mvn
 */.mvn
-.vscode
-*/.vscode
 */target
 example
 
 
 # Frontend
 */package-lock.json
+
+# Trea
+.vscode
+*/.vscode
+*.py
