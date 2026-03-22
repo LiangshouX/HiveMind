@@ -59,11 +59,11 @@ const items: MenuItem[] = [
     getItem('MCP', '/mcp', <ApiOutlined />),
     getItem('官员管理', '/official-management', <UserOutlined />),
   ]),
-  getItem('大理寺', 'dalisi', <SafetyCertificateOutlined />, [
+  getItem('九司', 'dalisi', <SafetyCertificateOutlined />, [
     getItem('模型', '/models', <RobotOutlined />),
     getItem('环境变量', '/env-vars', <SettingOutlined />),
-    getItem('御林军', '/security', <SafetyCertificateOutlined />),
-    getItem('大司农', '/token-usage', <DatabaseOutlined />),
+    getItem('卫尉寺', '/security', <SafetyCertificateOutlined />),
+    getItem('司农寺', '/token-usage', <DatabaseOutlined />),
   ]),
 ];
 

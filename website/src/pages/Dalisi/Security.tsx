@@ -13,7 +13,7 @@ const Security: React.FC = () => {
     <div style={{ padding: 24, background: '#fff', minHeight: '100%', borderRadius: 8 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div>
-          <Title level={4} style={{ margin: 0 }}>御林军 (Security)</Title>
+          <Title level={4} style={{ margin: 0 }}>卫尉寺 (Security)</Title>
           <Text type="secondary">负责系统安全相关的配置，如访问控制、工具权限管理等。</Text>
         </div>
         <Button type="primary" onClick={handleSave}>保存配置</Button>

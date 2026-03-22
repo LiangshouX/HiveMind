@@ -39,7 +39,7 @@ const TokenUsage: React.FC = () => {
     <div style={{ padding: 24, background: '#fff', minHeight: '100%', borderRadius: 8 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div>
-          <Title level={4} style={{ margin: 0 }}>大司农 (Token Usage)</Title>
+          <Title level={4} style={{ margin: 0 }}>司农寺 (Token Usage)</Title>
           <Text type="secondary">查看一段时间内的 LLM Token 消耗，按日期和模型统计。</Text>
         </div>
         <RangePicker defaultValue={[dayjs().subtract(7, 'day'), dayjs()]} />

@@ -23,6 +23,17 @@
         <spring-ai.version>1.0.0-M5</spring-ai.version>
     </properties>
 
+    <repositories>
+        <repository>
+            <id>spring-milestones</id>
+            <name>Spring Milestones</name>
+            <url>https://repo.spring.io/milestone</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
+
     <dependencies>
         <!-- Web -->
         <dependency>
@@ -82,20 +93,6 @@
             <groupId>com.alibaba.cloud.ai</groupId>
             <artifactId>spring-ai-alibaba-agent-framework</artifactId>
             <version>${spring-ai-alibaba.version}</version>
-        </dependency>
-
-        <!-- Spring AI MCP Client (支持 Stdio 和 SSE) -->
-        <dependency>
-            <groupId>org.springframework.ai</groupId>
-            <artifactId>spring-ai-starter-mcp-client-webflux</artifactId>
-            <version>${spring-ai.version}</version>
-        </dependency>
-
-        <!-- Spring AI MCP Server -->
-        <dependency>
-            <groupId>org.springframework.ai</groupId>
-            <artifactId>spring-ai-mcp-server-spring-boot-starter</artifactId>
-            <version>${spring-ai.version}</version>
         </dependency>
         
         <!-- Test -->

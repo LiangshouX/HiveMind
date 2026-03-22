@@ -5,5 +5,5 @@ spring:
   datasource:
     url: jdbc:mysql://localhost:3306/tang_dynasty?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
     username: root
-    password: xls12345
+    password: ${LOCAL_MYSQL_PWD}
     driver-class-name: com.mysql.cj.jdbc.Driver

@@ -75,8 +75,9 @@
 业务流转示意图如下：
 
 ```mermaid
+%%{init: {'theme': 'neutral'}}%%
 stateDiagram-v2
-    [*] --> Pending: 皇上下旨
+    [*] --> Pending: 皇上(用户)下旨
     Pending --> ChengXiang: 丞相接旨
     ChengXiang --> Zhongshu: 丞相转交中书
     Zhongshu --> Menxia: 中书提交审议
@@ -289,7 +290,7 @@ stateDiagram-v2
 ### 架构说明
 
 ```txt
-src/package/module/
+module/src/package/
 ├── adapter/                          # 适配器层：负责外部请求的接入与协议转换
 │   └── controller/                   # 控制器层：接收 HTTP 请求，调用 Service 层，返回响应
 ├── common/                           # 公共模块：存放项目中通用的工具、配置和常量
@@ -318,6 +319,64 @@ src/package/module/
         ├── tools/                    # 自定义 Tool 实现：供 Agent 调用的函数工具（如查询数据库、调用 API）
         └── mcp/                      # Model Context Protocol 相关实现（待定）：可能用于多模型协作或上下文协议 
 ```
+
+
+
+## 数据库设计
+
+| datasource | table/document name  | description          | columns       | Type              | comment                           | 索引        |
+| :--------- | -------------------- | -------------------- | ------------- | ----------------- | --------------------------------- | ----------- |
+| MySQL      | td_task              | 任务/旨意表 (Tasks)  | id            | string            | 任务ID (如 JJC-20260228-E2E)      | PRIMARY KEY |
+|            |                      |                      | title         | String            | 任务标题                          |             |
+|            |                      |                      | official_id   | bigint            | 当前负责官员ID                    |             |
+|            |                      |                      | dept_id       | bigint            | 当前负责部门ID                    | KEY         |
+|            |                      |                      | state         | String            | 当前状态                          | KEY         |
+|            |                      |                      | priority      | String            | 优先级: critical/high/normal/low' |             |
+|            |                      |                      | block_reason  | String            | 阻滞原因                          |             |
+|            |                      |                      | review_round  | int               | 审议轮数                          |             |
+|            |                      |                      | prev_state    | String            | 被中断前的状态                    |             |
+|            |                      |                      | output_result | Text              | 最终产出结果                      |             |
+|            |                      |                      | ac_criteria   | Text              | 验收标准                          |             |
+|            |                      |                      | archived      | TinyInt           | 是否归档                          |             |
+|            |                      |                      | archived_at   | datetime          | 归档时间                          |             |
+|            |                      |                      | deleted       | TinyInt           | 逻辑删除                          |             |
+|            |                      |                      | version       | long              | 乐观锁版本                        |             |
+|            |                      |                      | create_time   | datetime          | 创建时间                          | KEY         |
+|            |                      |                      | update_time   | datetime          | 更新时间                          |             |
+|            |                      |                      |               |                   |                                   |             |
+|            |                      |                      |               |                   |                                   |             |
+|            |                      |                      |               |                   |                                   |             |
+|            |                      |                      |               |                   |                                   |             |
+|            |                      |                      |               |                   |                                   |             |
+|            |                      |                      |               |                   |                                   |             |
+|            |                      |                      |               |                   |                                   |             |
+|            |                      |                      |               |                   |                                   |             |
+|            |                      |                      |               |                   |                                   |             |
+|            |                      |                      |               |                   |                                   |             |
+|            |                      |                      |               |                   |                                   |             |
+|            |                      |                      |               |                   |                                   |             |
+|            |                      |                      |               |                   |                                   |             |
+|            |                      |                      |               |                   |                                   |             |
+| MongoDB    | conversations_view   | Agent对话session视图 | id            | String            | 对话唯一标识id                    |             |
+|            |                      |                      | userId        | String            | 用户id                            |             |
+|            |                      |                      | title         | String            | 对话title                         |             |
+|            |                      |                      | lastMessageAt | java.time.Instant | 最后一条消息的时间                |             |
+|            |                      |                      | updatedAt     | java.time.Instant | 更新时间                          |             |
+|            |                      |                      | createdAt     | java.time.Instant | 创建时间                          |             |
+|            |                      |                      | unreadCount   | long              | 未读消息数量                      |             |
+|            |                      |                      | messageCount  | long              | 消息总述                          |             |
+|            |                      |                      | version       | long              | 版本                              |             |
+|            | conversations_memory | Agent历史对话记忆    | id            | String            | 对话唯一标识id                    |             |
+|            |                      |                      | userId        | String            | 用户id                            |             |
+|            |                      |                      | messages      | List\<Object>     | 所有对话内容                      |             |
+|            |                      |                      | roundCount    | long              | 对话轮数                          |             |
+|            |                      |                      | updatedAt     | java.time.Instant | 更新时间                          |             |
+|            |                      |                      | createdAt     | java.time.Instant | 创建时间                          |             |
+|            |                      |                      | version       | long              | 版本                              |             |
+
+
+
+
 
 ### 重要要求
 

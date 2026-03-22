@@ -35,6 +35,7 @@ const Chat: React.FC = () => {
   const [activeChatId, setActiveChatId] = useState('1');
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const panelHeight = 'calc(100vh)';
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -87,7 +88,7 @@ const Chat: React.FC = () => {
   };
 
   return (
-    <Layout style={{ height: '100%', background: 'transparent', display: 'flex', flexDirection: 'row', gap: '24px' }}>
+    <Layout style={{ height: panelHeight, width: '100%', background: 'transparent', display: 'flex', flexDirection: 'row', gap: '24px', overflow: 'hidden', minHeight: 0 }}>
       {/* Session List */}
       <Sider 
         width={300} 
@@ -98,7 +99,9 @@ const Chat: React.FC = () => {
           boxShadow: 'var(--td-shadow-base)',
           overflow: 'hidden',
           display: 'flex',
-          flexDirection: 'column'
+          flexDirection: 'column',
+          height: '100%',
+          minHeight: 0
         }}
       >
         <div style={{ padding: '20px', borderBottom: '1px solid var(--td-border-light)' }}>
@@ -122,7 +125,7 @@ const Chat: React.FC = () => {
             宣召入朝
           </Button>
         </div>
-        <div style={{ flex: 1, overflowY: 'auto', padding: '12px' }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '12px', minHeight: 0 }}>
           <Text type="secondary" style={{ fontSize: '12px', padding: '0 8px 8px', display: 'block', color: 'var(--td-text-tertiary)' }}>近期朝会</Text>
           {chats.map(chat => (
             <div
@@ -166,7 +169,10 @@ const Chat: React.FC = () => {
         borderRadius: '12px',
         border: '1px solid var(--td-border-light)',
         backdropFilter: 'blur(10px)',
-        boxShadow: 'var(--td-shadow-base)'
+        boxShadow: 'var(--td-shadow-base)',
+        height: '100%',
+        overflow: 'hidden',
+        minHeight: 0
       }}>
         {/* Chat Header */}
         <div style={{ 
@@ -197,7 +203,7 @@ const Chat: React.FC = () => {
         </div>
         
         {/* Messages */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '32px 24px' }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '32px 24px', minHeight: 0 }}>
           <div style={{ textAlign: 'center', marginBottom: '32px' }}>
             <Text type="secondary" style={{ fontSize: '12px', background: 'var(--td-bg-base)', padding: '4px 12px', borderRadius: '12px', color: 'var(--td-text-secondary)' }}>
               贞观二十年 三月十二日
@@ -367,7 +373,7 @@ const Chat: React.FC = () => {
              </div>
            </div>
            <Text type="secondary" style={{ fontSize: '12px', display: 'block', textAlign: 'center', marginTop: '16px', color: 'var(--td-text-tertiary)' }}>
-             三省六部制 AI 协作架构 · 懂你所需，伴你左右
+             盛唐 · 三省六部制 AI 协作架构
            </Text>
         </div>
       </Content>

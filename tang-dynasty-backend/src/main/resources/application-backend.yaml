@@ -23,10 +23,6 @@ mybatis-plus:
       logic-delete-value: 1
       logic-not-delete-value: 0
 
-jwt:
-  secret: aLongSecretKeyForJwtAuthenticationWhichShouldBeAtLeast32Bytes
-  expiration: 86400000
-
 springdoc:
   api-docs:
     path: /v3/api-docs

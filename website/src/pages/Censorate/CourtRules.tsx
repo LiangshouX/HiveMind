@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Typography, List, Switch, Button, Input, Card, Row, Col, message, Space } from 'antd';
 import { SaveOutlined, ReloadOutlined, FileMarkdownOutlined, EyeOutlined, EditOutlined, CloudUploadOutlined, CloudDownloadOutlined } from '@ant-design/icons';
+import ReactMarkdown from 'react-markdown';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -121,14 +122,17 @@ const CourtRules: React.FC = () => {
             
             <div style={{ flex: 1, overflow: 'auto', padding: 16 }}>
               {preview ? (
-                <div style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace', lineHeight: 1.6 }}>
-                  {/* Simple markdown simulation */}
-                  {currentFile.content.split('\n').map((line, i) => {
-                    if (line.startsWith('# ')) return <h1 key={i}>{line.substring(2)}</h1>;
-                    if (line.startsWith('## ')) return <h2 key={i}>{line.substring(3)}</h2>;
-                    if (line.startsWith('- ')) return <li key={i} style={{ marginLeft: 20 }}>{line.substring(2)}</li>;
-                    return <p key={i} style={{ margin: '4px 0' }}>{line}</p>;
-                  })}
+                <div style={{ lineHeight: 1.6 }}>
+                  <ReactMarkdown
+                    components={{
+                      a: ({ node, ...props }) => {
+                        void node;
+                        return <a {...props} target="_blank" rel="noreferrer" />;
+                      },
+                    }}
+                  >
+                    {currentFile.content}
+                  </ReactMarkdown>
                 </div>
               ) : (
                 <TextArea
