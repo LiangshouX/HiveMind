@@ -31,28 +31,28 @@
             <artifactId>spring-boot-starter</artifactId>
             <version>3.2.3</version>
         </dependency>
-        
-        <!-- Spring AI Alibaba Agent Framework (官方 Graph 框架) -->
-        <dependency>
-            <groupId>com.alibaba.cloud.ai</groupId>
-            <artifactId>spring-ai-alibaba-agent-framework</artifactId>
-            <version>${spring-ai-alibaba.version}</version>
-        </dependency>
-        
-        <!-- Spring AI Alibaba DashScope -->
-        <dependency>
-            <groupId>com.alibaba.cloud.ai</groupId>
-            <artifactId>spring-ai-alibaba-starter-dashscope</artifactId>
-            <version>${spring-ai-alibaba.version}</version>
-        </dependency>
-        
-        <!-- Spring AI MCP Client -->
-        <dependency>
-            <groupId>org.springframework.ai</groupId>
-            <artifactId>spring-ai-starter-mcp-client-webflux</artifactId>
-            <version>${spring-ai.version}</version>
-        </dependency>
-        
+<!--        -->
+<!--        &lt;!&ndash; Spring AI Alibaba Agent Framework (官方 Graph 框架) &ndash;&gt;-->
+<!--        <dependency>-->
+<!--            <groupId>com.alibaba.cloud.ai</groupId>-->
+<!--            <artifactId>spring-ai-alibaba-agent-framework</artifactId>-->
+<!--            <version>${spring-ai-alibaba.version}</version>-->
+<!--        </dependency>-->
+<!--        -->
+<!--        &lt;!&ndash; Spring AI Alibaba DashScope &ndash;&gt;-->
+<!--        <dependency>-->
+<!--            <groupId>com.alibaba.cloud.ai</groupId>-->
+<!--            <artifactId>spring-ai-alibaba-starter-dashscope</artifactId>-->
+<!--            <version>${spring-ai-alibaba.version}</version>-->
+<!--        </dependency>-->
+<!--        -->
+<!--        &lt;!&ndash; Spring AI MCP Client &ndash;&gt;-->
+<!--        <dependency>-->
+<!--            <groupId>org.springframework.ai</groupId>-->
+<!--            <artifactId>spring-ai-starter-mcp-client-webflux</artifactId>-->
+<!--            <version>${spring-ai.version}</version>-->
+<!--        </dependency>-->
+<!--        -->
         <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>

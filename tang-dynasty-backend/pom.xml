@@ -102,6 +102,13 @@
             <scope>test</scope>
         </dependency>
         
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-spring-boot3-starter-test</artifactId>
+            <version>3.5.5</version>
+            <scope>test</scope>
+        </dependency>
+        
         <!-- Spring Security -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

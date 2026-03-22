@@ -1,7 +1,7 @@
 package com.liangshou.adapter.controller;
 
-import com.liangshou.common.Result;
-import com.liangshou.common.security.JwtUtils;
+import com.liangshou.common.utils.Result;
+import com.liangshou.common.utils.JwtUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.Data;
@@ -18,15 +18,14 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthenticationManager authenticationManager;
-    private final JwtUtils jwtUtils;
 
-    @PostMapping("/login")
     @Operation(summary = "用户登录", description = "使用用户名和密码登录并获取JWT Token")
+    @PostMapping
     public Result<LoginResponse> login(@RequestBody LoginRequest request) {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()));
 
-        String jwt = jwtUtils.generateToken(authentication.getName());
+        String jwt = JwtUtils.generateToken(authentication.getName());
 
         LoginResponse response = new LoginResponse();
         response.setToken(jwt);
