@@ -6,6 +6,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -38,22 +39,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
      * <p>从请求头中获取 JWT 令牌，验证其有效性，并将认证信息设置到安全上下文中。</p>
      * <p>如果 JWT 无效或不存在，则跳过认证，继续执行过滤器链。</p>
      *
-     * @param request HTTP 请求对象
-     * @param response HTTP 响应对象
+     * @param request     HTTP 请求对象
+     * @param response    HTTP 响应对象
      * @param filterChain 过滤器链
      * @throws ServletException Servlet 执行异常
-     * @throws IOException IO 异常
+     * @throws IOException      IO 异常
      */
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
-            throws ServletException, IOException {
-        
+    protected void doFilterInternal(
+            @NotNull HttpServletRequest request,
+            @NotNull HttpServletResponse response,
+            @NotNull FilterChain filterChain
+    ) throws ServletException, IOException {
+
         try {
             String jwt = getJwtFromRequest(request);
 
             if (StringUtils.hasText(jwt)) {
                 String username = JwtUtils.extractUsername(jwt);
-                
+
                 if (username != null && JwtUtils.validateToken(jwt, username)) {
                     UserDetails userDetails = userDetailsService.loadUserByUsername(username);
                     UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(

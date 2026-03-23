@@ -8,7 +8,9 @@ spring:
     name: auto-ai-movie
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
-    include: backend
+    include:
+      - backend
+      - agentic
     group:
       dev:
         - backend-dev

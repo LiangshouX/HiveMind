@@ -12,7 +12,7 @@ import lombok.RequiredArgsConstructor;
 
 /**
  * SysChannels 控制器
- *
+ * <p>
  * 提供 SysChannels 相关的 RESTful API 接口
  */
 @Tag(name = "SysChannels API", description = "SysChannels 管理相关接口")
@@ -47,7 +47,7 @@ public class SysChannelsController {
      * 新增 SysChannels 记录
      *
      * @param dto 包含新增数据的 SysChannelsDTO 对象
-     * @return 包含保存结果(true/false)的 Result 对象
+     * @return 包含保存结果(true / false)的 Result 对象
      */
     @Operation(summary = "新增记录", description = "创建一条新的数据记录")
     @PostMapping
@@ -60,7 +60,7 @@ public class SysChannelsController {
      *
      * @param id  主键ID
      * @param dto 包含更新数据的 SysChannelsDTO 对象
-     * @return 包含更新结果(true/false)的 Result 对象
+     * @return 包含更新结果(true / false)的 Result 对象
      */
     @Operation(summary = "更新记录", description = "根据主键更新已有记录")
     @PutMapping("/{id}")
@@ -73,7 +73,7 @@ public class SysChannelsController {
      * 根据主键删除 SysChannels 记录
      *
      * @param id 主键ID
-     * @return 包含删除结果(true/false)的 Result 对象
+     * @return 包含删除结果(true / false)的 Result 对象
      */
     @Operation(summary = "删除记录", description = "根据主键逻辑删除一条记录")
     @DeleteMapping("/{id}")

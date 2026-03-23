@@ -18,41 +18,27 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        
+
         <!-- Spring AI Alibaba -->
         <spring-ai-alibaba.version>1.1.2.0</spring-ai-alibaba.version>
         <spring-ai.version>1.0.0-M5</spring-ai.version>
     </properties>
-    
+
     <dependencies>
         <!-- Spring Boot -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter</artifactId>
-            <version>3.2.3</version>
+            <version>${spring-boot.version}</version>
         </dependency>
-<!--        -->
-<!--        &lt;!&ndash; Spring AI Alibaba Agent Framework (官方 Graph 框架) &ndash;&gt;-->
-<!--        <dependency>-->
-<!--            <groupId>com.alibaba.cloud.ai</groupId>-->
-<!--            <artifactId>spring-ai-alibaba-agent-framework</artifactId>-->
-<!--            <version>${spring-ai-alibaba.version}</version>-->
-<!--        </dependency>-->
-<!--        -->
-<!--        &lt;!&ndash; Spring AI Alibaba DashScope &ndash;&gt;-->
-<!--        <dependency>-->
-<!--            <groupId>com.alibaba.cloud.ai</groupId>-->
-<!--            <artifactId>spring-ai-alibaba-starter-dashscope</artifactId>-->
-<!--            <version>${spring-ai-alibaba.version}</version>-->
-<!--        </dependency>-->
-<!--        -->
-<!--        &lt;!&ndash; Spring AI MCP Client &ndash;&gt;-->
-<!--        <dependency>-->
-<!--            <groupId>org.springframework.ai</groupId>-->
-<!--            <artifactId>spring-ai-starter-mcp-client-webflux</artifactId>-->
-<!--            <version>${spring-ai.version}</version>-->
-<!--        </dependency>-->
-<!--        -->
+
+        <!--agentscope-java-->
+        <dependency>
+            <groupId>io.agentscope</groupId>
+            <artifactId>agentscope</artifactId>
+            <version>1.0.9</version>
+        </dependency>
+
         <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -60,26 +46,26 @@
             <version>1.18.30</version>
             <optional>true</optional>
         </dependency>
-        
+
         <!-- FastJSON2 -->
         <dependency>
             <groupId>com.alibaba.fastjson2</groupId>
             <artifactId>fastjson2</artifactId>
             <version>2.0.43</version>
         </dependency>
-        
+
         <!-- Caffeine Cache -->
         <dependency>
             <groupId>com.github.ben-manes.caffeine</groupId>
             <artifactId>caffeine</artifactId>
             <version>3.1.8</version>
         </dependency>
-        
+
         <!-- Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
-            <version>3.2.3</version>
+            <version>${spring-boot.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
