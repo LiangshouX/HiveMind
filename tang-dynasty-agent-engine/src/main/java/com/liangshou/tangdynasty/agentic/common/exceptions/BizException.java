@@ -1,5 +1,7 @@
 package com.liangshou.tangdynasty.agentic.common.exceptions;
 
+import lombok.Getter;
+
 /**
  * 业务异常类。
  * <p>用于封装业务逻辑中的错误信息。</p>
@@ -7,9 +9,14 @@ package com.liangshou.tangdynasty.agentic.common.exceptions;
  * @author liangshou
  * @version 1.0
  */
+@Getter
 public class BizException extends RuntimeException {
 
-    /** 错误码 */
+    /** 错误码
+     * -- GETTER --
+     *  获取错误码。
+     *
+     */
     private final int code;
 
     /**
@@ -33,12 +40,4 @@ public class BizException extends RuntimeException {
         this.code = errorCodeEnum.getCode();
     }
 
-    /**
-     * 获取错误码。
-     *
-     * @return 错误码
-     */
-    public int getCode() {
-        return code;
-    }
 }

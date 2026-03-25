@@ -81,20 +81,6 @@
             <version>2.0.43</version>
         </dependency>
 
-        <!-- Spring AI Alibaba -->
-        <dependency>
-            <groupId>com.alibaba.cloud.ai</groupId>
-            <artifactId>spring-ai-alibaba-starter-dashscope</artifactId>
-            <version>${spring-ai-alibaba.version}</version>
-        </dependency>
-
-        <!-- Spring AI Alibaba Agent Framework -->
-        <dependency>
-            <groupId>com.alibaba.cloud.ai</groupId>
-            <artifactId>spring-ai-alibaba-agent-framework</artifactId>
-            <version>${spring-ai-alibaba.version}</version>
-        </dependency>
-        
         <!-- Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
