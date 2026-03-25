@@ -30,20 +30,6 @@
         <spring-ai.version>1.0.0-M5</spring-ai.version>
     </properties>
 
-    <dependencies>
-        <!-- Spring Boot Starter Dependencies -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
-            <version>${spring-boot.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-validation</artifactId>
-            <version>${spring-boot.version}</version>
-        </dependency>
-    </dependencies>
-
     <dependencyManagement>
         <dependencies>
             <dependency>
