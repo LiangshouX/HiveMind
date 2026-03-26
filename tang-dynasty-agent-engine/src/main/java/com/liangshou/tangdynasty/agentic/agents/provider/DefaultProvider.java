@@ -2,10 +2,6 @@ package com.liangshou.tangdynasty.agentic.agents.provider;
 
 import com.liangshou.tangdynasty.agentic.agents.provider.model.CheckResult;
 import com.liangshou.tangdynasty.agentic.agents.provider.model.ModelInfo;
-import io.agentscope.core.model.ChatModelBase;
-import io.agentscope.core.model.ChatResponse;
-import io.agentscope.core.model.OpenAIChatModel;
-import io.agentscope.core.model.OpenAIClient;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;

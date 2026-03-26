@@ -6,8 +6,8 @@ import com.alibaba.fastjson2.JSONObject;
 import com.liangshou.tangdynasty.agentic.agents.provider.AbstractProvider;
 import com.liangshou.tangdynasty.agentic.agents.provider.model.CheckResult;
 import com.liangshou.tangdynasty.agentic.agents.provider.model.ModelInfo;
+import io.agentscope.core.model.DashScopeChatModel;
 import io.agentscope.core.model.GenerateOptions;
-import io.agentscope.core.model.OpenAIChatModel;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -27,17 +27,17 @@ import java.util.function.IntConsumer;
 import java.util.function.LongConsumer;
 
 /**
- * OpenAI Provider 实现。
+ * DashScope Provider 实现。
  *
  * <p>职责：</p>
  * <ul>
- *     <li>基于 OpenAI 兼容 API（OpenAI / 任何 OpenAI-compatible 平台）提供连接性检查与模型发现能力</li>
- *     <li>根据指定 {@code modelId} 生成 AgentScope {@link OpenAIChatModel} 实例（用于后续对话推理）</li>
+ *     <li>基于 DashScope（阿里云百炼）API 提供连接性检查与模型发现能力</li>
+ *     <li>根据指定 {@code modelId} 生成 AgentScope {@link io.agentscope.core.model.DashScopeChatModel} 实例（用于后续对话推理）</li>
  * </ul>
  *
  * <p>约定：</p>
  * <ul>
- *     <li>{@link #baseUrl} 可填写形如 {@code https://api.openai.com} 或 {@code https://api.openai.com/v1}；
+ *     <li>{@link #baseUrl} 默认为 {@code https://dashscope.aliyuncs.com/compatible-mode/v1}；
  *     本类会在必要时自动补全 {@code /v1}。</li>
  *     <li>鉴权使用 {@code Authorization: Bearer <apiKey>} 方式。</li>
  *     <li>{@link #generateKwargs} 中常见的生成参数会被映射到 {@link GenerateOptions}；其余键值会透传为
@@ -53,46 +53,46 @@ import java.util.function.LongConsumer;
 @EqualsAndHashCode(callSuper = true)
 @Data
 @NoArgsConstructor
-public class OpenAIProvider extends AbstractProvider {
+public class DashScopeProvider extends AbstractProvider {
 
     /**
      * 日志记录器。
      */
-    private static final Logger LOGGER = LoggerFactory.getLogger(OpenAIProvider.class);
-    public static final String ARG_STREAM = "stream";
+    private static final Logger LOGGER = LoggerFactory.getLogger(DashScopeProvider.class);
 
     /**
-     * 共享 HTTP 客户端，用于调用 OpenAI 兼容 REST API。
+     * 共享 HTTP 客户端，用于调用 DashScope REST API。
      */
     private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder().build();
 
     /**
-     * 默认 OpenAI Base URL（包含 {@code /v1}）。
+     * 默认 DashScope Base URL（包含 {@code /v1}）。
      */
-    private static final String DEFAULT_BASE_URL = "https://api.openai.com/v1";
+    private static final String DEFAULT_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1";
+    public static final String ARG_STREAM = "stream";
 
     /**
-     * 构造一个 OpenAIProvider，并可选择初始化内建默认配置。
+     * 构造一个 DashScopeProvider，并可选择初始化内建默认配置。
      *
      * <p>当 {@code initDefaults=true} 时，将填充如下默认值：</p>
      * <ul>
-     *     <li>{@code id=openai}</li>
-     *     <li>{@code name=OpenAI}</li>
-     *     <li>{@code baseUrl=https://api.openai.com/v1}</li>
+     *     <li>{@code id=dashscope}</li>
+     *     <li>{@code name=DashScope}</li>
+     *     <li>{@code baseUrl=https://dashscope.aliyuncs.com/compatible-mode/v1}</li>
      *     <li>{@code apiKeyPrefix=sk-}</li>
-     *     <li>{@code chatModel=io.agentscope.core.model.OpenAIChatModel}</li>
+     *     <li>{@code chatModel=io.agentscope.core.model.DashScopeChatModel}</li>
      *     <li>开启模型发现与连接性检查标识</li>
      * </ul>
      *
      * @param initDefaults 是否写入默认配置
      */
-    public OpenAIProvider(boolean initDefaults) {
+    public DashScopeProvider(boolean initDefaults) {
         if (!initDefaults) return;
-        this.setId("openai");
-        this.setName("OpenAI");
+        this.setId("dashscope");
+        this.setName("DashScope");
         this.setBaseUrl(DEFAULT_BASE_URL);
         this.setApiKeyPrefix("sk-");
-        this.setChatModel(OpenAIChatModel.class.getName());
+        this.setChatModel(DashScopeChatModel.class.getName());
         this.setLocal(false);
         this.setCustom(false);
         this.setFreezeUrl(false);
@@ -105,7 +105,7 @@ public class OpenAIProvider extends AbstractProvider {
     }
 
     /**
-     * 检查当前 Provider 配置下 OpenAI 兼容平台的连通性（不依赖具体模型）。
+     * 检查当前 Provider 配置下 DashScope 平台的连通性（不依赖具体模型）。
      *
      * <p>实现策略：调用 {@code GET /v1/models}，HTTP 2xx 视为可用。</p>
      *
@@ -136,7 +136,7 @@ public class OpenAIProvider extends AbstractProvider {
     }
 
     /**
-     * 从 OpenAI 兼容平台拉取可用模型列表。
+     * 从 DashScope 平台拉取可用模型列表。
      *
      * <p>实现策略：调用 {@code GET /v1/models} 并解析响应中的 {@code data[].id}。</p>
      *
@@ -199,7 +199,7 @@ public class OpenAIProvider extends AbstractProvider {
      *     <li>若上述失败，则 fallback 调用 {@code POST /v1/chat/completions} 做一次最小探测</li>
      * </ol>
      *
-     * @param modelId 模型标识（OpenAI API 使用的 model 字段）
+     * @param modelId 模型标识（DashScope API 使用的 model 字段）
      * @param timeout 本次检查超时时间（为空时默认 30 秒）
      * @return 异步返回检查结果
      */
@@ -228,7 +228,7 @@ public class OpenAIProvider extends AbstractProvider {
     }
 
     /**
-     * 获取指定模型对应的 AgentScope {@link OpenAIChatModel} 实例。
+     * 获取指定模型对应的 AgentScope {@link DashScopeChatModel} 实例。
      *
      * <p>该实例会携带：</p>
      * <ul>
@@ -238,21 +238,21 @@ public class OpenAIProvider extends AbstractProvider {
      * </ul>
      *
      * @param modelId 模型标识
-     * @return {@link OpenAIChatModel} 实例（返回类型为 Object 以匹配抽象层定义）
+     * @return {@link DashScopeChatModel} 实例（返回类型为 Object 以匹配抽象层定义）
      * @throws IllegalArgumentException modelId 为空
      * @throws IllegalStateException    apiKey 缺失且当前 Provider 要求 apiKey
      */
     @Override
     public Object getChatModelInstance(String modelId) {
         if (modelId == null || modelId.isBlank()) {
-            throw new IllegalArgumentException("modelId is empty");
+            throw new IllegalArgumentException("DashScope modelId is empty");
         }
         String apiKeyError = validateApiKey();
         if (apiKeyError != null) {
             throw new IllegalStateException(apiKeyError);
         }
 
-        OpenAIChatModel.Builder builder = OpenAIChatModel.builder()
+        DashScopeChatModel.Builder builder = DashScopeChatModel.builder()
                 .apiKey(this.getApiKey())
                 .modelName(modelId);
 
@@ -263,7 +263,7 @@ public class OpenAIProvider extends AbstractProvider {
 
         Map<String, Object> kwargs = this.getGenerateKwargs();
         if (kwargs != null && !kwargs.isEmpty()) {
-            builder.generateOptions(toGenerateOptions(kwargs));
+            builder.defaultOptions(toGenerateOptions(kwargs));
             Object stream = firstNonNull(kwargs.get(ARG_STREAM), kwargs.get("stream_enabled"), kwargs.get("streamEnabled"));
             if (stream instanceof Boolean b) {
                 builder.stream(b);
@@ -345,12 +345,12 @@ public class OpenAIProvider extends AbstractProvider {
     }
 
     /**
-     * 生成 OpenAI 兼容 API 的完整 URL。
+     * 生成 DashScope 兼容 API 的完整 URL。
      *
      * <p>兼容如下输入：</p>
      * <ul>
-     *     <li>{@code baseUrl=https://api.openai.com} + {@code endpoint=/models} → {@code https://api.openai.com/v1/models}</li>
-     *     <li>{@code baseUrl=https://api.openai.com/v1} + {@code endpoint=/models} → {@code https://api.openai.com/v1/models}</li>
+     *     <li>{@code baseUrl=https://dashscope.aliyuncs.com/compatible-mode} + {@code endpoint=/models} → {@code https://dashscope.aliyuncs.com/compatible-mode/v1/models}</li>
+     *     <li>{@code baseUrl=https://dashscope.aliyuncs.com/compatible-mode/v1} + {@code endpoint=/models} → {@code https://dashscope.aliyuncs.com/compatible-mode/v1/models}</li>
      *     <li>{@code baseUrl=https://xxx.com/custom/v4} + {@code endpoint=/models} → {@code https://xxx.com/custom/v4/models}</li>
      * </ul>
      *
@@ -423,7 +423,7 @@ public class OpenAIProvider extends AbstractProvider {
     /**
      * 从字典中读取一个 Double 参数并设置到 {@link GenerateOptions.Builder}。
      *
-     * @param kwargs   生成参数字典
+     * @param kwargs    生成参数字典
      * @param setter   builder 的 setter
      * @param consumed 已消费 key 集合，用于避免重复透传
      * @param keys     支持的 key 别名（按顺序取第一个非空值）
@@ -443,7 +443,7 @@ public class OpenAIProvider extends AbstractProvider {
     /**
      * 从字典中读取一个 Integer 参数并设置到 {@link GenerateOptions.Builder}。
      *
-     * @param kwargs   生成参数字典
+     * @param kwargs    生成参数字典
      * @param setter   builder 的 setter
      * @param consumed 已消费 key 集合，用于避免重复透传
      * @param keys     支持的 key 别名（按顺序取第一个非空值）
@@ -463,7 +463,7 @@ public class OpenAIProvider extends AbstractProvider {
     /**
      * 从字典中读取一个 Long 参数并设置到 {@link GenerateOptions.Builder}。
      *
-     * @param kwargs   生成参数字典
+     * @param kwargs    生成参数字典
      * @param setter   builder 的 setter
      * @param consumed 已消费 key 集合，用于避免重复透传
      * @param keys     支持的 key 别名（按顺序取第一个非空值）
@@ -483,7 +483,7 @@ public class OpenAIProvider extends AbstractProvider {
     /**
      * 从字典中读取一个 Boolean 参数并设置到 builder。
      *
-     * @param kwargs   生成参数字典
+     * @param kwargs    生成参数字典
      * @param setter   setter
      * @param consumed 已消费 key 集合
      * @param keys     支持的 key 别名
@@ -503,7 +503,7 @@ public class OpenAIProvider extends AbstractProvider {
     /**
      * 从字典中读取一个 String 参数并设置到 builder。
      *
-     * @param kwargs   生成参数字典
+     * @param kwargs    生成参数字典
      * @param setter   setter
      * @param consumed 已消费 key 集合
      * @param keys     支持的 key 别名

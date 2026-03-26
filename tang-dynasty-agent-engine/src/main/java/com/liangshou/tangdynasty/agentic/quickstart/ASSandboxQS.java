@@ -71,8 +71,7 @@ public class ASSandboxQS {
         }
         try {
             // 如果已经是字符串，尝试解析为 JSON 并格式化
-            if (obj instanceof String) {
-                String jsonStr = (String) obj;
+            if (obj instanceof String jsonStr) {
                 if (jsonStr.trim().startsWith("{")) {
                     Object jsonObj = objectMapper.readValue(jsonStr, Object.class);
                     return objectMapper.writerWithDefaultPrettyPrinter()
