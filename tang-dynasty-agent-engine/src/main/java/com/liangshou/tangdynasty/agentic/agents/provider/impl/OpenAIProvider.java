@@ -263,7 +263,7 @@ public class OpenAIProvider extends AbstractProvider {
 
         Map<String, Object> kwargs = this.getGenerateKwargs();
         if (kwargs != null && !kwargs.isEmpty()) {
-            builder.generateOptions(toGenerateOptions(kwargs));
+            builder.defaultOptions(toGenerateOptions(kwargs));
             Object stream = firstNonNull(kwargs.get(ARG_STREAM), kwargs.get("stream_enabled"), kwargs.get("streamEnabled"));
             if (stream instanceof Boolean b) {
                 builder.stream(b);

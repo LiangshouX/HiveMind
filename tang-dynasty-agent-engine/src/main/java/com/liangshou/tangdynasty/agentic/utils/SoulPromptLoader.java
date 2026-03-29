@@ -14,7 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static com.liangshou.tangdynasty.agentic.common.enums.ErrorCodeEnum.SOUL_LOADER_ERROR;
+import static com.liangshou.tangdynasty.agentic.common.exceptions.ErrorCodeEnum.SOUL_LOADER_ERROR;
 
 /**
  * SOUL.md 文件加载工具，

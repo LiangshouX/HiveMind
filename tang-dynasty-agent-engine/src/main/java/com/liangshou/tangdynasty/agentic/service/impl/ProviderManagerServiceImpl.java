@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static com.liangshou.tangdynasty.agentic.common.enums.ErrorCodeEnum.LOAD_PROVIDER_ERROR;
+import static com.liangshou.tangdynasty.agentic.common.exceptions.ErrorCodeEnum.LOAD_PROVIDER_ERROR;
 
 @SuppressWarnings("unused")
 public class ProviderManagerServiceImpl implements IProviderManagerService {

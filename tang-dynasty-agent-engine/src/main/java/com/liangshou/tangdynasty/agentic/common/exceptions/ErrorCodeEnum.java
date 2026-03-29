@@ -1,6 +1,4 @@
-package com.liangshou.tangdynasty.agentic.common.enums;
-
-import com.liangshou.tangdynasty.agentic.common.exceptions.IErrorCode;
+package com.liangshou.tangdynasty.agentic.common.exceptions;
 
 /**
  * 错误码枚举类。
@@ -43,7 +41,12 @@ public enum ErrorCodeEnum implements IErrorCode {
     /**
      * 加载供应商错误
      */
-    LOAD_PROVIDER_ERROR(502, "Load Provider Error");
+    LOAD_PROVIDER_ERROR(502, "Load Provider Error"),
+
+    /**
+     * Session 历史存储错误
+     */
+    SESSION_HISTORY_ERROR(503, "Session History Error");
 
     /**
      * 错误码
