@@ -4,3 +4,10 @@ spring:
   data:
     mongodb:
       uri: ${MONGODB_URI:mongodb://localhost:27017/tang_dynasty}
+
+agentic:
+  max-iters: 200
+  # ReMe 长期记忆配置
+  memory:
+    reme:
+      baseUrl: ${REME_API_BASE_URL:http://localhost:8002}

@@ -32,7 +32,7 @@ public class MongoDBSessionHistoryService implements SessionHistoryService {
     private final String collectionName;
 
     public MongoDBSessionHistoryService(MongoTemplate mongoTemplate) {
-        this(mongoTemplate, "agentic_session_history");
+        this(mongoTemplate, "tang_agentic_session_history");
     }
 
     public MongoDBSessionHistoryService(MongoTemplate mongoTemplate, String collectionName) {
@@ -62,7 +62,7 @@ public class MongoDBSessionHistoryService implements SessionHistoryService {
     public CompletableFuture<Session> createSession(String userId, Optional<String> sessionId) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                String sid = sessionId.filter(s -> s != null && !s.trim().isEmpty())
+                String sid = sessionId.filter(s -> !s.trim().isEmpty())
                         .orElse(UUID.randomUUID().toString());
 
                 Session session = new Session(sid, userId, new ArrayList<>());
