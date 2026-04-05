@@ -14,6 +14,27 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
+ * ReMe 记忆服务 - 集成 ReMe (Retrieval-enhanced Memory) 实现长期记忆管理。
+ *
+ * <p>该服务利用 ReMe 框架提供以下核心功能：</p>
+ * <ul>
+ *     <li><b>记忆存储</b>：将对话消息添加到指定的 workspace 中，用于后续检索</li>
+ *     <li><b>语义检索</b>：根据查询内容从历史记忆中检索相关信息，支持 Top-K 排序</li>
+ *     <li><b>会话压缩</b>：对长对话历史进行智能压缩，生成包含关键事实、任务状态和未完成事项的摘要</li>
+ *     <li><b>Workspace 管理</b>：为用户和会话生成独立的 workspace ID，实现记忆的隔离和组织</li>
+ * </ul>
+ *
+ * <p>工作流程：</p>
+ * <ol>
+ *     <li>当对话历史超过阈值时，调用 {@link #compactSessionHistory} 方法</li>
+ *     <li>将待压缩的消息添加到 ReMe workspace 中</li>
+ *     <li>使用提示词向 ReMe 请求生成会话摘要</li>
+ *     <li>返回融合后的压缩摘要，用于替换原始历史消息</li>
+ * </ol>
+ *
+ * <p>配置项通过 {@link com.liangshou.tangdynasty.agentic.common.config.TdAgentProperties.ReMe} 管理，
+ * 包括 baseUrl、topK、timeout 等参数。</p>
+ *
  * @author LiangshouX
  */
 @Service

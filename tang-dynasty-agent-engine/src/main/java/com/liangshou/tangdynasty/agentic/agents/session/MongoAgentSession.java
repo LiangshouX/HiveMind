@@ -13,6 +13,26 @@ import java.time.Instant;
 import java.util.*;
 
 /**
+ * MongoDB Agent 会话存储 - 实现 AgentScope 的 Session 接口，基于 MongoDB 持久化 Agent 状态。
+ *
+ * <p>该类将 AgentScope 框架的 Session 抽象适配到 MongoDB 存储，提供以下功能：</p>
+ * <ul>
+ *     <li><b>键值存储</b>：保存和读取单个 State 对象或 State 列表</li>
+ *     <li><b>类型安全</b>：通过泛型方法确保反序列化时的类型正确性</li>
+ *     <li><b>存在检查</b>：判断指定 sessionKey 的状态是否存在</li>
+ *     <li><b>删除操作</b>：清除指定会话的所有状态数据</li>
+ * </ul>
+ *
+ * <p>数据存储格式：</p>
+ * <ul>
+ *     <li>文档 ID："{userId}:{sessionId}:state"</li>
+ *     <li>状态数据：以 JSON 字符串形式存储在 stateJson 字段中</li>
+ *     <li>使用 Jackson ObjectMapper 进行序列化和反序列化</li>
+ * </ul>
+ *
+ * <p>该实现支持 AgentScope ReActAgent 的 saveTo/loadFrom 方法，使得 Agent 的内部状态
+ * （如记忆、执行历史、工具上下文等）可以跨请求持久化和恢复。</p>
+ *
  * @author LiangshouX
  */
 public class MongoAgentSession implements Session {

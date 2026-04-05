@@ -19,7 +19,20 @@ import java.util.UUID;
 import java.util.function.Function;
 
 /**
- * ToolApprovalService 提供工具执行审批操作 Service
+ * 工具执行审批服务 - 管理 Agent 工具调用的审批流程。
+ *
+ * <p>该服务负责：</p>
+ * <ul>
+ *     <li>创建待审批的工具调用记录，包含风险等级评估和审批原因</li>
+ *     <li>查询指定会话中所有待审批的工具调用</li>
+ *     <li>批准或拒绝工具执行请求，并记录审批意见</li>
+ *     <li>检查特定工具调用是否已获得批准且未过期</li>
+ *     <li>标记工具已成功执行，更新审批状态</li>
+ *     <li>自动处理过期的审批请求，将其状态更新为 EXPIRED</li>
+ * </ul>
+ *
+ * <p>审批流程：当 Agent 尝试执行高风险工具时，系统会创建 PENDING 状态的审批记录，
+ * 等待用户确认后才会继续执行。审批记录具有有效期，超时后自动失效。</p>
  *
  * @author LiangshouX
  */

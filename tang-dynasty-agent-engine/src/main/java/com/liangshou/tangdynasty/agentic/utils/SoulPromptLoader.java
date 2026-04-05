@@ -17,10 +17,34 @@ import java.util.concurrent.ConcurrentHashMap;
 import static com.liangshou.tangdynasty.agentic.common.exceptions.ErrorCodeEnum.SOUL_LOADER_ERROR;
 
 /**
- * SOUL.md 文件加载工具，
- * 负责加载 {@code resources/souls/} 路径下的所有 SOUL.md 文件，
- * 一方面提供为 具体 Agent 的System Prompts，
- * 另一方面为前端查询时，分对象提供视图
+ * SOUL 提示词加载器 - 从类路径加载 Agent 的系统提示词文件。
+ *
+ * <p>该工具类负责：</p>
+ * <ul>
+ *     <li><b>加载单个 SOUL</b>：根据 Agent 名称从 {@code resources/souls/{agentName}/SOUL.md} 加载提示词内容</li>
+ *     <li><b>缓存管理</b>：使用 ConcurrentHashMap 缓存已加载的 SOUL，避免重复读取文件</li>
+ *     <li><b>批量扫描</b>：扫描 {@code resources/souls/} 目录下的所有一级子目录，返回所有可用的 Agent 名称列表</li>
+ * </ul>
+ *
+ * <p>文件结构约定：</p>
+ * <pre>{@code
+ * resources/souls/
+ *   ├── ZDXL/
+ *   │   └── SOUL.md
+ *   ├── VSUU/
+ *   │   └── SOUL.md
+ *   └── ...
+ * }</pre>
+ *
+ * <p>使用场景：</p>
+ * <ul>
+ *     <li>为不同角色的 Agent（如宰相、御史等）加载专属的系统提示词</li>
+ *     <li>前端查询可用的 Agent 列表，动态展示 Agent 选择界面</li>
+ * </ul>
+ *
+ * <p>注意：该类是纯静态工具类，不允许实例化。</p>
+ *
+ * @author LiangshouX
  */
 @SuppressWarnings("unused")
 public class SoulPromptLoader {

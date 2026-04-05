@@ -20,7 +20,27 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * MongoDBSessionHistoryService：基于 MongoDB 的 Session 历史服务实现。
+ * MongoDB 会话历史服务 - 基于 MongoDB 实现 AgentScope 的 Session 持久化存储。
+ *
+ * <p>该服务实现了 AgentScope 框架的 {@link io.agentscope.runtime.engine.services.memory.service.SessionHistoryService} 接口，
+ * 提供以下功能：</p>
+ * <ul>
+ *     <li><b>会话管理</b>：创建、查询、删除和列出用户的所有会话</li>
+ *     <li><b>消息追加</b>：将新的对话消息追加到指定会话中</li>
+ *     <li><b>自动修复</b>：当发现损坏或空的会话数据时，自动创建新的空会话进行修复</li>
+ *     <li><b>健康检查</b>：通过 MongoDB ping 命令检测数据库连接状态</li>
+ * </ul>
+ *
+ * <p>数据存储结构：</p>
+ * <ul>
+ *     <li>集合名称：默认为 "tang_agentic_session_history"</li>
+ *     <li>文档 ID 格式："session:{userId}:{sessionId}"</li>
+ *     <li>会话数据以 JSON 字符串形式存储在 sessionJson 字段中</li>
+ * </ul>
+ *
+ * <p>注意：该类位于 old 包下，可能是旧版本实现，建议优先使用新的 MongoConversationMemory 实现。</p>
+ *
+ * @author LiangshouX
  */
 public class MongoDBSessionHistoryService implements SessionHistoryService {
 

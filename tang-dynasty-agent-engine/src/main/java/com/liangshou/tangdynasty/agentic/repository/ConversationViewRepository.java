@@ -8,7 +8,14 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * ConversationViewRepository 对话记忆视图存储库
+ * 对话视图存储库 - 提供 ConversationViewDocument 的 MongoDB 数据访问接口。
+ *
+ * <p>该 Repository 继承自 Spring Data MongoDB 的 MongoRepository，提供：</p>
+ * <ul>
+ *     <li>标准的 CRUD 操作（保存、查询、删除等）</li>
+ *     <li>{@link #findByUserIdAndSessionId} - 查询指定会话的视图信息</li>
+ *     <li>{@link #findByUserIdOrderByUpdatedAtDesc} - 按更新时间倒序查询用户的所有会话，用于会话列表展示</li>
+ * </ul>
  *
  * @author LiangshouX
  */

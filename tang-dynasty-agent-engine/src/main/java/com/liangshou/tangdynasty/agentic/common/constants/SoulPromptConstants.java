@@ -3,7 +3,24 @@ package com.liangshou.tangdynasty.agentic.common.constants;
 import com.liangshou.tangdynasty.agentic.utils.SoulPromptLoader;
 
 /**
- * SoulPromptConstants：SOUL.md 文件内容常量
+ * SOUL 提示词常量 - 定义 Agent 的系统提示词常量和浏览器操作指南。
+ *
+ * <p>该常量类包含：</p>
+ * <ul>
+ *     <li><b>ZDXL_BUILTIN_SOUL</b>：通过 {@link SoulPromptLoader} 加载的宰相 Agent 的内置提示词</li>
+ *     <li><b>BROWSER_SYSTEM_PROMPT</b>：浏览器自动化操作的系统提示词，指导 Agent 如何控制浏览器完成任务</li>
+ * </ul>
+ *
+ * <p>浏览器操作指南包括：</p>
+ * <ul>
+ *     <li>动作执行准则：每次迭代只执行一个动作、优先点击页面中间元素等</li>
+ *     <li>观察准则：基于网页实际元素操作、处理空白或错误页面等</li>
+ *     <li>搜索策略：使用合适的关键词、避免使用 site: 语法、逐步深入查找答案</li>
+ * </ul>
+ *
+ * <p>注意：该类是纯常量类，不允许实例化。</p>
+ *
+ * @author LiangshouX
  */
 @SuppressWarnings("unused")
 public class SoulPromptConstants {

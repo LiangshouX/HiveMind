@@ -12,16 +12,27 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 记忆管理器
+ * Agent 记忆管理器 - 管理对话记忆的压缩和摘要注入。
  *
- * <p>负责管理 Agent 的对话记忆，包括添加消息、自动压缩等功能。</p>
- *
- * <h3>功能说明：</h3>
+ * <p>该管理器负责智能控制对话历史的压缩策略，主要功能包括：</p>
  * <ul>
- *     <li>添加消息到记忆</li>
- *     <li>获取最近的消息</li>
- *     <li>自动压缩（当记忆超过阈值时）</li>
- *     <li>手动触发压缩</li>
+ *     <li><b>自动压缩触发</b>：根据消息数量或字符数阈值判断是否需要压缩历史</li>
+ *     <li><b>压缩执行</b>：调用 ReMe 服务对旧消息进行压缩，保留最近 N 条消息不压缩</li>
+ *     <li><b>摘要注入</b>：将压缩后的历史摘要作为 System Message 注入到当前对话上下文中</li>
+ *     <li><b>配置驱动</b>：通过 {@link com.liangshou.tangdynasty.agentic.common.config.TdAgentProperties.Compaction} 控制压缩行为</li>
+ * </ul>
+ *
+ * <p>压缩触发条件（满足任一即可）：</p>
+ * <ul>
+ *     <li>历史消息数超过 {@code triggerMessageCount}（默认 20 条）</li>
+ *     <li>总字符数超过 {@code triggerCharacterCount}（默认 24000 字符）</li>
+ * </ul>
+ *
+ * <p>压缩策略：</p>
+ * <ul>
+ *     <li>保留最近的 {@code keepRecentMessages} 条消息（默认 8 条）不被压缩</li>
+ *     <li>将更早的消息压缩为摘要，最大长度不超过 {@code maxSummaryCharacters}（默认 2400 字符）</li>
+ *     <li>压缩后的摘要会累积更新，融合新旧信息</li>
  * </ul>
  *
  * @author LiangshouX

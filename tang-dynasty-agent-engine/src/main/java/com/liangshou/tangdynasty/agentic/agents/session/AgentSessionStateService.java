@@ -10,6 +10,26 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 
 /**
+ * Agent 会话状态服务 - 管理 ReActAgent 的状态持久化和恢复。
+ *
+ * <p>该服务提供以下核心功能：</p>
+ * <ul>
+ *     <li><b>状态保存</b>：将 Agent 的当前状态（包括记忆、工具历史等）序列化并保存到 MongoDB</li>
+ *     <li><b>状态恢复</b>：从存储中加载之前保存的 Agent 状态，实现对话断点续传</li>
+ *     <li><b>暂停标记</b>：记录会话是否处于暂停状态，用于控制 Agent 的执行流程</li>
+ *     <li><b>状态清理</b>：删除指定会话的状态数据，用于重置会话</li>
+ * </ul>
+ *
+ * <p>使用场景：</p>
+ * <ul>
+ *     <li>用户刷新页面后恢复之前的对话上下文</li>
+ *     <li>长时间运行的任务需要暂停和恢复</li>
+ *     <li>多设备间同步 Agent 状态</li>
+ * </ul>
+ *
+ * <p>底层通过 {@link MongoAgentSession} 实现 AgentScope 的 {@link io.agentscope.core.session.Session} 接口，
+ * 将 Agent 状态以 JSON 格式存储在 {@link com.liangshou.tangdynasty.agentic.domain.document.AgentSessionStateDocument} 中。</p>
+ *
  * @author LiangshouX
  */
 @Service

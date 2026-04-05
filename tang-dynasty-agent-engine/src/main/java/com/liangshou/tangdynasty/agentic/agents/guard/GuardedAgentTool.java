@@ -11,7 +11,17 @@ import reactor.core.publisher.Mono;
 import java.util.Map;
 
 /**
- * 以 Agent Tool 的形式提供 工具执行防护
+ * 工具执行防护代理 - 以 Agent Tool 的形式提供工具调用安全控制。
+ *
+ * <p>该类包装原始 Agent 工具，在工具执行前进行安全检查：</p>
+ * <ul>
+ *     <li>通过 {@link ToolGuardEngine} 评估工具调用的风险等级</li>
+ *     <li>如果工具被判定为不允许执行，直接返回错误结果</li>
+ *     <li>如果需要人工审批且尚未批准，抛出 {@link io.agentscope.core.tool.ToolSuspendException} 暂停执行</li>
+ *     <li>工具成功执行后，自动标记审批记录为 EXECUTED 状态</li>
+ * </ul>
+ *
+ * <p>该设计实现了责任链模式，在不修改原始工具逻辑的前提下，统一添加工具安全防护层。</p>
  *
  * @author LiangshouX
  */

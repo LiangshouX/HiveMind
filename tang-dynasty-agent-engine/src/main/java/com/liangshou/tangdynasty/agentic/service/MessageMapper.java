@@ -13,6 +13,28 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * 消息映射器 - 在 AgentScope Msg 对象和存储格式之间进行转换。
+ *
+ * <p>该组件提供双向转换功能：</p>
+ * <ul>
+ *     <li><b>toStoredMessage</b>：将 AgentScope 的 {@link io.agentscope.core.message.Msg} 转换为 {@link StoredMessage}</li>
+ *     <li><b>toMsg</b>：将 {@link StoredMessage} 转换回 AgentScope 的 {@link io.agentscope.core.message.Msg}</li>
+ * </ul>
+ *
+ * <p>支持的内容类型转换：</p>
+ * <ul>
+ *     <li>{@link io.agentscope.core.message.TextBlock} ↔ text 类型</li>
+ *     <li>{@link io.agentscope.core.message.ThinkingBlock} ↔ thinking 类型</li>
+ *     <li>{@link io.agentscope.core.message.ToolUseBlock} ↔ tool_use 类型</li>
+ *     <li>{@link io.agentscope.core.message.ToolResultBlock} ↔ tool_result 类型</li>
+ * </ul>
+ *
+ * <p>序列化策略：</p>
+ * <ul>
+ *     <li>复杂对象（如 metadata、tool input）使用 Jackson ObjectMapper 序列化为 JSON 字符串</li>
+ *     <li>反序列化失败时抛出 IllegalStateException，确保数据完整性</li>
+ * </ul>
+ *
  * @author LiangshouX
  */
 @Component

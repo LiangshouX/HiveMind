@@ -5,7 +5,25 @@ import io.agentscope.core.memory.InMemoryMemory;
 import io.agentscope.core.message.Msg;
 
 /**
- * 封装基于 MongoDB 存储的用于 AgentScope ReAct Agent 会话记忆的实现。
+ * MongoDB 对话记忆 - 封装基于 MongoDB 存储的 AgentScope ReAct Agent 会话记忆实现。
+ *
+ * <p>该类扩展了 AgentScope 的 {@link io.agentscope.core.memory.InMemoryMemory}，提供以下增强功能：</p>
+ * <ul>
+ *     <li><b>自动持久化</b>：每次添加或删除消息时，自动将更新后的消息列表保存到 MongoDB</li>
+ *     <li><b>历史加载</b>：在初始化时从 MongoDB 加载之前的对话历史，恢复会话上下文</li>
+ *     <li><b>压缩摘要</b>：维护一个压缩的历史摘要字符串，用于在长对话中保留关键信息</li>
+ *     <li><b>智能压缩</b>：通过 {@link #applyCompaction} 方法应用消息压缩，替换旧消息为摘要</li>
+ * </ul>
+ *
+ * <p>工作流程：</p>
+ * <ol>
+ *     <li>创建实例时，从 {@link ConversationPersistenceService} 加载历史消息和压缩摘要</li>
+ *     <li>Agent 添加新消息时，调用 {@link #addMessage} 并触发 {@link #flush} 持久化</li>
+ *     <li>当需要压缩时，调用 {@link #applyCompaction} 清除旧消息、保留最近消息、更新摘要</li>
+ *     <li>清理会话时，调用 {@link #clear} 清空内存和数据库中的所有消息</li>
+ * </ol>
+ *
+ * <p>该实现确保了对话历史的持久性和一致性，支持会话中断后恢复和长对话的上下文管理。</p>
  *
  * @author LiangshouX
  */

@@ -6,7 +6,13 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 import java.util.Optional;
 
 /**
- * AgentSessionStateRepository 会话状态存储库
+ * Agent 会话状态存储库 - 提供 AgentSessionStateDocument 的 MongoDB 数据访问接口。
+ *
+ * <p>该 Repository 继承自 Spring Data MongoDB 的 MongoRepository，提供：</p>
+ * <ul>
+ *     <li>标准的 CRUD 操作（保存、查询、删除等）</li>
+ *     <li>自定义查询方法 {@link #findByUserIdAndSessionId} 用于根据用户和会话ID精确查找状态</li>
+ * </ul>
  *
  * @author LiangshouX
  */

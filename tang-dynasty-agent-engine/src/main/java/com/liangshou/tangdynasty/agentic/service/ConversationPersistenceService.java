@@ -15,6 +15,26 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
+ * 对话持久化服务 - 管理会话历史在 MongoDB 中的存储和检索。
+ *
+ * <p>该服务提供以下核心功能：</p>
+ * <ul>
+ *     <li><b>消息加载</b>：从 MongoDB 加载指定会话的完整历史消息，并转换为 AgentScope Msg 对象</li>
+ *     <li><b>消息替换</b>：保存或更新会话的所有消息，同时维护会话视图和压缩摘要</li>
+ *     <li><b>会话清理</b>：清空指定会话的所有消息和摘要</li>
+ *     <li><b>摘要管理</b>：加载和保存压缩后的历史摘要</li>
+ *     <li><b>会话列表</b>：查询用户的所有会话，按更新时间倒序排列</li>
+ *     <li><b>记忆搜索</b>：在会话历史中搜索包含关键词的消息</li>
+ *     <li><b>统计查询</b>：统计会话的消息数量和构建最近消息预览</li>
+ * </ul>
+ *
+ * <p>数据一致性：</p>
+ * <ul>
+ *     <li>每次消息变更都会同步更新 ConversationMemoryDocument 和 ConversationViewDocument</li>
+ *     <li>会话标题自动从第一条用户消息提取，或使用默认标题</li>
+ *     <li>使用乐观锁（version 字段）防止并发更新冲突</li>
+ * </ul>
+ *
  * @author LiangshouX
  */
 @Service

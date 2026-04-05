@@ -21,7 +21,26 @@ import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * 管理内置模型供应商目录，并在运行时解析当前生效的模型配置。
+ * 模型供应商目录注册表 - 管理内置和自定义的 LLM 供应商配置。
+ *
+ * <p>该组件负责：</p>
+ * <ul>
+ *     <li><b>加载供应商目录</b>：从 JSON 配置文件（默认 classpath:provider/builtin_provider.json）中读取供应商列表</li>
+ *     <li><b>解析模型配置</b>：根据应用配置合并供应商默认值和运行时覆盖值，生成最终的模型配置</li>
+ *     <li><b>环境变量替换</b>：支持在配置中使用 {{env:VAR_NAME}} 占位符引用环境变量</li>
+ *     <li><b>自动重载</b>：当配置文件发生变化时，支持自动或手动重新加载目录</li>
+ *     <li><b>配置验证</b>：验证供应商 ID、类型等必填字段，检测重复配置</li>
+ * </ul>
+ *
+ * <p>配置解析优先级：</p>
+ * <ol>
+ *     <li>应用配置 (application.yaml) 中的值优先</li>
+ *     <li>其次使用供应商配置文件中的默认值</li>
+ *     <li>API Key 必须提供，否则抛出异常</li>
+ * </ol>
+ *
+ * <p>支持的供应商类型由 {@link com.liangshou.tangdynasty.agentic.common.enums.TdAgentProviderType} 定义，
+ * 目前包括 DASHSCOPE 和 OPENAI。</p>
  *
  * @author LiangshouX
  */

@@ -7,17 +7,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * 记忆管理器
+ * 记忆管理器（旧版）- 管理 Agent 的对话记忆和自动压缩。
  *
- * <p>负责管理 Agent 的对话记忆，包括添加消息、自动压缩等功能。</p>
- *
- * <h3>功能说明：</h3>
+ * <p>该管理器封装了 AgentScope 的 {@link Memory} 组件，提供以下功能：</p>
  * <ul>
- *     <li>添加消息到记忆</li>
- *     <li>获取最近的消息</li>
- *     <li>自动压缩（当记忆超过阈值时）</li>
- *     <li>手动触发压缩</li>
+ *     <li><b>消息管理</b>：添加、获取和清空对话消息</li>
+ *     <li><b>自动压缩</b>：当记忆超过阈值时触发压缩，保留重要消息</li>
+ *     <li><b>大小控制</b>：限制最大记忆数量，防止内存溢出</li>
  * </ul>
+ *
+ * <p>注意：该类位于 old 包下，是一个未完成的实现（大部分方法为空或返回 null），
+ * 建议优先使用新的 {@link com.liangshou.tangdynasty.agentic.agents.memory.TdAgentMemoryManager}。</p>
  *
  * @author LiangshouX
  */

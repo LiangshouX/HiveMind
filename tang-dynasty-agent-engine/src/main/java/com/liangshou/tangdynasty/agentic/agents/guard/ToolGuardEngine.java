@@ -11,6 +11,18 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
+ * 工具防护引擎 - 评估 Agent 工具调用的安全风险并生成决策。
+ *
+ * <p>该引擎通过以下规则对工具调用进行安全评估：</p>
+ * <ul>
+ *     <li><b>危险命令检测</b>：检查工具输入中是否包含高危命令模式（如 rm -rf、format、shutdown 等），命中则直接拒绝</li>
+ *     <li><b>敏感路径检测</b>：在严格模式下，检查是否访问敏感文件或目录（如 .env、.git、id_rsa 等），命中则拒绝</li>
+ *     <li><b>高风险工具识别</b>：识别需要人工审批的工具（如执行 shell 命令、文件写入、浏览器操作等），标记为 requiresApproval</li>
+ *     <li><b>默认放行</b>：未命中任何风险规则的普通工具调用，标记为低风险并允许执行</li>
+ * </ul>
+ *
+ * <p>评估结果以 {@link ToolGuardDecision} 形式返回，包含风险等级、决策原因和命中的模式标识。</p>
+ *
  * @author LiangshouX
  */
 @Component

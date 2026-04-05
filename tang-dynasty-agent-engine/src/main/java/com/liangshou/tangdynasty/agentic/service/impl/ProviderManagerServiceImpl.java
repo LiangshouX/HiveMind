@@ -25,6 +25,29 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import static com.liangshou.tangdynasty.agentic.common.exceptions.ErrorCodeEnum.LOAD_PROVIDER_ERROR;
 
+/**
+ * 供应商管理服务实现 - 从 JSON 配置文件加载和管理模型供应商。
+ *
+ * <p>该实现提供以下功能：</p>
+ * <ul>
+ *     <li><b>配置加载</b>：从 classpath:provider/builtin_provider.json 和 custom_provider.json 加载供应商配置</li>
+ *     <li><b>缓存管理</b>：使用 ConcurrentHashMap 缓存已加载的供应商，避免重复解析</li>
+ *     <li><b>动态解析</b>：根据 chatModel 字段自动选择 DashScopeProvider 或 OpenAIProvider 实现</li>
+ *     <li><b>模型列表解析</b>：解析供应商的 models 和 extraModels 列表，构建完整的模型信息</li>
+ * </ul>
+ *
+ * <p>工作流程：</p>
+ * <ol>
+ *     <li>首次调用 {@link #getProvider(String)} 时触发 {@link #loadAllProviders()}</li>
+ *     <li>读取 JSON 文件并解析为 JSONArray</li>
+ *     <li>遍历数组，根据配置创建对应的 AbstractProvider 实例</li>
+ *     <li>将供应商存入缓存并返回</li>
+ * </ol>
+ *
+ * <p>注意：该类位于旧版实现中，建议优先使用新的 {@link com.liangshou.tangdynasty.agentic.agents.provider.TdAgentProviderRegistry}。</p>
+ *
+ * @author LiangshouX
+ */
 @SuppressWarnings("unused")
 public class ProviderManagerServiceImpl implements IProviderManagerService {
 

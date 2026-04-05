@@ -5,7 +5,34 @@ import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * Agent 配置信息读取类
+ * Agent 引擎配置属性 - 封装所有与 TDAgent 相关的配置项。
+ *
+ * <p>该配置类通过 Spring Boot 的 {@code @ConfigurationProperties} 机制，
+ * 从 application.yaml 中读取前缀为 "tdagent" 的配置项，包括：</p>
+ *
+ * <ul>
+ *     <li><b>SystemPrompt</b>：系统提示词相关配置（产品名称、所有者名称、历史预览长度）</li>
+ *     <li><b>Model</b>：LLM 模型配置（供应商 ID、模型 ID、API Key、Base URL、流式选项等）</li>
+ *     <li><b>Sandbox</b>：沙箱环境配置（是否启用、浏览器/文件系统支持、严格启动模式）</li>
+ *     <li><b>ToolGuard</b>：工具防护配置（是否启用、严格模式、审批过期时间）</li>
+ *     <li><b>ReMe</b>：长期记忆服务配置（Base URL、超时时间、Top-K 检索数量）</li>
+ *     <li><b>Compaction</b>：对话压缩配置（触发阈值、保留消息数、最大摘要长度）</li>
+ *     <li><b>Streaming</b>：流式响应配置（是否启用、增量模式）</li>
+ * </ul>
+ *
+ * <p>配置示例（application.yaml）：</p>
+ * <pre>{@code
+ * tdagent:
+ *   model:
+ *     provider-id: dashscope
+ *     model-name: qwen-max
+ *     api-key: ${DASHSCOPE_API_KEY}
+ *   sandbox:
+ *     enabled: true
+ *   tool-guard:
+ *     enabled: true
+ *     strict-mode: true
+ * }</pre>
  *
  * @author LiangshouX
  */

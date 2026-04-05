@@ -3,7 +3,16 @@ package com.liangshou.tangdynasty.agentic.common.enums;
 import java.util.Locale;
 
 /**
- * TDAgent 支持的模型供应商类型。
+ * Agent 支持的模型供应商类型枚举。
+ *
+ * <p>目前支持的供应商类型：</p>
+ * <ul>
+ *     <li><b>DASHSCOPE</b> - 阿里云 DashScope（通义千问）平台</li>
+ *     <li><b>OPENAI</b> - OpenAI 及兼容 OpenAI API 格式的平台（如 DeepSeek、Ollama 等）</li>
+ * </ul>
+ *
+ * <p>通过 {@link #fromValue(String)} 方法可以从配置字符串解析出对应的枚举值，
+ * 支持多种别名格式（如 "openai-compatible"、"openai_compatible" 都映射到 OPENAI）。</p>
  *
  * @author LiangshouX
  */

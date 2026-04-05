@@ -1,8 +1,21 @@
 package com.liangshou.tangdynasty.agentic.common.exceptions;
 
 /**
- * 错误码枚举类。
- * <p>用于统一管理 Agent Engine 模块中的各种错误码和对应的错误消息。</p>
+ * 错误码枚举类 - 统一管理 Agent Engine 模块的错误码和错误消息。
+ *
+ * <p>定义的错误码包括：</p>
+ * <ul>
+ *     <li><b>SUCCESS (200)</b> - 操作成功</li>
+ *     <li><b>SYSTEM_ERROR (500)</b> - 系统内部错误</li>
+ *     <li><b>PARAM_ERROR (400)</b> - 请求参数错误</li>
+ *     <li><b>NOT_FOUND (404)</b> - 资源未找到</li>
+ *     <li><b>UNAUTHORIZED (401)</b> - 未授权访问</li>
+ *     <li><b>SOUL_LOADER_ERROR (501)</b> - SOUL 提示词加载失败</li>
+ *     <li><b>LOAD_PROVIDER_ERROR (502)</b> - 模型供应商配置加载失败</li>
+ *     <li><b>SESSION_HISTORY_ERROR (503)</b> - 会话历史存储错误</li>
+ * </ul>
+ *
+ * <p>所有错误码实现了 {@link IErrorCode} 接口，可通过 {@link BizException} 抛出。</p>
  *
  * @author liangshou
  * @version 1.0
