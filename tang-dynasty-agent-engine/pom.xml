@@ -18,6 +18,9 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <agentscope.core.version>1.0.11-SNAPSHOT</agentscope.core.version>
+        <agentscope.runtime.version>1.0.2</agentscope.runtime.version>
+        <maven.compiler.release>17</maven.compiler.release>
     </properties>
 
     <dependencies>
@@ -40,24 +43,24 @@
         <!--agentscope-java-->
         <dependency>
             <groupId>io.agentscope</groupId>
-            <artifactId>agentscope</artifactId>
-            <version>1.0.2</version>
+            <artifactId>agentscope-core</artifactId>
+            <version>${agentscope.core.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-simple</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
-        <dependency>
-            <groupId>io.agentscope</groupId>
-            <artifactId>agentscope-runtime-sandbox-core</artifactId>
-            <version>1.0.2</version>
-        </dependency>
-        <!-- Add AgentScope Agent adapter dependency -->
         <dependency>
             <groupId>io.agentscope</groupId>
             <artifactId>agentscope-runtime-agentscope</artifactId>
-            <version>1.0.2</version>
+            <version>${agentscope.runtime.version}</version>
         </dependency>
         <dependency>
             <groupId>io.agentscope</groupId>
-            <artifactId>agentscope-runtime-engine</artifactId>
-            <version>1.0.2</version>
+            <artifactId>agentscope-extensions-reme</artifactId>
+            <version>${agentscope.core.version}</version>
         </dependency>
 
         <!-- Lombok -->

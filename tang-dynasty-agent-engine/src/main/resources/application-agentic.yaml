@@ -5,9 +5,43 @@ spring:
     mongodb:
       uri: ${MONGODB_URI:mongodb://localhost:27017/tang_dynasty}
 
-agentic:
-  max-iters: 200
-  # ReMe 长期记忆配置
-  memory:
-    reme:
-      baseUrl: ${REME_API_BASE_URL:http://localhost:8002}
+tdagent:
+  system-prompt:
+    product-name: TDAgent
+    owner-name: TangWorkSpace
+    max-history-preview: 12
+  model:
+    provider-config-location: classpath:provider/builtin_provider.json
+    reload-on-change: true
+    provider-id: ${TDAGENT_MODEL_PROVIDER:dashscope}
+    model-id: ${TDAGENT_MODEL_ID:}
+    api-key: ${TDAGENT_MODEL_API_KEY:}
+    base-url: ${TDAGENT_MODEL_BASE_URL:}
+    endpoint-path: ${TDAGENT_MODEL_ENDPOINT_PATH:}
+    model-name: ${TDAGENT_MODEL_NAME:qwen-max}
+    stream: false
+    enable-thinking: false
+    max-iters: 8
+  sandbox:
+    enabled: true
+    browser-enabled: true
+    filesystem-enabled: true
+    strict-startup: false
+  tool-guard:
+    enabled: true
+    strict-mode: true
+    pending-expire-minutes: 60
+  reme:
+    enabled: true
+    base-url: ${TDAGENT_REME_BASE_URL:http://localhost:8085}
+    timeout-seconds: 60
+    top-k: 5
+  compaction:
+    enabled: true
+    trigger-message-count: 20
+    trigger-character-count: 24000
+    keep-recent-messages: 8
+    max-summary-characters: 2400
+  streaming:
+    enabled: true
+    incremental: true

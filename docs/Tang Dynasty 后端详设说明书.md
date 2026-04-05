@@ -1,16 +1,22 @@
 ## 一、定位与目标
-本项目是一个全新的基于多 Agent 协作架构的个人助理平台，以中国古代沿用千年的【三省六部】制度为蓝本，基于 Spring Boot、Spring AI、Spring AI Alibaba 等后端技术框架，对各类 AI Agent 进行组织与工作分配，实现一套制度化、流程化、职责分明的 AI 多 Agent 协作框架。用户作为系统的最高决策者（“皇上”），通过与系统交互下达指令，系统将指令通过不同的“政府机构”（Agent 部门）进行分拣、规划、审议、执行和汇总，最终交付给用户高质量的结果。
+
+本项目是一个全新的基于多 Agent 协作架构的个人助理平台，以中国古代沿用千年的【三省六部】制度为蓝本，基于 Spring Boot、Spring
+AI、Spring AI Alibaba 等后端技术框架，对各类 AI Agent 进行组织与工作分配，实现一套制度化、流程化、职责分明的 AI 多 Agent
+协作框架。用户作为系统的最高决策者（“皇上”），通过与系统交互下达指令，系统将指令通过不同的“政府机构”（Agent
+部门）进行分拣、规划、审议、执行和汇总，最终交付给用户高质量的结果。
 
 ## 二、领域建模
+
 ### 2.1 存储选型
-+ 关系型数据库：MySQL 8.0.36（InnoDB，utf8mb4）  
-+ 文档型数据库：MongoDB 
+
++ 关系型数据库：MySQL 8.0.36（InnoDB，utf8mb4）
++ 文档型数据库：MongoDB
 + 缓存/分布式锁（可选）：Redis 7.2.x
 
-
-
 ### 2.2 业务建模
+
 #### 业务实体
+
 + 实体：**皇上**
     - 职责：代表用户，向 Agent 系统发送消息（闲聊）或下达任务指令（下旨）
 + 实体：**宰相（ZDXL）**
@@ -23,16 +29,17 @@
     - 权限：只能调用 门下省
 + 实体：**门下省 /侍中(MFXX)**
     - 定位：方案审议官、负责把握方案质量；
-    - 职责：审查中书方案（可行性、完整性、风险），若审议通过，转 尚书省 开始执行，否则<font style="color:rgb(51, 51, 51);">封驳重修</font>，转 中书省 重新修改，驳回时包含具体的修改建议，修改后重新审议，<font style="color:rgb(51, 51, 51);">封驳</font>过程限制最多执行 3 轮
+    - 职责：审查中书方案（可行性、完整性、风险），若审议通过，转 尚书省 开始执行，否则<font style="color:rgb(51, 51, 51);">
+      封驳重修</font>，转 中书省 重新修改，驳回时包含具体的修改建议，修改后重新审议，<font style="color:rgb(51, 51, 51);">
+      封驳</font>过程限制最多执行 3 轮
     - 权限：只能调用 尚书令 + 回调 中书令
 + 实体：**尚书令 (UHUU)**
     - 定位：任务派发官、执行总指挥；
     - 职责：接收门下省提交的执行方案，依次执行，汇总执行结果，回调 中书令，由 中书令 整理为奏章，呈报皇上审阅；
     - 权限：只能调用 中书令，不能越权调用其他实体；
 
-
-
 #### 业务流转图
+
 mermaid 代码：
 
 ```mermaid
@@ -53,55 +60,49 @@ stateDiagram-v2
     Review --> [*]: 业务终止
 ```
 
-
-
 <!-- 这是一张图片，ocr 内容为： -->
 ![](https://cdn.nlark.com/yuque/0/2026/png/39061585/1774180283538-32ba7f42-530b-4d51-956e-248cf7f24688.png)
 
-
-
 ### 2.3 MySQL 存储表设计
+
 #### 场景表总览
+
 > 表字段见表：[TangDynastyTable](https://www.yuque.com/liangshoux/hzp1qk/bbhh53eqgtg0x18w)，或后文的 MySQL DDL
 >
 
-| 场景 | 业务场景 | 业务功能描述 | 存储表 | 表职能 |
-| --- | --- | --- | --- | --- |
-| 用户登录 | Login | 用户登录 | sys_users | 存储用户信息、登录时鉴权等 |
-| 早朝 | 上朝 | 发起 AI 对话 | conversations_view（MongoDB） | <font style="color:#080808;background-color:#ffffff;">Agent对话session视图</font> |
-| | | | conversations_memory（Mongo） | <font style="color:#080808;background-color:#ffffff;">Agent历史对话记忆</font> |
-| | 旨意库 | 从预设指令模板快速下达任务 | sys_edict_template | 预设的旨意模板（分类/参数 schema/预估 token/费用） |
-| 御书房 | 翰林学士 | 消息通道 channel | sys_channels | 渠道配置，密钥必须加密存储 |
-| | 旨意看板 | 任务总览、执行情况、流转进度、执行详情等 | edict_tasks | 任务/旨意实例（主表） |
-| | | | edict_task_flow_log | 流转与进度日志（flow/progress/review） |
-| | | | edict_task_scheduler | 调度元数据（分布式调度/重试/升级） |
-| | | | ~~sys_memorial~~ | ~~奏折（任务产出归档）~~ |
-| | 奏折 | | edict_memorial | 奏折正文/引用附件/状态（draft/submitted/approved） |
-| |  | | ~~sys_channel_delivery_log~~ | ~~投递日志（用于排障与审计）~~ |
-| | 司天台 | 创建和管理 AI 助手按时间自动执行的定时任务。 | scheduled_job | 定时任务定义（Cron/一次性/事件触发） |
-| | | | scheduled_job_run_record | 运行记录（开始/结束/错误/耗时/重试） |
-| 御史台 | 朝纲 | 编辑定义 AI 助手人设和行为的文件——SOUL.md、AGENTS.md、 HEARTBEAT.md 等——全部在浏览器中完成。 | sys_config | |
-| | 技能库 | 管理扩展 AI 助手能力的技能（如读取 PDF、创建 Word 文档、获取新闻等）。 | sys_skills | 扫描项目工程中的技能初始化，新安装的技能再单独做处理 |
-| | 工具库 | 管理 AI 助手使用的系统工具（如 执行命令行、进行浏览器Web搜索等 等）。 | sys_tools | 扫描项目工程中提供的工具进行初始化 |
-| | MCP | 启用/禁用/删除MCP，或者创建新的客户端。 | sys_mcp | |
-| | 官员管理 | 配置三省六部各个部门官员的权限、模型、系统提示词Soul、输出限制等，同时支持为各部录用新的官员，初始的三省六部官员为系统默认官员，为各部门对应的最高职权 | sys_officials | 官员（Agent 实例配置） |
-| |  | | sys_official_policy | 权限/限额/安全策略（工具白名单、审批阈值等） |
-| |  | | sys_official_prompt | 提示词文件引用/版本（可与 workspace_file 关联） |
-| 九司 | 模型 | 配置 LLM 提供商并选择 AI 助手使用的模型。AI 助手同时支持云提供商（需要 API Key） | sys_models | |
-| | 环境变量 | 管理 AI 助手的工具和技能在运行时需要的环境变量（如 TAVILY_API_KEY）。 | sys_env_vars | 环境变量（Secret 必须加密/脱敏） |
-| | 卫尉寺 | 负责安全相关的配置，如 访问控制、工具权限管理 等。 | sys_security_policy | 全局安全策略（RBAC、工具审批、黑白名单） |
-| |  |  | sys_access_token | 可选（如需要黑名单/撤销） |
-| | 司农寺 | 查看一段时间内的 LLM Token 消耗，按日期和模型统计。 | sys_token_usage | 按天/模型聚合 |
-| |  | | sys_token_usage_view | Token 消耗统计视图 |
-
-
-
+| 场景   | 业务场景  | 业务功能描述                                                                        | 存储表                          | 表职能                                                                           |
+|------|-------|-------------------------------------------------------------------------------|------------------------------|-------------------------------------------------------------------------------|
+| 用户登录 | Login | 用户登录                                                                          | sys_users                    | 存储用户信息、登录时鉴权等                                                                 |
+| 早朝   | 上朝    | 发起 AI 对话                                                                      | conversations_view（MongoDB）  | <font style="color:#080808;background-color:#ffffff;">Agent对话session视图</font> |
+|      |       |                                                                               | conversations_memory（Mongo）  | <font style="color:#080808;background-color:#ffffff;">Agent历史对话记忆</font>      |
+|      | 旨意库   | 从预设指令模板快速下达任务                                                                 | sys_edict_template           | 预设的旨意模板（分类/参数 schema/预估 token/费用）                                             |
+| 御书房  | 翰林学士  | 消息通道 channel                                                                  | sys_channels                 | 渠道配置，密钥必须加密存储                                                                 |
+|      | 旨意看板  | 任务总览、执行情况、流转进度、执行详情等                                                          | edict_tasks                  | 任务/旨意实例（主表）                                                                   |
+|      |       |                                                                               | edict_task_flow_log          | 流转与进度日志（flow/progress/review）                                                 |
+|      |       |                                                                               | edict_task_scheduler         | 调度元数据（分布式调度/重试/升级）                                                            |
+|      |       |                                                                               | ~~sys_memorial~~             | ~~奏折（任务产出归档）~~                                                                |
+|      | 奏折    |                                                                               | edict_memorial               | 奏折正文/引用附件/状态（draft/submitted/approved）                                        |
+|      |       |                                                                               | ~~sys_channel_delivery_log~~ | ~~投递日志（用于排障与审计）~~                                                             |
+|      | 司天台   | 创建和管理 AI 助手按时间自动执行的定时任务。                                                      | scheduled_job                | 定时任务定义（Cron/一次性/事件触发）                                                         |
+|      |       |                                                                               | scheduled_job_run_record     | 运行记录（开始/结束/错误/耗时/重试）                                                          |
+| 御史台  | 朝纲    | 编辑定义 AI 助手人设和行为的文件——SOUL.md、AGENTS.md、 HEARTBEAT.md 等——全部在浏览器中完成。             | sys_config                   |                                                                               |
+|      | 技能库   | 管理扩展 AI 助手能力的技能（如读取 PDF、创建 Word 文档、获取新闻等）。                                    | sys_skills                   | 扫描项目工程中的技能初始化，新安装的技能再单独做处理                                                    |
+|      | 工具库   | 管理 AI 助手使用的系统工具（如 执行命令行、进行浏览器Web搜索等 等）。                                       | sys_tools                    | 扫描项目工程中提供的工具进行初始化                                                             |
+|      | MCP   | 启用/禁用/删除MCP，或者创建新的客户端。                                                        | sys_mcp                      |                                                                               |
+|      | 官员管理  | 配置三省六部各个部门官员的权限、模型、系统提示词Soul、输出限制等，同时支持为各部录用新的官员，初始的三省六部官员为系统默认官员，为各部门对应的最高职权 | sys_officials                | 官员（Agent 实例配置）                                                                |
+|      |       |                                                                               | sys_official_policy          | 权限/限额/安全策略（工具白名单、审批阈值等）                                                       |
+|      |       |                                                                               | sys_official_prompt          | 提示词文件引用/版本（可与 workspace_file 关联）                                              |
+| 九司   | 模型    | 配置 LLM 提供商并选择 AI 助手使用的模型。AI 助手同时支持云提供商（需要 API Key）                            | sys_models                   |                                                                               |
+|      | 环境变量  | 管理 AI 助手的工具和技能在运行时需要的环境变量（如 TAVILY_API_KEY）。                                  | sys_env_vars                 | 环境变量（Secret 必须加密/脱敏）                                                          |
+|      | 卫尉寺   | 负责安全相关的配置，如 访问控制、工具权限管理 等。                                                    | sys_security_policy          | 全局安全策略（RBAC、工具审批、黑白名单）                                                        |
+|      |       |                                                                               | sys_access_token             | 可选（如需要黑名单/撤销）                                                                 |
+|      | 司农寺   | 查看一段时间内的 LLM Token 消耗，按日期和模型统计。                                               | sys_token_usage              | 按天/模型聚合                                                                       |
+|      |       |                                                                               | sys_token_usage_view         | Token 消耗统计视图                                                                  |
 
 #### MySQL DDL
+
 > 项目工程启动时执行 SQL，完成建表
 >
-
-
 
 ```sql
 -- MySQL 8.0.36 / InnoDB / utf8mb4
@@ -307,98 +308,84 @@ CREATE TABLE IF NOT EXISTS `sys_token_usage` (
 
 ```
 
-
-
 #### 表数据初始化说明
+
 + sys_user
     - 插入一个默认用户，user_id 为 default，user_id 为 admin123，phone_number 为 12345678901，此用户在开发测试期间用于豁免登录，注意密码脱敏以及解码逻辑；
 + sys_channels
 
-
-
-
-
 ### 2.4 MongoDB 文档设计
 
-
-| **文档名** | **文档描述** | **字段** | **子字段** | **类型** | **字段含义** |
-| --- | --- | --- | --- | --- | --- |
-| conversations_view | Agent对话session视图 | session_id |  | String | 对话唯一标识id |
-|  |  | userId |  | String | 用户id |
-|  |  | title |  | String | 对话title |
-|  |  | lastMessageAt |  | java.time.Instant | 最后一条消息的时间 |
-|  |  | updatedAt |  | java.time.Instant | 更新时间 |
-|  |  | createdAt |  | java.time.Instant | 创建时间 |
-|  |  | unreadCount |  | long | 未读消息数量 |
-|  |  | messageCount |  | long | 消息总数 |
-|  |  | version |  | long | 版本 |
-|  |  |  |  |  |  |
-| conversations_memory | Agent历史对话记忆 | session_id |  | String | 对话唯一标识id |
-|  |  | userId |  | String | 用户id |
-|  |  | messages |  | List<Message> | 所有对话内容 |
-|  |  |  | msg_id | String | 消息唯一 ID |
-|  |  |  | name | String | 消息发送者名称 |
-|  |  |  | role | String | 消息发送者角色 |
-|  |  |  | content | List<MessageContent> | 消息内容（字段见后文） |
-|  |  |  | <font style="color:#080808;background-color:#ffffff;">metadata</font> | String | 消息的元信息 |
-|  |  |  | <font style="color:#080808;background-color:#ffffff;">timestamp</font> | String | 消息发送完的时间戳 |
-|  |  | roundCount |  | long | 对话轮数 |
-|  |  | updatedAt |  | java.time.Instant | 更新时间 |
-|  |  | createdAt |  | java.time.Instant | 创建时间 |
-|  |  | version |  | long | 版本 |
-|  |  | title | String | 对话标题 |  |
-|  |  | sys_prompt | String | 系统提示词 |  |
-
-
-
+| **文档名**              | **文档描述**         | **字段**        | **子字段**                                                                | **类型**               | **字段含义**    |
+|----------------------|------------------|---------------|------------------------------------------------------------------------|----------------------|-------------|
+| conversations_view   | Agent对话session视图 | session_id    |                                                                        | String               | 对话唯一标识id    |
+|                      |                  | userId        |                                                                        | String               | 用户id        |
+|                      |                  | title         |                                                                        | String               | 对话title     |
+|                      |                  | lastMessageAt |                                                                        | java.time.Instant    | 最后一条消息的时间   |
+|                      |                  | updatedAt     |                                                                        | java.time.Instant    | 更新时间        |
+|                      |                  | createdAt     |                                                                        | java.time.Instant    | 创建时间        |
+|                      |                  | unreadCount   |                                                                        | long                 | 未读消息数量      |
+|                      |                  | messageCount  |                                                                        | long                 | 消息总数        |
+|                      |                  | version       |                                                                        | long                 | 版本          |
+|                      |                  |               |                                                                        |                      |             |
+| conversations_memory | Agent历史对话记忆      | session_id    |                                                                        | String               | 对话唯一标识id    |
+|                      |                  | userId        |                                                                        | String               | 用户id        |
+|                      |                  | messages      |                                                                        | List<Message>        | 所有对话内容      |
+|                      |                  |               | msg_id                                                                 | String               | 消息唯一 ID     |
+|                      |                  |               | name                                                                   | String               | 消息发送者名称     |
+|                      |                  |               | role                                                                   | String               | 消息发送者角色     |
+|                      |                  |               | content                                                                | List<MessageContent> | 消息内容（字段见后文） |
+|                      |                  |               | <font style="color:#080808;background-color:#ffffff;">metadata</font>  | String               | 消息的元信息      |
+|                      |                  |               | <font style="color:#080808;background-color:#ffffff;">timestamp</font> | String               | 消息发送完的时间戳   |
+|                      |                  | roundCount    |                                                                        | long                 | 对话轮数        |
+|                      |                  | updatedAt     |                                                                        | java.time.Instant    | 更新时间        |
+|                      |                  | createdAt     |                                                                        | java.time.Instant    | 创建时间        |
+|                      |                  | version       |                                                                        | long                 | 版本          |
+|                      |                  | title         | String                                                                 | 对话标题                 |             |
+|                      |                  | sys_prompt    | String                                                                 | 系统提示词                |             |
 
 MessageContent 字段定义：
 
-| 字段 | 字段描述 | 字段类型 | 说明 |
-| --- | --- | --- | --- |
-| type | 消息类型 | String | <font style="color:#080808;background-color:#ffffff;">text/tool_use/tool_result</font> |
-| text | 消息输出文本 | String | |
-| name | 工具调用等类型时，表示为工具名 | String | |
-| input | 工具调用等类型时，工具的输入 | String | 通常为 Json 串 |
-| input_raw | 工具调用等类型时，工具的原始输入 | String |  |
-| id | 工具调用等类型时的 call_id |  |  |
-
-
-
+| 字段        | 字段描述              | 字段类型   | 说明                                                                                     |
+|-----------|-------------------|--------|----------------------------------------------------------------------------------------|
+| type      | 消息类型              | String | <font style="color:#080808;background-color:#ffffff;">text/tool_use/tool_result</font> |
+| text      | 消息输出文本            | String |                                                                                        |
+| name      | 工具调用等类型时，表示为工具名   | String |                                                                                        |
+| input     | 工具调用等类型时，工具的输入    | String | 通常为 Json 串                                                                             |
+| input_raw | 工具调用等类型时，工具的原始输入  | String |                                                                                        |
+| id        | 工具调用等类型时的 call_id |        |                                                                                        |
 
 ### 2.5 菜单路由
+
 前端菜单对应的 Controller 路由
 
-| 一级分类 | 二级菜单（页面） | 路由路径 | 功能描述 |
-| --- | --- | --- | --- |
-| **早朝** | 上朝 | `/chat` | 与 AI 助手对话的核心页面。支持自然语言输入与历史对话。 |
-|  | 旨意库 | `/edict-library` | 预设圣旨模板，支持分类筛选、参数表单、预估时间和费用，可预览并一键下旨。 |
-| **御书房** | 翰林学士 | `/channels` | 管理各消息频道（钉钉、飞书、Discord、QQ、iMessage、控制台）的开关与凭据。 |
-|  | 旨意看板 | `/edict-board` | 查看、筛选和清理所有频道的聊天会话。若为“旨意”（Agent 协作任务），可点击查看进度，支持叫停、取消、恢复操作。 |
-|  | 奏折 | `/memorials` | 管理任务完成后形成的结果，供皇上审阅，支持一键复制为 Markdown。 |
-|  | 司天台 | `/scheduled-tasks` | 创建和管理 AI 助手按时间自动执行的定时任务。 |
-| **御史台** | 朝纲 | `/court-rules` | 编辑定义 AI 助手人设和行为的文件（如 SOUL.md, AGENTS.md, HEARTBEAT.md），全程在浏览器内完成。 |
-|  | 技能库 | `/skill-library` | 管理扩展 AI 助手能力的技能（如读取 PDF、创建 Word、获取新闻等）。 |
-|  | 工具库 | `/tool-library` | 管理 AI 助手使用的系统级工具（如命令行执行、Web 搜索等）。 |
-|  | MCP | `/mcp` | 启用、禁用、删除 MCP 或创建新的 Model Context Protocol 客户端。 |
-|  | 官员管理 | `/officials` | 配置三省六部各部门官员的权限、模型、系统提示词 (Soul)、输出限制等。支持为各部录用新官员。 |
-| **九司** | 模型 | `/models` | 配置 LLM 提供商，选择 AI 助手使用的云端或本地模型。 |
-|  | 环境变量 | `/env-vars` | 管理工具和技能运行时所需的环境变量（如 API Key 等）。 |
-|  | 御林军 | `/security` | 负责安全相关配置，如访问控制、工具权限管理等。 |
-|  | 大司农 | `/token-usage` | 查看和统计一段时间内（按日期、按模型）的 LLM Token 消耗。 |
-
-
-
-
-
+| 一级分类    | 二级菜单（页面） | 路由路径               | 功能描述                                                              |
+|---------|----------|--------------------|-------------------------------------------------------------------|
+| **早朝**  | 上朝       | `/chat`            | 与 AI 助手对话的核心页面。支持自然语言输入与历史对话。                                     |
+|         | 旨意库      | `/edict-library`   | 预设圣旨模板，支持分类筛选、参数表单、预估时间和费用，可预览并一键下旨。                              |
+| **御书房** | 翰林学士     | `/channels`        | 管理各消息频道（钉钉、飞书、Discord、QQ、iMessage、控制台）的开关与凭据。                     |
+|         | 旨意看板     | `/edict-board`     | 查看、筛选和清理所有频道的聊天会话。若为“旨意”（Agent 协作任务），可点击查看进度，支持叫停、取消、恢复操作。        |
+|         | 奏折       | `/memorials`       | 管理任务完成后形成的结果，供皇上审阅，支持一键复制为 Markdown。                              |
+|         | 司天台      | `/scheduled-tasks` | 创建和管理 AI 助手按时间自动执行的定时任务。                                          |
+| **御史台** | 朝纲       | `/court-rules`     | 编辑定义 AI 助手人设和行为的文件（如 SOUL.md, AGENTS.md, HEARTBEAT.md），全程在浏览器内完成。 |
+|         | 技能库      | `/skill-library`   | 管理扩展 AI 助手能力的技能（如读取 PDF、创建 Word、获取新闻等）。                           |
+|         | 工具库      | `/tool-library`    | 管理 AI 助手使用的系统级工具（如命令行执行、Web 搜索等）。                                 |
+|         | MCP      | `/mcp`             | 启用、禁用、删除 MCP 或创建新的 Model Context Protocol 客户端。                    |
+|         | 官员管理     | `/officials`       | 配置三省六部各部门官员的权限、模型、系统提示词 (Soul)、输出限制等。支持为各部录用新官员。                  |
+| **九司**  | 模型       | `/models`          | 配置 LLM 提供商，选择 AI 助手使用的云端或本地模型。                                    |
+|         | 环境变量     | `/env-vars`        | 管理工具和技能运行时所需的环境变量（如 API Key 等）。                                   |
+|         | 御林军      | `/security`        | 负责安全相关配置，如访问控制、工具权限管理等。                                           |
+|         | 大司农      | `/token-usage`     | 查看和统计一段时间内（按日期、按模型）的 LLM Token 消耗。                                |
 
 ## 三、RESTful API
+
 > 本节按菜单逐条覆盖。每个模块均包含：领域对象/表、核心 API（REST/WS）、事件、缓存、安全控制点。
 >
 > **注意**：在后端中，/api 统一使用 application.yaml 进行配置
 >
 
 ### 模块 1：上朝（聊天）
+
 领域对象：
 
 + conversations_view：左侧列表展示历史对话 title，按 lastMessageAt 逆序排序
@@ -410,19 +397,15 @@ API 接口：
 + `GET /api/chat/conversations/{sessionId}/messages`：根据sessionId 从conversations_memory 加载详细对话信息
 + `POST /api/chat/completions` 发送对话消息
 
-
-
 ### 模块 2：旨意库（模板）
+
 暂不开发后端
 
-
-
 ### 模块 3：翰林学士（频道）
+
 领域对象：
 
 + sys_channels
-
-
 
 API 接口：
 
@@ -431,15 +414,12 @@ API 接口：
 + `POST /api/channels/{name}/toggle`：设置名为 name 的 channel 是否启用，name 对应表中的 channel_name
 + `POST /api/channels/{name}/test`：测试名为 name 的 channel 是否联通
 
-
-
 ### 模块 4：旨意看板（任务）
+
 领域对象：
 
 + edict_tasks
 + edict_task_flow_log
-
-
 
 API 接口：
 
@@ -459,9 +439,8 @@ WebSocket：
 
 + `GET /ws/edict-board/task/{taskId}` 推送状态、进度、心跳
 
-
-
 ### 模块 5：奏折
+
 领域对象：
 
 + edict_memorial
@@ -475,9 +454,8 @@ API 接口：
 + `POST /api/memorials/{taskId}/submit`：
 + `POST /api/memorials/{taskId}/copy-link`（生成一次性分享链接，可审计）
 
-
-
 ### 模块 6：定时任务
+
 领域对象：
 
 + scheduled_job
@@ -494,34 +472,28 @@ API 接口：
 
 + Quartz+ Redis 锁（防并发）
 
-
-
 ### 模块 7：朝纲
+
 暂不实现后端
-
-
 
 ### 模块 8：技能库
+
 暂不实现后端
-
-
 
 ### 模块 9：工具库
+
 暂不实现后端
-
-
 
 ### 模块 10：MCP
+
 暂不实现后端
-
-
 
 ### 模块 11：官员管理
+
 暂不实现后端
 
-
-
 ### 模块 12：模型
+
 领域对象：
 
 + `sys_model`
@@ -535,19 +507,16 @@ API 接口：
 + `POST /api/models/providers/{id}/models`：修改 model_provider_id 为 id 的供应商下配置的模型，主要为增加删除
 + `DELETE /api/models/{id}`：修改 model_provider_id 为 id 的供应商，同时删除该model_provider_id 下的模型
 
-
-
 ### 模块 13：环境变量
+
 暂不实现后端
-
-
 
 ### 模块 14：御林军（安全）
+
 暂不实现后端
 
-
-
 ### 模块 15：大司农（Token 消耗）
+
 领域对象：
 
 + TokenUsage（日聚合 `sys_token_usage` + 明细 `sys_token_usage_raw`）
@@ -557,9 +526,8 @@ API 接口：
 + `GET /api/token-usage?startDate=...&endDate=...`：查询 startDate 到 endDate 之间的所有 Token 消耗
 + `POST /api/token-usage/by-model`：按条件查询符合条件的 Token 消耗
 
-
-
 ### 模块 16：公共模块（登录与鉴权）
+
 API（新增）：
 
 + `POST /api/auth/login`：登录

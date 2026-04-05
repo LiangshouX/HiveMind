@@ -1,7 +1,7 @@
 package com.liangshou.tangdynasty.agentic.service;
 
-import com.liangshou.tangdynasty.agentic.agents.provider.AbstractProvider;
-import com.liangshou.tangdynasty.agentic.agents.provider.model.ProviderInfo;
+import com.liangshou.tangdynasty.agentic.agents.provider.old.AbstractProvider;
+import com.liangshou.tangdynasty.agentic.agents.provider.old.model.ProviderInfo;
 
 /**
  * ProviderManagerService：供应商管理服务。
