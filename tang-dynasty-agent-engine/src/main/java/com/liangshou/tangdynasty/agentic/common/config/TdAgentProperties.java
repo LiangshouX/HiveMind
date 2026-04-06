@@ -3,6 +3,7 @@ package com.liangshou.tangdynasty.agentic.common.config;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.stereotype.Component;
 
 /**
  * Agent 引擎配置属性 - 封装所有与 TDAgent 相关的配置项。
@@ -36,9 +37,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *
  * @author LiangshouX
  */
-
 @Getter
 @Setter
+@Component
 @ConfigurationProperties(prefix = "tdagent")
 public class TdAgentProperties {
 
@@ -55,6 +56,8 @@ public class TdAgentProperties {
     private Compaction compaction = new Compaction();
 
     private Streaming streaming = new Streaming();
+
+    private Skill skill = new Skill();
 
     /**
      * System prompt 相关配置。
@@ -175,5 +178,20 @@ public class TdAgentProperties {
 
         private boolean incremental = true;
     }
-}
 
+    /**
+     * Agent Skill 相关配置。
+     */
+    @Getter
+    @Setter
+    public static class Skill {
+
+        private boolean enabled = true;
+
+        private String builtinLocation = "classpath:skills";
+
+        private boolean builtinEnabledByDefault = true;
+
+        private boolean customEnabledByDefault = true;
+    }
+}

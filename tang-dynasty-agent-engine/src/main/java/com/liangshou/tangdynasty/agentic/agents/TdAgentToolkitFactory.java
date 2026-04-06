@@ -18,6 +18,23 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 /**
+ * Agent Toolkit 工厂类，负责创建和配置 Agent 的工具集（Toolkit）。
+ * <p>
+ * 主要功能包括：
+ * <ul>
+ *   <li>注册内置工具（如会话管理、历史查询等）</li>
+ *   <li>根据配置动态注册沙箱工具，包括：</li>
+ *   <ul>
+ *     <li>Python 代码执行工具</li>
+ *     <li>Shell 命令执行工具</li>
+ *     <li>文件系统操作工具（读/写文件、列出目录、搜索文件）</li>
+ *     <li>浏览器自动化工具（导航、截图、点击、输入、等待等）</li>
+ *   </ul>
+ *   <li>集成 Tool Guard 引擎，为工具调用添加安全防护和审批机制</li>
+ *   <li>支持沙箱初始化失败时的优雅降级处理</li>
+ * </ul>
+ * </p>
+ *
  * @author LiangshouX
  */
 @Component

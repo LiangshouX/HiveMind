@@ -5,6 +5,22 @@ import com.liangshou.tangdynasty.agentic.service.ConversationPersistenceService;
 import org.springframework.stereotype.Service;
 
 /**
+ * Agent System Prompt 构建服务，负责生成动态的系统提示词。
+ * <p>
+ * 主要功能包括：
+ * <ul>
+ *   <li>根据配置和会话上下文构建个性化的 system prompt</li>
+ *   <li>注入最近会话摘要，帮助 Agent 理解当前对话背景</li>
+ *   <li>注入压缩历史摘要，在长对话中保持上下文一致性</li>
+ *   <li>定义 Agent 的行为准则和工具使用规范</li>
+ *   <li>包含产品信息、用户信息和会话元数据</li>
+ * </ul>
+ * </p>
+ * <p>
+ * 生成的 prompt 指导 Agent 作为软件工程专家，优先提供可执行、可验证、可维护的解决方案，
+ * 并遵守工具调用审批和安全策略。
+ * </p>
+ *
  * @author LiangshouX
  */
 @Service

@@ -45,3 +45,8 @@ tdagent:
   streaming:
     enabled: true
     incremental: true
+  skill:
+    enabled: true
+    builtin-location: classpath:skills
+    builtin-enabled-by-default: true
+    custom-enabled-by-default: true
