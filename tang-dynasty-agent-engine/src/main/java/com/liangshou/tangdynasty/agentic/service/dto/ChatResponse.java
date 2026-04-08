@@ -1,4 +1,4 @@
-package com.liangshou.tangdynasty.agentic.adapter.controller.dto;
+package com.liangshou.tangdynasty.agentic.service.dto;
 
 import lombok.Builder;
 import lombok.Getter;

@@ -33,10 +33,11 @@ public class GuardedAgentTool implements AgentTool {
     private final ToolApprovalService toolApprovalService;
 
     /**
-     * 执行相关操作。
-     * @param delegate 被包装的工具
-     * @param context 会话上下文
-     * @param toolGuardEngine tool guard 引擎
+     * 构造器
+     *
+     * @param delegate            被包装的工具
+     * @param context             会话上下文
+     * @param toolGuardEngine     tool guard 引擎
      * @param toolApprovalService 工具审批服务
      */
     public GuardedAgentTool(

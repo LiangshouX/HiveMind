@@ -1,18 +1,20 @@
-package com.liangshou.tangdynasty.agentic.agents.streaming;
+package com.liangshou.tangdynasty.agentic.service.impl;
 
-import com.liangshou.tangdynasty.agentic.adapter.controller.dto.ChatRequest;
-import com.liangshou.tangdynasty.agentic.adapter.controller.dto.ChatResponse;
-import com.liangshou.tangdynasty.agentic.adapter.controller.dto.ToolApprovalActionRequest;
 import com.liangshou.tangdynasty.agentic.agents.ConversationSessionContext;
 import com.liangshou.tangdynasty.agentic.agents.TdAgentFactory;
 import com.liangshou.tangdynasty.agentic.agents.guard.approval.ToolApprovalService;
 import com.liangshou.tangdynasty.agentic.agents.session.AgentSessionStateService;
+import com.liangshou.tangdynasty.agentic.agents.streaming.TdAgentActiveSessionRegistry;
+import com.liangshou.tangdynasty.agentic.agents.streaming.TdAgentStreamEvent;
 import com.liangshou.tangdynasty.agentic.common.config.TdAgentProperties;
 import com.liangshou.tangdynasty.agentic.common.enums.TdAgentStreamEventType;
-
 import com.liangshou.tangdynasty.agentic.domain.document.ToolApprovalDocument;
-import com.liangshou.tangdynasty.agentic.service.ChatCommandService;
-import com.liangshou.tangdynasty.agentic.service.TdAgentChatService;
+import com.liangshou.tangdynasty.agentic.service.IChatCommandService;
+import com.liangshou.tangdynasty.agentic.service.ITdAgentChatService;
+import com.liangshou.tangdynasty.agentic.service.ITdAgentStreamingService;
+import com.liangshou.tangdynasty.agentic.service.dto.ChatRequest;
+import com.liangshou.tangdynasty.agentic.service.dto.ChatResponse;
+import com.liangshou.tangdynasty.agentic.service.dto.ToolApprovalActionRequest;
 import io.agentscope.core.ReActAgent;
 import io.agentscope.core.agent.Event;
 import io.agentscope.core.agent.EventType;
@@ -50,11 +52,12 @@ import java.util.concurrent.atomic.AtomicReference;
  * @author LiangshouX
  */
 @Service
-public class TdAgentStreamingService {
+@SuppressWarnings("unused")
+public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
 
     private final TdAgentFactory agentFactory;
-    private final TdAgentChatService chatService;
-    private final ChatCommandService chatCommandService;
+    private final ITdAgentChatService chatService;
+    private final IChatCommandService IChatCommandService;
     private final AgentSessionStateService agentSessionStateService;
     private final ToolApprovalService toolApprovalService;
     private final TdAgentActiveSessionRegistry activeSessionRegistry;
@@ -62,25 +65,26 @@ public class TdAgentStreamingService {
 
     /**
      * 执行相关操作。
-     * @param agentFactory Agent 工厂
-     * @param chatService 聊天服务
-     * @param chatCommandService 命令服务
+     *
+     * @param agentFactory             Agent 工厂
+     * @param chatService              聊天服务
+     * @param IChatCommandService      命令服务
      * @param agentSessionStateService 会话状态服务
-     * @param toolApprovalService 工具审批服务
-     * @param activeSessionRegistry 活动会话注册表
-     * @param properties 外部化配置
+     * @param toolApprovalService      工具审批服务
+     * @param activeSessionRegistry    活动会话注册表
+     * @param properties               外部化配置
      */
-    public TdAgentStreamingService(
+    public TdAgentStreamingServiceImpl(
             TdAgentFactory agentFactory,
-            TdAgentChatService chatService,
-            ChatCommandService chatCommandService,
+            ITdAgentChatService chatService,
+            IChatCommandService IChatCommandService,
             AgentSessionStateService agentSessionStateService,
             ToolApprovalService toolApprovalService,
             TdAgentActiveSessionRegistry activeSessionRegistry,
             TdAgentProperties properties) {
         this.agentFactory = agentFactory;
         this.chatService = chatService;
-        this.chatCommandService = chatCommandService;
+        this.IChatCommandService = IChatCommandService;
         this.agentSessionStateService = agentSessionStateService;
         this.toolApprovalService = toolApprovalService;
         this.activeSessionRegistry = activeSessionRegistry;
@@ -89,12 +93,14 @@ public class TdAgentStreamingService {
 
     /**
      * 启动流式请求。
-     * @param request 请求对象
+     *
+     * @param request {@link ChatRequest}请求对象
      * @return 返回结果
      */
+    @Override
     public SseEmitter stream(ChatRequest request) {
         ConversationSessionContext context = chatService.buildContext(request);
-        ChatResponse commandResponse = chatCommandService.handleCommand(context, request.getMessage());
+        ChatResponse commandResponse = IChatCommandService.handleCommand(context, request.getMessage());
         if (commandResponse != null) {
             return singleResponseEmitter(context, commandResponse);
         }
@@ -114,9 +120,11 @@ public class TdAgentStreamingService {
 
     /**
      * 在批准后继续执行。
-     * @param request 请求对象
+     *
+     * @param request {@link ToolApprovalActionRequest}请求对象
      * @return 返回结果
      */
+    @Override
     public SseEmitter approveAndResume(ToolApprovalActionRequest request) {
         ConversationSessionContext context =
                 chatService.buildContext(request.getUserId(), request.getSessionId(), request.getTitle());
@@ -128,9 +136,11 @@ public class TdAgentStreamingService {
 
     /**
      * 在拒绝后继续执行。
+     *
      * @param request 请求对象
      * @return 返回结果
      */
+    @Override
     public SseEmitter rejectAndResume(ToolApprovalActionRequest request) {
         ConversationSessionContext context =
                 chatService.buildContext(request.getUserId(), request.getSessionId(), request.getTitle());
@@ -152,8 +162,8 @@ public class TdAgentStreamingService {
                                                                         .text(
                                                                                 "工具调用未通过审批："
                                                                                         + (approval.getReviewComment() == null
-                                                                                                ? "已拒绝"
-                                                                                                : approval.getReviewComment()))
+                                                                                        ? "已拒绝"
+                                                                                        : approval.getReviewComment()))
                                                                         .build()))
                                         .toList())
                         .build();
@@ -162,10 +172,12 @@ public class TdAgentStreamingService {
 
     /**
      * 中断当前执行。
-     * @param userId 用户标识
+     *
+     * @param userId    用户标识
      * @param sessionId 会话标识
      * @return 返回结果
      */
+    @Override
     public boolean interrupt(String userId, String sessionId) {
         return activeSessionRegistry.interrupt(key(userId, sessionId));
     }
@@ -192,10 +204,10 @@ public class TdAgentStreamingService {
                                     event.getType() == EventType.AGENT_RESULT
                                             ? TdAgentStreamEventType.RESULT
                                             : event.getType() == EventType.REASONING
-                                                    ? TdAgentStreamEventType.REASONING
-                                                    : event.getType() == EventType.TOOL_RESULT
-                                                            ? TdAgentStreamEventType.TOOL_RESULT
-                                                            : TdAgentStreamEventType.MESSAGE,
+                                            ? TdAgentStreamEventType.REASONING
+                                            : event.getType() == EventType.TOOL_RESULT
+                                            ? TdAgentStreamEventType.TOOL_RESULT
+                                            : TdAgentStreamEventType.MESSAGE,
                                     event.getMessage(),
                                     event.isLast(),
                                     Map.of("eventType", event.getType().name())));
@@ -323,8 +335,8 @@ public class TdAgentStreamingService {
         return result != null
                 && result.getGenerateReason() != null
                 && (result.getGenerateReason() == GenerateReason.REASONING_STOP_REQUESTED
-                        || result.getGenerateReason() == GenerateReason.ACTING_STOP_REQUESTED
-                        || result.getGenerateReason() == GenerateReason.TOOL_SUSPENDED);
+                || result.getGenerateReason() == GenerateReason.ACTING_STOP_REQUESTED
+                || result.getGenerateReason() == GenerateReason.TOOL_SUSPENDED);
     }
 
     private void send(SseEmitter emitter, TdAgentStreamEvent event) {

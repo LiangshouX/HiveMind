@@ -1,5 +1,6 @@
 package com.liangshou.tangdynasty.agentic.domain.document;
 
+import com.liangshou.tangdynasty.agentic.utils.MessageMapper;
 import lombok.*;
 
 /**
@@ -13,7 +14,7 @@ import lombok.*;
  *     <li><b>tool_result</b> - 工具执行结果，包含 {@code name}、{@code text}（结果文本）、{@code id}</li>
  * </ul>
  *
- * <p>该对象由 {@link com.liangshou.tangdynasty.agentic.service.MessageMapper} 在 AgentScope Msg 和存储格式之间转换。</p>
+ * <p>该对象由 {@link MessageMapper} 在 AgentScope Msg 和存储格式之间转换。</p>
  *
  * @author LiangshouX
  */

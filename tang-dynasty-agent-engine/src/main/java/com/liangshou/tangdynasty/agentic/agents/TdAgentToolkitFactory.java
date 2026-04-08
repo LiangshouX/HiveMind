@@ -50,10 +50,11 @@ public class TdAgentToolkitFactory {
 
     /**
      * 执行相关操作。
-     * @param properties 外部化配置
-     * @param persistenceService 持久化服务
-     * @param sandboxManager 沙箱管理器
-     * @param toolGuardEngine tool guard 引擎
+     *
+     * @param properties          外部化配置
+     * @param persistenceService  持久化服务
+     * @param sandboxManager      沙箱管理器
+     * @param toolGuardEngine     tool guard 引擎
      * @param toolApprovalService 工具审批服务
      */
     public TdAgentToolkitFactory(
@@ -71,6 +72,7 @@ public class TdAgentToolkitFactory {
 
     /**
      * 创建 toolkit 实例。
+     *
      * @param context 会话上下文
      * @return 返回结果
      */

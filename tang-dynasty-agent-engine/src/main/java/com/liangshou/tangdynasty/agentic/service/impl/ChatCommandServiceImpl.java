@@ -1,11 +1,12 @@
-package com.liangshou.tangdynasty.agentic.service;
+package com.liangshou.tangdynasty.agentic.service.impl;
 
-import com.liangshou.tangdynasty.agentic.adapter.controller.dto.ChatResponse;
+import com.liangshou.tangdynasty.agentic.service.ConversationPersistenceService;
+import com.liangshou.tangdynasty.agentic.service.IChatCommandService;
+import com.liangshou.tangdynasty.agentic.service.dto.ChatResponse;
 import com.liangshou.tangdynasty.agentic.agents.ConversationSessionContext;
 import com.liangshou.tangdynasty.agentic.agents.session.AgentSessionStateService;
 import org.springframework.stereotype.Service;
 
-import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
 
@@ -27,7 +28,8 @@ import java.util.UUID;
  * @author LiangshouX
  */
 @Service
-public class ChatCommandService {
+@SuppressWarnings("unused")
+public class ChatCommandServiceImpl implements IChatCommandService {
 
     private final ConversationPersistenceService persistenceService;
     private final AgentSessionStateService agentSessionStateService;
@@ -37,7 +39,7 @@ public class ChatCommandService {
      * @param persistenceService 持久化服务
      * @param agentSessionStateService 会话状态服务
      */
-    public ChatCommandService(
+    public ChatCommandServiceImpl(
             ConversationPersistenceService persistenceService,
             AgentSessionStateService agentSessionStateService) {
         this.persistenceService = persistenceService;
@@ -50,6 +52,7 @@ public class ChatCommandService {
      * @param rawMessage 原始用户消息
      * @return 返回结果
      */
+    @Override
     public ChatResponse handleCommand(ConversationSessionContext context, String rawMessage) {
         if (rawMessage == null || !rawMessage.startsWith("/")) {
             return null;
@@ -87,21 +90,4 @@ public class ChatCommandService {
                 Map.of("command", "unknown"));
     }
 
-    private ChatResponse buildResponse(
-            ConversationSessionContext context,
-            String message,
-            long messageCount,
-            Map<String, Object> metadata) {
-        return ChatResponse.builder()
-                .success(true)
-                .commandHandled(true)
-                .userId(context.getUserId())
-                .sessionId(context.getSessionId())
-                .title(context.getSessionTitle())
-                .message(message)
-                .messageCount(messageCount)
-                .timestamp(Instant.now().toString())
-                .metadata(metadata)
-                .build();
-    }
 }

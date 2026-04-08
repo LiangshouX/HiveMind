@@ -30,7 +30,8 @@ public class TdAgentActiveSessionRegistry {
 
     /**
      * 执行 register 操作。
-     * @param key 会话键
+     *
+     * @param key   会话键
      * @param agent 参数
      */
     public void register(String key, ReActAgent agent) {
@@ -39,6 +40,7 @@ public class TdAgentActiveSessionRegistry {
 
     /**
      * 执行 unregister 操作。
+     *
      * @param key 会话键
      */
     public void unregister(String key) {
@@ -47,6 +49,7 @@ public class TdAgentActiveSessionRegistry {
 
     /**
      * 中断当前执行。
+     *
      * @param key 会话键
      * @return 返回结果
      */

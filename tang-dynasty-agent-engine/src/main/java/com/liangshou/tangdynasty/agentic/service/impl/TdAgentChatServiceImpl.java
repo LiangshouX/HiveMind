@@ -1,16 +1,18 @@
-package com.liangshou.tangdynasty.agentic.service;
+package com.liangshou.tangdynasty.agentic.service.impl;
 
-import com.liangshou.tangdynasty.agentic.adapter.controller.dto.ChatRequest;
-import com.liangshou.tangdynasty.agentic.adapter.controller.dto.ChatResponse;
-import com.liangshou.tangdynasty.agentic.adapter.controller.dto.SessionHistoryResponse;
 import com.liangshou.tangdynasty.agentic.agents.ConversationSessionContext;
 import com.liangshou.tangdynasty.agentic.agents.TdAgentFactory;
 import com.liangshou.tangdynasty.agentic.agents.guard.approval.ToolApprovalService;
 import com.liangshou.tangdynasty.agentic.agents.session.AgentSessionStateService;
 import com.liangshou.tangdynasty.agentic.domain.document.ConversationMemoryDocument;
 import com.liangshou.tangdynasty.agentic.domain.document.ConversationViewDocument;
+import com.liangshou.tangdynasty.agentic.service.ConversationPersistenceService;
+import com.liangshou.tangdynasty.agentic.service.IChatCommandService;
+import com.liangshou.tangdynasty.agentic.service.ITdAgentChatService;
+import com.liangshou.tangdynasty.agentic.service.dto.ChatRequest;
+import com.liangshou.tangdynasty.agentic.service.dto.ChatResponse;
+import com.liangshou.tangdynasty.agentic.service.dto.SessionHistoryResponse;
 import io.agentscope.core.ReActAgent;
-import io.agentscope.core.message.GenerateReason;
 import io.agentscope.core.message.Msg;
 import io.agentscope.core.message.MsgRole;
 import org.springframework.stereotype.Service;
@@ -37,25 +39,27 @@ import java.util.Map;
  * @author LiangshouX
  */
 @Service
-public class TdAgentChatService {
+@SuppressWarnings("unused")
+public class TdAgentChatServiceImpl implements ITdAgentChatService {
 
     private final TdAgentFactory agentFactory;
-    private final ChatCommandService chatCommandService;
+    private final IChatCommandService chatCommandService;
     private final ConversationPersistenceService persistenceService;
     private final AgentSessionStateService agentSessionStateService;
     private final ToolApprovalService toolApprovalService;
 
     /**
-     * 执行相关操作。
-     * @param agentFactory Agent 工厂
-     * @param chatCommandService 命令服务
-     * @param persistenceService 持久化服务
+     * 构造器
+     *
+     * @param agentFactory             Agent 工厂
+     * @param chatCommandService       命令服务
+     * @param persistenceService       持久化服务
      * @param agentSessionStateService 会话状态服务
-     * @param toolApprovalService 工具审批服务
+     * @param toolApprovalService      工具审批服务
      */
-    public TdAgentChatService(
+    public TdAgentChatServiceImpl(
             TdAgentFactory agentFactory,
-            ChatCommandService chatCommandService,
+            IChatCommandService chatCommandService,
             ConversationPersistenceService persistenceService,
             AgentSessionStateService agentSessionStateService,
             ToolApprovalService toolApprovalService) {
@@ -68,9 +72,11 @@ public class TdAgentChatService {
 
     /**
      * 处理聊天请求。
+     *
      * @param request 请求对象
      * @return 返回结果
      */
+    @Override
     public ChatResponse chat(ChatRequest request) {
         ConversationSessionContext context = buildContext(request);
         ChatResponse commandResponse = chatCommandService.handleCommand(context, request.getMessage());
@@ -105,33 +111,37 @@ public class TdAgentChatService {
                         Map.of(
                                 "agentName", agent.getName(),
                                 "generateReason",
-                                        response == null || response.getGenerateReason() == null
-                                                ? ""
-                                                : response.getGenerateReason().name(),
+                                response == null || response.getGenerateReason() == null
+                                        ? ""
+                                        : response.getGenerateReason().name(),
                                 "paused", paused,
                                 "pendingApprovals",
-                                        paused
-                                                ? toolApprovalService.listPending(
-                                                        context.getUserId(), context.getSessionId())
-                                                : List.of()))
+                                paused
+                                        ? toolApprovalService.listPending(
+                                        context.getUserId(), context.getSessionId())
+                                        : List.of()))
                 .build();
     }
 
     /**
      * 列出会话列表。
+     *
      * @param userId 用户标识
      * @return 返回结果
      */
+    @Override
     public List<ConversationViewDocument> listSessions(String userId) {
         return persistenceService.listSessions(userId);
     }
 
     /**
      * 获取会话历史。
-     * @param userId 用户标识
+     *
+     * @param userId    用户标识
      * @param sessionId 会话标识
      * @return 返回结果
      */
+    @Override
     public SessionHistoryResponse getSessionHistory(String userId, String sessionId) {
         ConversationViewDocument view =
                 persistenceService.getSessionView(userId, sessionId).orElse(null);
@@ -143,6 +153,7 @@ public class TdAgentChatService {
                 .build();
     }
 
+    @Override
     public ConversationSessionContext buildContext(ChatRequest request) {
         return ConversationSessionContext.builder()
                 .userId(request.getUserId())
@@ -154,11 +165,13 @@ public class TdAgentChatService {
 
     /**
      * 构建会话上下文。
-     * @param userId 用户标识
+     *
+     * @param userId    用户标识
      * @param sessionId 会话标识
-     * @param title 会话标题
+     * @param title     会话标题
      * @return 返回结果
      */
+    @Override
     public ConversationSessionContext buildContext(String userId, String sessionId, String title) {
         return ConversationSessionContext.builder()
                 .userId(userId)
@@ -167,12 +180,4 @@ public class TdAgentChatService {
                 .build();
     }
 
-    private boolean isPaused(Msg response) {
-        if (response == null || response.getGenerateReason() == null) {
-            return false;
-        }
-        return response.getGenerateReason() == GenerateReason.REASONING_STOP_REQUESTED
-                || response.getGenerateReason() == GenerateReason.ACTING_STOP_REQUESTED
-                || response.getGenerateReason() == GenerateReason.TOOL_SUSPENDED;
-    }
 }

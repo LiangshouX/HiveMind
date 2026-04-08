@@ -7,6 +7,7 @@ import com.liangshou.tangdynasty.agentic.domain.document.StoredMessage;
 import com.liangshou.tangdynasty.agentic.domain.document.StoredMessageContent;
 import com.liangshou.tangdynasty.agentic.repository.ConversationMemoryRepository;
 import com.liangshou.tangdynasty.agentic.repository.ConversationViewRepository;
+import com.liangshou.tangdynasty.agentic.utils.MessageMapper;
 import io.agentscope.core.message.Msg;
 import org.springframework.stereotype.Service;
 

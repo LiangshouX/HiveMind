@@ -1,12 +1,11 @@
 package com.liangshou.tangdynasty.agentic.adapter.controller;
 
-import com.liangshou.tangdynasty.agentic.adapter.controller.dto.*;
-
 import com.liangshou.tangdynasty.agentic.agents.guard.approval.ToolApprovalService;
-import com.liangshou.tangdynasty.agentic.agents.streaming.TdAgentStreamingService;
+import com.liangshou.tangdynasty.agentic.service.ITdAgentStreamingService;
 import com.liangshou.tangdynasty.agentic.domain.document.ConversationViewDocument;
 import com.liangshou.tangdynasty.agentic.domain.document.ToolApprovalDocument;
-import com.liangshou.tangdynasty.agentic.service.TdAgentChatService;
+import com.liangshou.tangdynasty.agentic.service.ITdAgentChatService;
+import com.liangshou.tangdynasty.agentic.service.dto.*;
 import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
@@ -38,10 +37,11 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/api/v1/tdagent")
+@SuppressWarnings("unused")
 public class TdAgentChatController {
 
-    private final TdAgentChatService chatService;
-    private final TdAgentStreamingService streamingService;
+    private final ITdAgentChatService chatService;
+    private final ITdAgentStreamingService streamingService;
     private final ToolApprovalService toolApprovalService;
 
     /**
@@ -51,8 +51,8 @@ public class TdAgentChatController {
      * @param toolApprovalService 工具审批服务
      */
     public TdAgentChatController(
-            TdAgentChatService chatService,
-            TdAgentStreamingService streamingService,
+            ITdAgentChatService chatService,
+            ITdAgentStreamingService streamingService,
             ToolApprovalService toolApprovalService) {
         this.chatService = chatService;
         this.streamingService = streamingService;

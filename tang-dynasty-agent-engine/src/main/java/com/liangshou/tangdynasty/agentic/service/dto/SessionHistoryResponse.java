@@ -1,4 +1,4 @@
-package com.liangshou.tangdynasty.agentic.adapter.controller.dto;
+package com.liangshou.tangdynasty.agentic.service.dto;
 
 import com.liangshou.tangdynasty.agentic.domain.document.ConversationViewDocument;
 import com.liangshou.tangdynasty.agentic.domain.document.StoredMessage;
