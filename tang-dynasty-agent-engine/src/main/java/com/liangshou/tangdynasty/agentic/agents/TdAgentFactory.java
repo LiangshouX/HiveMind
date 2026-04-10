@@ -52,17 +52,18 @@ public class TdAgentFactory {
     private final TdAgentSkillService skillService;
 
     /**
-     * 执行相关操作。
-     * @param properties 外部化配置
-     * @param modelFactory 模型工厂
-     * @param toolkitFactory toolkit 工厂
-     * @param promptService prompt 服务
-     * @param persistenceService 持久化服务
-     * @param toolGuardEngine tool guard 引擎
-     * @param toolApprovalService 工具审批服务
-     * @param memoryManager 记忆管理器
-     * @param reMeService ReMe 集成服务
-     * @param skillService skill 服务
+     * 构造 ReAct Agent 工厂实例。
+     *
+     * @param properties          Agent 外部化配置，包含模型参数、沙箱设置、Tool Guard 开关等
+     * @param modelFactory        模型工厂，负责创建 LLM 模型实例
+     * @param toolkitFactory      Toolkit 工厂，负责创建和配置工具集
+     * @param promptService       Prompt 服务，负责构建系统提示词
+     * @param persistenceService  对话持久化服务，用于会话历史的读写操作
+     * @param toolGuardEngine     Tool Guard 引擎，提供工具调用的安全防护
+     * @param toolApprovalService 工具审批服务，处理需要用户确认的高风险操作
+     * @param memoryManager       记忆管理器，负责对话记忆的压缩和管理
+     * @param reMeService         ReMe 集成服务，提供长期记忆能力
+     * @param skillService        Skill 服务，管理用户的自定义 Skills
      */
     public TdAgentFactory(
             TdAgentProperties properties,
@@ -88,9 +89,38 @@ public class TdAgentFactory {
     }
 
     /**
-     * 创建 Agent 实例。
-     * @param context 会话上下文
-     * @return 返回结果
+     * 根据会话上下文创建并配置完整的 ReAct Agent 实例。
+     *
+     * <p>该方法按以下步骤构建 Agent：</p>
+     * <ol>
+     *     <li><b>构建 System Prompt</b>：调用 {@link TdAgentPromptService#buildPrompt} 生成个性化提示词</li>
+     *     <li><b>创建 MongoDB 记忆</b>：初始化 {@link MongoConversationMemory}，加载历史对话数据</li>
+     *     <li><b>创建 Toolkit</b>：调用 {@link TdAgentToolkitFactory#createToolkit} 注册所有可用工具</li>
+     *     <li><b>创建 SkillBox</b>：调用 {@link TdAgentSkillService#createSkillBox} 激活用户启用的 Skills</li>
+     *     <li><b>配置基础组件</b>：设置名称、提示词、模型、工具集、记忆等核心组件</li>
+     *     <li><b>添加记忆压缩 Hook</b>：注册 {@link TdAgentMemoryCompactionHook} 自动管理长对话上下文</li>
+     *     <li><b>设置最大迭代次数</b>：从配置中读取 {@code maxIters} 限制 Agent 的思考步数</li>
+     *     <li><b>可选添加 SkillBox</b>：如果 SkillBox 不为 null，则添加到 Agent</li>
+     *     <li><b>可选添加 Tool Guard Hook</b>：如果启用 Tool Guard，注册 {@link TdAgentToolGuardHook}</li>
+     *     <li><b>可选集成 ReMe 长期记忆</b>：如果启用 ReMe，配置长期记忆服务和模式</li>
+     * </ol>
+     *
+     * <p><strong>核心组件说明：</strong></p>
+     * <ul>
+     *     <li><b>记忆压缩 Hook</b>：在对话消息过多时自动触发压缩，保留最近消息并生成摘要</li>
+     *     <li><b>Tool Guard Hook</b>：拦截工具调用，进行风险评估和用户审批检查</li>
+     *     <li><b>ReMe 长期记忆</b>：跨会话持久化关键信息，增强 Agent 的长期记忆能力</li>
+     * </ul>
+     *
+     * <p><strong>配置依赖：</strong></p>
+     * <ul>
+     *     <li>{@code properties.getToolGuard().isEnabled()}：决定是否启用 Tool Guard Hook</li>
+     *     <li>{@code properties.getReme().isEnabled()}：决定是否集成 ReMe 长期记忆</li>
+     *     <li>{@code properties.getModel().getMaxIters()}：设置 Agent 的最大迭代次数</li>
+     * </ul>
+     *
+     * @param context 会话上下文，包含用户ID、会话ID、会话标题等元数据，用于初始化记忆和工具权限
+     * @return 配置完成的 ReActAgent 实例，已准备好接收用户消息并执行任务
      */
     public ReActAgent createAgent(ConversationSessionContext context) {
         String systemPrompt = promptService.buildPrompt(context);

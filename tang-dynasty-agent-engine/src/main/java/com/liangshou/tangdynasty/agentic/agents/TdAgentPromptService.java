@@ -30,9 +30,10 @@ public class TdAgentPromptService {
     private final ConversationPersistenceService persistenceService;
 
     /**
-     * 执行相关操作。
-     * @param properties 外部化配置
-     * @param persistenceService 持久化服务
+     * 构造 Agent System Prompt 构建服务实例。
+     *
+     * @param properties         Agent 外部化配置，包含系统提示词模板、产品名称等信息
+     * @param persistenceService 对话持久化服务，用于加载会话历史和摘要信息
      */
     public TdAgentPromptService(
             TdAgentProperties properties,
@@ -42,9 +43,30 @@ public class TdAgentPromptService {
     }
 
     /**
-     * 构建 system prompt。
-     * @param context 会话上下文
-     * @return 返回结果
+     * 根据会话上下文动态构建个性化的 System Prompt。
+     *
+     * <p>该方法生成一个完整的系统提示词，指导 Agent 的行为和响应风格。生成的 prompt 包含：</p>
+     * <ul>
+     *     <li><b>角色定义</b>：明确 Agent 的身份（基于 AgentScope-Java 的企业级 Java AI Agent）</li>
+     *     <li><b>核心职责</b>：作为软件工程专家，提供可执行、可验证、可维护的解决方案</li>
+     *     <li><b>工具使用规范</b>：合理使用沙箱工具（Python、Shell、Browser、FileSystem）</li>
+     *     <li><b>上下文保持</b>：利用会话历史保持回答连续性，术语一致性</li>
+     *     <li><b>安全策略</b>：遵守工具调用审批和安全策略，不得绕过 Tool Guard</li>
+     *     <li><b>元数据注入</b>：产品信息、用户ID、会话ID、会话标题等</li>
+     *     <li><b>最近会话摘要</b>：从持久化服务加载的最近对话预览</li>
+     *     <li><b>压缩历史摘要</b>：长对话中保留的关键历史信息</li>
+     * </ul>
+     *
+     * <p>该方法通过 {@link ConversationPersistenceService} 获取两种摘要：</p>
+     * <ol>
+     *     <li>{@code buildRecentPreview}：最近的对话预览，帮助 Agent 理解当前讨论主题</li>
+     *     <li>{@code loadCompressedSummary}：经过压缩的历史摘要，在长对话中保持上下文一致性</li>
+     * </ol>
+     *
+     * <p><strong>注意：</strong>如果摘要为空或 null，会自动替换为默认提示文本（"暂无历史摘要。"或"暂无压缩摘要。"）。</p>
+     *
+     * @param context 会话上下文，包含用户ID、会话ID、会话标题等元数据
+     * @return 完整的系统提示词字符串，已填充所有占位符并格式化
      */
     public String buildPrompt(ConversationSessionContext context) {
         String preview =

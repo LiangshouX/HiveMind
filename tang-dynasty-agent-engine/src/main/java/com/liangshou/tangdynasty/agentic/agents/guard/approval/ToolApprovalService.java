@@ -44,7 +44,7 @@ public class ToolApprovalService {
     private final ObjectMapper objectMapper;
 
     /**
-     * 执行相关操作。
+     * 构造器
      *
      * @param toolApprovalRepository 审批 Repository
      * @param properties             外部化配置

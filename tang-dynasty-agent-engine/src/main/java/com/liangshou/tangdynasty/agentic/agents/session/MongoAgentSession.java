@@ -42,7 +42,7 @@ public class MongoAgentSession implements Session {
     private final String userId;
 
     /**
-     * 执行相关操作。
+     * 构造器
      *
      * @param repository   参数
      * @param objectMapper ObjectMapper

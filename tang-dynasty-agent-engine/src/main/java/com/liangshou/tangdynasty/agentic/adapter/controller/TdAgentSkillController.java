@@ -33,7 +33,7 @@ public class TdAgentSkillController {
     private final TdAgentSkillService skillService;
 
     /**
-     * 执行相关操作。
+     * 构造器
      * @param skillService skill 服务
      */
     public TdAgentSkillController(TdAgentSkillService skillService) {

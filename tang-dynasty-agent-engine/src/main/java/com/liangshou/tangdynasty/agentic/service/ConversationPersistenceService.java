@@ -46,7 +46,7 @@ public class ConversationPersistenceService {
     private final MessageMapper messageMapper;
 
     /**
-     * 执行相关操作。
+     * 构造器
      *
      * @param conversationMemoryRepository 历史 Repository
      * @param conversationViewRepository   会话视图 Repository

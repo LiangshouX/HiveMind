@@ -64,7 +64,7 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
     private final TdAgentProperties properties;
 
     /**
-     * 执行相关操作。
+     * 构造器
      *
      * @param agentFactory             Agent 工厂
      * @param chatService              聊天服务

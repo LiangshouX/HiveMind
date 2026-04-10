@@ -33,7 +33,7 @@ public class TdAgentSandboxManager {
     private volatile SandboxService sandboxService;
 
     /**
-     * 执行相关操作。
+     * 构造器
      *
      * @param properties 外部化配置
      */

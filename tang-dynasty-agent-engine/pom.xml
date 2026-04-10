@@ -18,7 +18,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <agentscope.core.version>1.0.11-SNAPSHOT</agentscope.core.version>
+        <agentscope.core.version>1.0.11</agentscope.core.version>
         <agentscope.runtime.version>1.0.2</agentscope.runtime.version>
         <maven.compiler.release>17</maven.compiler.release>
     </properties>

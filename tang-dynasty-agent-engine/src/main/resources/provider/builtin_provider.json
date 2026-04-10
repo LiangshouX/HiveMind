@@ -42,7 +42,7 @@
     "supportModelDiscovery": true,
     "supportConnectionCheck": true,
     "generateKwargs": {
-      "max_tokens": 1013760
+      "max_tokens": 8192
     }
   },
   {

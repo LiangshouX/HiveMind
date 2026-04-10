@@ -44,7 +44,7 @@ public class TdAgentMemoryManager {
     private final TdAgentReMeService reMeService;
 
     /**
-     * 执行相关操作。
+     * 构造器
      *
      * @param properties  外部化配置
      * @param reMeService ReMe 集成服务

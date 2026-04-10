@@ -49,7 +49,7 @@ public class ToolGuardEngine {
     private final ObjectMapper objectMapper;
 
     /**
-     * 执行相关操作。
+     * 构造器
      *
      * @param properties   外部化配置
      * @param objectMapper ObjectMapper

@@ -39,7 +39,7 @@ public class AgentSessionStateService {
     private final ObjectMapper objectMapper;
 
     /**
-     * 执行相关操作。
+     * 构造器
      * @param agentSessionStateRepository 状态 Repository
      * @param objectMapper ObjectMapper
      */

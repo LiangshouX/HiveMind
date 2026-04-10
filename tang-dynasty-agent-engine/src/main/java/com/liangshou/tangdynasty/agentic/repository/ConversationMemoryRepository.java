@@ -19,10 +19,19 @@ import java.util.Optional;
 public interface ConversationMemoryRepository extends MongoRepository<ConversationMemoryDocument, String> {
 
     /**
-     * 执行相关操作。
-     * @param userId 用户标识
-     * @param sessionId 会话标识
-     * @return 返回结果
+     * 根据用户ID和会话ID查询对话记忆文档。
+     *
+     * <p>该方法用于加载指定会话的完整对话历史，包括所有用户消息、Agent 回复及元数据，
+     * 通常在以下场景使用：</p>
+     * <ul>
+     *     <li>恢复会话时重建对话上下文，使 Agent 能够理解之前的交流内容</li>
+     *     <li>导出或备份用户的对话记录</li>
+     *     <li>分析对话质量或进行用户行为研究</li>
+     * </ul>
+     *
+     * @param userId    用户唯一标识
+     * @param sessionId 会话唯一标识
+     * @return 包含对话记忆文档的 Optional，若该会话不存在则返回 empty
      */
     Optional<ConversationMemoryDocument> findByUserIdAndSessionId(String userId, String sessionId);
 }

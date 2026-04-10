@@ -63,7 +63,7 @@ public class TdAgentSkillService {
     private volatile Map<String, AgentSkill> builtinSkills = Map.of();
 
     /**
-     * 执行相关操作。
+     * 构造器
      * @param properties 外部化配置
      * @param skillRepository 自定义 skill repository
      * @param skillStateRepository skill 状态 repository

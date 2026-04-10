@@ -35,11 +35,18 @@ public class MongoConversationMemory extends InMemoryMemory {
     private String compressedSummary;
 
     /**
-     * 执行相关操作。
+     * 构造 MongoDB 对话记忆实例，并在初始化时加载历史对话数据。
      *
-     * @param context            会话上下文
-     * @param persistenceService 持久化服务
-     * @param systemPrompt       system prompt
+     * <p>构造函数执行以下操作：</p>
+     * <ol>
+     *     <li>保存会话上下文和持久化服务引用</li>
+     *     <li>从 MongoDB 加载压缩摘要（如果有）</li>
+     *     <li>从 MongoDB 加载历史消息并添加到内存中，恢复会话上下文</li>
+     * </ol>
+     *
+     * @param context            会话上下文，包含用户ID、会话ID等元数据
+     * @param persistenceService 对话持久化服务，用于读写 MongoDB 中的对话数据
+     * @param systemPrompt       系统提示词模板，用于后续消息持久化时保持一致性
      */
     public MongoConversationMemory(
             ConversationSessionContext context,
@@ -53,9 +60,19 @@ public class MongoConversationMemory extends InMemoryMemory {
     }
 
     /**
-     * 执行 addMessage 操作。
+     * 添加消息到对话记忆中，并自动触发持久化操作。
      *
-     * @param message 消息
+     * <p>该方法重写了父类的 {@code addMessage}，在添加消息后立即调用 {@link #flush()}
+     * 将更新后的消息列表同步到 MongoDB，确保对话历史的实时持久化。</p>
+     *
+     * <p>典型使用场景：</p>
+     * <ul>
+     *     <li>Agent 接收到用户输入消息时</li>
+     *     <li>Agent 生成回复消息后</li>
+     *     <li>工具调用产生中间结果时</li>
+     * </ul>
+     *
+     * @param message 要添加的消息对象，包含角色、内容、元数据等信息
      */
     @Override
     public void addMessage(Msg message) {
@@ -64,9 +81,20 @@ public class MongoConversationMemory extends InMemoryMemory {
     }
 
     /**
-     * 执行 deleteMessage 操作。
+     * 删除指定索引位置的消息，并自动触发持久化操作。
      *
-     * @param index 索引
+     * <p>该方法重写了父类的 {@code deleteMessage}，在删除消息后立即调用 {@link #flush()}
+     * 将更新后的消息列表同步到 MongoDB，保持数据库与内存的一致性。</p>
+     *
+     * <p>典型使用场景：</p>
+     * <ul>
+     *     <li>用户请求删除某条错误的消息</li>
+     *     <li>消息压缩时移除旧消息</li>
+     *     <li>清理无效或过期的对话内容</li>
+     * </ul>
+     *
+     * @param index 要删除的消息在列表中的索引位置（从0开始）
+     * @throws IndexOutOfBoundsException 如果索引超出消息列表范围
      */
     @Override
     public void deleteMessage(int index) {
@@ -75,7 +103,23 @@ public class MongoConversationMemory extends InMemoryMemory {
     }
 
     /**
-     * 清理当前数据。
+     * 清空当前会话的所有对话记忆，包括内存和数据库中的数据。
+     *
+     * <p>该方法执行以下清理操作：</p>
+     * <ol>
+     *     <li>调用父类 {@code clear()} 清空内存中的消息列表</li>
+     *     <li>重置压缩摘要为空字符串</li>
+     *     <li>调用持久化服务清除 MongoDB 中该会话的所有数据</li>
+     * </ol>
+     *
+     * <p><strong>注意：</strong>此操作不可逆，调用后将永久删除该会话的所有历史记录。</p>
+     *
+     * <p>典型使用场景：</p>
+     * <ul>
+     *     <li>用户主动清空会话历史</li>
+     *     <li>创建新会话前清理旧数据</li>
+     *     <li>测试环境中重置会话状态</li>
+     * </ul>
      */
     @Override
     public void clear() {
@@ -85,19 +129,47 @@ public class MongoConversationMemory extends InMemoryMemory {
     }
 
     /**
-     * 执行 getCompressedSummary 操作。
+     * 获取当前的压缩历史摘要字符串。
      *
-     * @return 返回结果
+     * <p>该方法返回经过压缩处理的对话历史摘要，用于在长对话中保留关键上下文信息。
+     * 当原始对话消息过多时，Agent 可以依赖此摘要而非完整历史来理解之前的交流内容。</p>
+     *
+     * <p>摘要内容由记忆压缩 Hook 定期生成和更新，通常包含：</p>
+     * <ul>
+     *     <li>对话的主要主题和结论</li>
+     *     <li>重要的技术决策或代码片段</li>
+     *     <li>用户的关键需求和偏好</li>
+     * </ul>
+     *
+     * @return 压缩摘要字符串；若尚未生成摘要则返回空字符串
      */
     public String getCompressedSummary() {
         return compressedSummary == null ? "" : compressedSummary;
     }
 
     /**
-     * 执行 applyCompaction 操作。
+     * 应用消息压缩策略，替换旧消息为压缩摘要并持久化。
      *
-     * @param remainingMessages 压缩后保留的消息
-     * @param summary           更新后的摘要
+     * <p>该方法执行以下操作：</p>
+     * <ol>
+     *     <li>清空内存中的所有消息</li>
+     *     <li>重新添加压缩后保留的最近消息</li>
+     *     <li>更新压缩摘要为新生成的摘要内容</li>
+     *     <li>调用持久化服务将压缩后的消息和摘要保存到 MongoDB</li>
+     * </ol>
+     *
+     * <p>压缩策略的目的是在长对话中控制上下文长度，避免超出模型的 token 限制，
+     * 同时通过摘要保留关键历史信息，确保 Agent 能够理解完整的对话脉络。</p>
+     *
+     * <p>典型使用场景：</p>
+     * <ul>
+     *     <li>对话消息数量超过预设阈值时自动触发</li>
+     *     <li>用户手动请求压缩历史以优化性能</li>
+     *     <li>检测到上下文即将超出模型限制时</li>
+     * </ul>
+     *
+     * @param remainingMessages 压缩后需要保留的最近消息集合，通常是最后几条关键消息
+     * @param summary           新生成的压缩摘要，概括被移除的历史消息的核心内容
      */
     public void applyCompaction(Iterable<Msg> remainingMessages, String summary) {
         super.clear();

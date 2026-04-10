@@ -35,7 +35,7 @@ public class ChatCommandServiceImpl implements IChatCommandService {
     private final AgentSessionStateService agentSessionStateService;
 
     /**
-     * 执行相关操作。
+     * 构造器
      * @param persistenceService 持久化服务
      * @param agentSessionStateService 会话状态服务
      */

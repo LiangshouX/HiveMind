@@ -32,7 +32,7 @@ public class TdAgentBuiltinTools {
     private final ConversationPersistenceService persistenceService;
 
     /**
-     * 执行相关操作。
+     * 构造器
      *
      * @param context            会话上下文
      * @param persistenceService 持久化服务

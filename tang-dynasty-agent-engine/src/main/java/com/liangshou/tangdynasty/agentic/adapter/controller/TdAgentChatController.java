@@ -45,7 +45,7 @@ public class TdAgentChatController {
     private final ToolApprovalService toolApprovalService;
 
     /**
-     * 执行相关操作。
+     * 构造器
      * @param chatService 聊天服务
      * @param streamingService 流式服务
      * @param toolApprovalService 工具审批服务

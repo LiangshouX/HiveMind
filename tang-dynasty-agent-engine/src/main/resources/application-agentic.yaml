@@ -14,9 +14,9 @@ tdagent:
     provider-config-location: classpath:provider/builtin_provider.json
     reload-on-change: true
     provider-id: ${TDAGENT_MODEL_PROVIDER:dashscope}
-    model-id: ${TDAGENT_MODEL_ID:}
-    api-key: ${TDAGENT_MODEL_API_KEY:}
-    base-url: ${TDAGENT_MODEL_BASE_URL:}
+    model-id: ${TDAGENT_MODEL_ID:qwen-max}
+    api-key: ${AI_DASHSCOPE_API_KEY:}
+    base-url: ${TDAGENT_MODEL_BASE_URL:https://dashscope.aliyuncs.com}
     endpoint-path: ${TDAGENT_MODEL_ENDPOINT_PATH:}
     model-name: ${TDAGENT_MODEL_NAME:qwen-max}
     stream: false
