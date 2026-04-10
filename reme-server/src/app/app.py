@@ -42,7 +42,7 @@ app = create_app()
 def main() -> None:
     parser = argparse.ArgumentParser(description="ReMe standalone server")
     parser.add_argument("--host", default=os.getenv("REME_SERVER_HOST", "127.0.0.1"))
-    parser.add_argument("--port", default=int(os.getenv("REME_SERVER_PORT", "8090")), type=int)
+    parser.add_argument("--port", default=int(os.getenv("REME_SERVER_PORT", "8085")), type=int)
     parser.add_argument("--reload", action="store_true")
     parser.add_argument("--workers", default=int(os.getenv("REME_SERVER_WORKERS", "1")), type=int)
     parser.add_argument("--log-level", default=os.getenv("REME_SERVER_LOG_LEVEL", "info"))
