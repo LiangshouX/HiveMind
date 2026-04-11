@@ -33,8 +33,15 @@ export async function parseApiResult<T>(response: Response): Promise<T> {
   if (!payload) {
     throw new Error("响应格式错误");
   }
-  if (payload.code !== 200) {
-    throw new Error(payload.message || "请求失败");
+  
+  // 检查是否是标准的 ApiResult 格式
+  if ('code' in payload && 'data' in payload) {
+    if (payload.code !== 200) {
+      throw new Error(payload.message || "请求失败");
+    }
+    return payload.data;
   }
-  return payload.data;
+  
+  // 如果不是标准的 ApiResult 格式，直接返回 payload 作为数据
+  return payload as T;
 }
