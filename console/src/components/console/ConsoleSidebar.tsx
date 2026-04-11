@@ -1,119 +1,83 @@
-import { ApiOutlined, LogoutOutlined, PlusOutlined, SettingOutlined } from "@ant-design/icons";
+import { ApiOutlined, PlusOutlined } from "@ant-design/icons";
 import { Conversations } from "@ant-design/x";
-import { Avatar, Badge, Button, Card, Flex, Space, Tooltip, Typography } from "antd";
-import type { AuthUser, ConversationGroupItem } from "../../types";
+import { Badge, Button, Flex, Space, Tooltip, Typography } from "antd";
+import type { ConversationGroupItem } from "../../types";
+import { useTheme } from "../../providers/ThemeProvider";
 
-const { Text, Title, Paragraph } = Typography;
+const { Text } = Typography;
 
 interface ConsoleSidebarProps {
-  user: AuthUser;
-  apiBase: string;
   activeSessionId?: string;
   loadingSessions: boolean;
   groupedConversationItems: ConversationGroupItem[];
   onCreateSession: () => void;
   onRefreshSessions: () => void;
   onSelectSession: (sessionId: string) => void | Promise<void>;
-  onOpenProfile: () => void;
-  onLogout: () => void;
 }
 
 export function ConsoleSidebar({
-  user,
-  apiBase,
   activeSessionId,
   loadingSessions,
   groupedConversationItems,
   onCreateSession,
   onRefreshSessions,
   onSelectSession,
-  onOpenProfile,
-  onLogout,
 }: ConsoleSidebarProps) {
-  return (
-    <>
-      <div className="brand-card">
-        <div className="brand-mark">TD</div>
-        <div>
-          <Title level={4} className="brand-title">
-            Tang Dynasty Agent
-          </Title>
-          <Text className="brand-subtitle">智能体实验操作台</Text>
-        </div>
-      </div>
+  const { isDarkMode } = useTheme();
 
+  return (
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', padding: '16px' }}>
       <Button
         type="primary"
         icon={<PlusOutlined />}
         className="new-chat-button"
         onClick={onCreateSession}
         block
+        style={{ marginBottom: '16px', height: '44px', fontSize: '14px', fontWeight: 600 }}
       >
         新建对话
       </Button>
 
-      <div className="sidebar-metrics">
-        <Card size="small" className="metric-card">
-          <Text className="metric-label">当前用户</Text>
-          <Title level={5}>{user.nickname}</Title>
-          <Text className="metric-foot">{user.userId}</Text>
-        </Card>
-        <Card size="small" className="metric-card">
-          <Text className="metric-label">接口基址</Text>
-          <Title level={5}>TDAgent</Title>
-          <Text className="metric-foot">{apiBase}</Text>
-        </Card>
-      </div>
-
-      <div className="session-panel">
-        <Flex align="center" justify="space-between" className="session-panel-head">
+      <div className="session-panel" style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        <Flex align="center" justify="space-between" className="session-panel-head" style={{ marginBottom: '12px', padding: '0 4px' }}>
           <Space size={8}>
             <Badge status={loadingSessions ? "processing" : "success"} />
-            <Text className="session-head-title">会话列表</Text>
+            <Text className="session-head-title" style={{ color: isDarkMode ? '#f3f7ff' : '#2c3e50', fontWeight: 600 }}>会话列表</Text>
           </Space>
           <Tooltip title="刷新会话">
-            <Button type="text" icon={<ApiOutlined />} onClick={onRefreshSessions} />
+            <Button type="text" icon={<ApiOutlined />} onClick={onRefreshSessions} style={{ color: isDarkMode ? '#a0b3d6' : '#6c757d' }} />
           </Tooltip>
         </Flex>
 
-        <Conversations
-          items={groupedConversationItems}
-          activeKey={activeSessionId}
-          onActiveChange={(value) => value && void onSelectSession(value)}
-          groupable
-          className="conversation-list"
-        />
-      </div>
-
-      <div className="sidebar-footer">
-        <Space size={12} align="start">
-          <Avatar
-            size={44}
+        <div style={{ flex: 1, overflow: 'auto' }}>
+          <Conversations
+            items={groupedConversationItems}
+            activeKey={activeSessionId}
+            onActiveChange={(value) => value && void onSelectSession(value)}
+            groupable
+            className="conversation-list"
             style={{
-              background:
-                "linear-gradient(135deg, rgba(110,168,255,0.95), rgba(120,255,211,0.95))",
-              color: "#09111f",
-              fontWeight: 800,
+              background: 'transparent',
+              '& .ant-conversations-item': {
+                backgroundColor: 'transparent',
+                borderBottom: `1px solid ${isDarkMode ? '#1e3a5f' : '#e9ecef'}`,
+                '&:hover': {
+                  backgroundColor: isDarkMode ? 'rgba(110, 168, 255, 0.1)' : 'rgba(74, 137, 220, 0.05)'
+                }
+              },
+              '& .ant-conversations-item-active': {
+                backgroundColor: isDarkMode ? 'rgba(110, 168, 255, 0.2)' : 'rgba(74, 137, 220, 0.1)',
+                borderLeft: '3px solid #4a89dc'
+              },
+              '& .ant-conversations-group-title': {
+                color: isDarkMode ? '#a0b3d6' : '#6c757d',
+                fontSize: '12px',
+                fontWeight: 600
+              }
             }}
-          >
-            {user.nickname.slice(0, 1).toUpperCase()}
-          </Avatar>
-          <div className="sidebar-footer-main">
-            <Text className="brand-subtitle">{user.role}</Text>
-            <Paragraph className="sidebar-footer-text">
-              你的所有对话、审批与个人设置已与登录身份绑定。
-            </Paragraph>
-            <Space size={8}>
-              <Button icon={<SettingOutlined />} onClick={onOpenProfile}>
-                个人资料
-              </Button>
-              <Button icon={<LogoutOutlined />} onClick={onLogout}>
-                退出登录
-              </Button>
-            </Space>
-          </div>
-        </Space>
+          />
+        </div>
       </div>
-    </>
+    </div>
   );
 }

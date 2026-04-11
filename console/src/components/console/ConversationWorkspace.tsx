@@ -21,6 +21,7 @@ import "dayjs/locale/zh-cn";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { AuthUser, SessionState } from "../../types";
+import { useTheme } from "../../providers/ThemeProvider";
 
 dayjs.extend(relativeTime);
 dayjs.locale("zh-cn");
@@ -99,7 +100,6 @@ interface ConversationWorkspaceProps {
   onRefreshSession: () => void;
   onInterrupt: () => void | Promise<void>;
   onSend: () => void | Promise<void>;
-  onOpenProfile: () => void;
 }
 
 export function ConversationWorkspace({
@@ -112,8 +112,8 @@ export function ConversationWorkspace({
   onRefreshSession,
   onInterrupt,
   onSend,
-  onOpenProfile,
 }: ConversationWorkspaceProps) {
+  const { isDarkMode } = useTheme();
   const bubbleItems =
     activeSession?.messages.map((message) => ({
       key: message.id,
@@ -122,23 +122,23 @@ export function ConversationWorkspace({
       typing: message.role === "assistant" && message.streaming ? { step: 3, interval: 14 } : false,
       content: (
         <div className="message-stack">
-          <div className="message-meta">
-            <Space size={8}>
-              <Text className="message-author">{message.name}</Text>
-              <Text className="message-time">{formatTime(message.createdAt)}</Text>
-            </Space>
-            {message.streaming ? (
-              <Tag color="processing" icon={<LoadingOutlined />}>
-                流式输出中
-              </Tag>
-            ) : message.failed ? (
-              <Tag color="error">已中断</Tag>
-            ) : null}
-          </div>
+            <div className="message-meta">
+              <Space size={8}>
+                <Text className="message-author" style={{ color: isDarkMode ? '#f3f7ff' : '#2c3e50' }}>{message.name}</Text>
+                <Text className="message-time" style={{ color: isDarkMode ? '#a0b3d6' : '#6c757d' }}>{formatTime(message.createdAt)}</Text>
+              </Space>
+              {message.streaming ? (
+                <Tag color="processing" icon={<LoadingOutlined />}>
+                  流式输出中
+                </Tag>
+              ) : message.failed ? (
+                <Tag color="error">已中断</Tag>
+              ) : null}
+            </div>
 
           {message.blocks.map((block) => (
             <div key={block.id} className={`message-block tone-${blockTone(block.type)}`}>
-              <div className="message-block-title">
+              <div className="message-block-title" style={{ color: isDarkMode ? '#f3f7ff' : '#2c3e50' }}>
                 <Space size={8}>
                   {toneIcon(block.type)}
                   <span>{block.title}</span>
@@ -146,9 +146,9 @@ export function ConversationWorkspace({
                 </Space>
               </div>
 
-              {block.rawInput ? <pre className="message-raw">{block.rawInput}</pre> : null}
+              {block.rawInput ? <pre className="message-raw" style={{ background: isDarkMode ? '#07111f' : '#f1f3f5', border: `1px solid ${isDarkMode ? '#1e3a5f' : '#dee2e6'}`, color: isDarkMode ? '#f3f7ff' : '#2c3e50' }}>{block.rawInput}</pre> : null}
 
-              <div className="markdown-body">
+              <div className="markdown-body" style={{ color: isDarkMode ? '#f3f7ff' : '#2c3e50' }}>
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                   {block.content || " "}
                 </ReactMarkdown>
@@ -157,15 +157,15 @@ export function ConversationWorkspace({
               {block.approvals?.length ? (
                 <div className="approval-inline">
                   {block.approvals.map((approval) => (
-                    <Card key={approval.id} size="small" className="approval-inline-card">
+                    <Card key={approval.id} size="small" className="approval-inline-card" style={{ background: isDarkMode ? '#0d1b33' : '#f8f9fa', border: `1px solid ${isDarkMode ? '#1e3a5f' : '#e9ecef'}` }}>
                       <Space direction="vertical" size={4} style={{ width: "100%" }}>
                         <Space wrap>
                           <Tag color="gold">{approval.riskLevel || "HIGH"}</Tag>
                           <Tag>{approval.toolName || "未知工具"}</Tag>
                         </Space>
-                        <Text>{approval.reason || "当前工具调用需要人工审批后继续执行。"}</Text>
+                        <Text style={{ color: isDarkMode ? '#f3f7ff' : '#2c3e50' }}>{approval.reason || "当前工具调用需要人工审批后继续执行。"}</Text>
                         {approval.toolInputJson ? (
-                          <pre className="message-raw">{approval.toolInputJson}</pre>
+                          <pre className="message-raw" style={{ background: isDarkMode ? '#07111f' : '#f1f3f5', border: `1px solid ${isDarkMode ? '#1e3a5f' : '#dee2e6'}`, color: isDarkMode ? '#f3f7ff' : '#2c3e50' }}>{approval.toolInputJson}</pre>
                         ) : null}
                       </Space>
                     </Card>
@@ -180,10 +180,10 @@ export function ConversationWorkspace({
 
   return (
     <>
-      <div className="main-header">
+      <div className="main-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
         <div>
           <Space size={10} align="center">
-            <Title level={3} className="header-title">
+            <Title level={3} className="header-title" style={{ margin: 0, color: isDarkMode ? '#f3f7ff' : '#2c3e50' }}>
               {activeSession?.title || "Agent 对话工作台"}
             </Title>
             {busy ? (
@@ -200,16 +200,10 @@ export function ConversationWorkspace({
               </Tag>
             )}
           </Space>
-          <Text className="header-description">
-            使用登录用户驱动会话、审批与历史读取，Session 以 session_id 为唯一标识。
-          </Text>
         </div>
 
         <Space size={12}>
-          <Button icon={<UserOutlined />} onClick={onOpenProfile}>
-            {user.nickname}
-          </Button>
-          <Button icon={<ApiOutlined />} onClick={onRefreshSession} disabled={!activeSessionId}>
+          <Button icon={<ApiOutlined />} onClick={onRefreshSession} disabled={!activeSessionId} style={{ background: isDarkMode ? '#0d1b33' : '#f1f3f5', border: `1px solid ${isDarkMode ? '#1e3a5f' : '#dee2e6'}`, color: isDarkMode ? '#f3f7ff' : '#2c3e50' }}>
             同步后端
           </Button>
           <Button danger icon={<StopOutlined />} onClick={() => void onInterrupt()} disabled={!busy}>
@@ -260,7 +254,7 @@ export function ConversationWorkspace({
               </div>
             ) : (
               <>
-                <div className="session-hero">
+                <div className="session-hero" style={{ background: isDarkMode ? '#0d1b33' : '#f8f9fa', border: `1px solid ${isDarkMode ? '#1e3a5f' : '#e9ecef'}`, padding: '16px', borderRadius: '12px', marginBottom: '16px' }}>
                   <div>
                     <Space size={8} wrap>
                       <Tag color="blue">{activeSession.sessionId}</Tag>
@@ -269,7 +263,7 @@ export function ConversationWorkspace({
                       </Tag>
                       <Tag icon={<SendOutlined />}>{activeSession.messageCount} 条消息</Tag>
                     </Space>
-                    <Paragraph className="session-hero-text">{activeSession.preview}</Paragraph>
+                    <Paragraph className="session-hero-text" style={{ color: isDarkMode ? '#f3f7ff' : '#2c3e50', margin: '8px 0 0 0' }}>{activeSession.preview}</Paragraph>
                   </div>
                 </div>
 
@@ -298,8 +292,8 @@ export function ConversationWorkspace({
                         avatar: {
                           style: {
                             background:
-                              "linear-gradient(135deg, rgba(110,168,255,0.96), rgba(120,255,211,0.96))",
-                            color: "#08101d",
+                              "linear-gradient(135deg, rgba(74,137,220,0.96), rgba(55,188,155,0.96))",
+                            color: isDarkMode ? "#08101d" : "#ffffff",
                             fontWeight: 800,
                           },
                           children: user.nickname.slice(0, 1).toUpperCase(),
@@ -311,8 +305,8 @@ export function ConversationWorkspace({
                         shape: "round",
                         avatar: {
                           style: {
-                            background: "linear-gradient(135deg, #5e89ff, #75ffd2)",
-                            color: "#08111f",
+                            background: "linear-gradient(135deg, #4a89dc, #37bc9b)",
+                            color: isDarkMode ? "#08111f" : "#ffffff",
                             fontWeight: 800,
                           },
                           children: "TD",
@@ -323,8 +317,8 @@ export function ConversationWorkspace({
                         variant: "outlined",
                         avatar: {
                           style: {
-                            background: "rgba(255,255,255,0.08)",
-                            color: "#ffffff",
+                            background: isDarkMode ? "rgba(255,255,255,0.08)" : "#e9ecef",
+                            color: isDarkMode ? "#ffffff" : "#2c3e50",
                           },
                           icon: <ApiOutlined />,
                         },
@@ -336,7 +330,7 @@ export function ConversationWorkspace({
             )}
           </div>
 
-          <div className="sender-shell">
+          <div className="sender-shell" style={{ background: isDarkMode ? '#0d1b33' : '#ffffff', border: `1px solid ${isDarkMode ? '#1e3a5f' : '#e9ecef'}`, borderRadius: '12px', padding: '16px', marginTop: '16px' }}>
             <Sender
               value={input}
               onChange={onInputChange}
@@ -363,14 +357,14 @@ export function ConversationWorkspace({
               )}
               footer={() => (
                 <Flex justify="space-between" align="center" className="sender-footer">
-                  <Text className="sender-hint">
+                  <Text className="sender-hint" style={{ color: isDarkMode ? '#a0b3d6' : '#6c757d' }}>
                     Enter 发送，Shift + Enter 换行。Token 24 小时内保持登录，会话切换仅以 session_id 驱动。
                   </Text>
                   <Space size={6}>
                     <Tag bordered={false} color="processing">
                       流式增量
                     </Tag>
-                    <Tag bordered={false}>审批恢复</Tag>
+                    <Tag bordered={false} style={{ color: isDarkMode ? '#f3f7ff' : '#2c3e50' }}>审批恢复</Tag>
                   </Space>
                 </Flex>
               )}

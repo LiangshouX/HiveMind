@@ -4,9 +4,10 @@ import { ConsolePage } from "./pages/ConsolePage";
 import { LoginPage } from "./pages/LoginPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { RegisterPage } from "./pages/RegisterPage";
-import { useAuth } from "./providers/AuthProvider";
+import { AuthProvider, useAuth } from "./providers/AuthProvider";
+import { ThemeProvider } from "./providers/ThemeProvider";
 
-function App() {
+function AppContent() {
   const { authenticated } = useAuth();
 
   return (
@@ -36,6 +37,16 @@ function App() {
         }
       />
     </Routes>
+  );
+}
+
+function App() {
+  return (
+    <ThemeProvider>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 
