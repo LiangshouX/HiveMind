@@ -14,6 +14,8 @@ import io.agentscope.core.memory.LongTermMemoryMode;
 import io.agentscope.core.memory.reme.ReMeLongTermMemory;
 import io.agentscope.core.skill.SkillBox;
 import io.agentscope.core.tool.Toolkit;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 /**
@@ -39,6 +41,8 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class TdAgentFactory {
+
+    private static final Logger log = LoggerFactory.getLogger(TdAgentFactory.class);
 
     private final TdAgentProperties properties;
     private final TdAgentModelFactory modelFactory;
@@ -123,11 +127,23 @@ public class TdAgentFactory {
      * @return 配置完成的 ReActAgent 实例，已准备好接收用户消息并执行任务
      */
     public ReActAgent createAgent(ConversationSessionContext context) {
+        log.info("[Agent工厂] 开始创建 ReActAgent - userId: {}, sessionId: {}", 
+                context.getUserId(), context.getSessionId());
+        
         String systemPrompt = promptService.buildPrompt(context);
+        log.debug("[Agent工厂] System Prompt 已构建 - length: {}", systemPrompt.length());
+        
         MongoConversationMemory memory =
                 new MongoConversationMemory(context, persistenceService, systemPrompt);
+        log.debug("[Agent工厂] MongoDB 记忆已初始化");
+        
         Toolkit toolkit = toolkitFactory.createToolkit(context);
+        log.debug("[Agent工厂] Toolkit 已创建");
+        
         SkillBox skillBox = skillService.createSkillBox(context, toolkit);
+        log.debug("[Agent工厂] SkillBox 已创建 - isNull: {}", skillBox == null);
+        
+        log.info("[Agent工厂] 开始构建 ReActAgent 实例");
         var builder =
                 ReActAgent.builder()
                         .name("TDAgent")
@@ -137,12 +153,19 @@ public class TdAgentFactory {
                         .memory(memory)
                         .hook(new TdAgentMemoryCompactionHook(context, memory, memoryManager))
                         .maxIters(properties.getModel().getMaxIters());
+        
         if (skillBox != null) {
             builder.skillBox(skillBox);
+            log.debug("[Agent工厂] SkillBox 已添加到 Agent");
         }
+        
         if (properties.getToolGuard().isEnabled()) {
             builder.hook(new TdAgentToolGuardHook(context, toolGuardEngine, toolApprovalService));
+            log.info("[Agent工厂] Tool Guard Hook 已启用");
+        } else {
+            log.debug("[Agent工厂] Tool Guard 未启用");
         }
+        
         if (properties.getReme().isEnabled()) {
             builder.longTermMemory(
                             ReMeLongTermMemory.builder()
@@ -150,7 +173,14 @@ public class TdAgentFactory {
                                     .apiBaseUrl(properties.getReme().getBaseUrl())
                                     .build())
                     .longTermMemoryMode(LongTermMemoryMode.BOTH);
+            log.info("[Agent工厂] ReMe 长期记忆已启用");
+        } else {
+            log.debug("[Agent工厂] ReMe 长期记忆未启用");
         }
-        return builder.build();
+        
+        ReActAgent agent = builder.build();
+        log.info("[Agent工厂] ReActAgent 创建完成 - name: {}, maxIters: {}", 
+                agent.getName(), properties.getModel().getMaxIters());
+        return agent;
     }
 }

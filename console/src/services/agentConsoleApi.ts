@@ -65,6 +65,7 @@ async function postSse(
   onEvent: (event: TdAgentStreamEvent) => void,
   signal?: AbortSignal,
 ) {
+  console.log('[SSE] 开始流式请求:', path);
   const response = await fetch(buildUrl(path), {
     method: "POST",
     headers: createHeaders({
@@ -79,17 +80,29 @@ async function postSse(
     throw new Error((await response.text()) || `流式请求失败: ${response.status}`);
   }
 
+  console.log('[SSE] 连接已建立，状态码:', response.status);
   const reader = response.body.getReader();
   const decoder = new TextDecoder("utf-8");
   let buffer = "";
+  let eventCount = 0;
 
   while (true) {
     const { value, done } = await reader.read();
     if (done) {
+      console.log('[SSE] 流结束，共接收', eventCount, '个事件');
       break;
     }
     buffer += decoder.decode(value, { stream: true });
-    buffer = consumeSseBuffer(buffer, onEvent);
+    const oldBufferLength = buffer.length;
+    buffer = consumeSseBuffer(buffer, (event) => {
+      eventCount++;
+      console.log('[SSE] 解析到事件 #', eventCount, '类型:', event.type);
+      onEvent(event);
+    });
+    const processedLength = oldBufferLength - buffer.length;
+    if (processedLength > 0) {
+      console.log('[SSE] 处理了', processedLength, '字节');
+    }
   }
 
   buffer += decoder.decode();

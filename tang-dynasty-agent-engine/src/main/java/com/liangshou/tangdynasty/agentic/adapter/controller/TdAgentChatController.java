@@ -7,6 +7,8 @@ import com.liangshou.tangdynasty.agentic.domain.document.ToolApprovalDocument;
 import com.liangshou.tangdynasty.agentic.service.ITdAgentChatService;
 import com.liangshou.tangdynasty.agentic.service.dto.*;
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -40,6 +42,8 @@ import java.util.List;
 @RequestMapping("/api/v1/tdagent")
 @SuppressWarnings("unused")
 public class TdAgentChatController {
+
+    private static final Logger log = LoggerFactory.getLogger(TdAgentChatController.class);
 
     private final ITdAgentChatService chatService;
     private final ITdAgentStreamingService streamingService;
@@ -78,8 +82,15 @@ public class TdAgentChatController {
      */
     @PostMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter stream(Principal principal, @Valid @RequestBody ChatRequest request) {
+        log.info("[流式聊天] 收到流式请求 - userId: {}, sessionId: {}, message: {}", 
+                principal != null ? principal.getName() : "unknown", 
+                request.getSessionId(), 
+                request.getMessage());
         applyCurrentUser(principal, request);
-        return streamingService.stream(request);
+        SseEmitter emitter = streamingService.stream(request);
+        log.info("[流式聊天] SSE Emitter 已创建并返回 - userId: {}, sessionId: {}", 
+                request.getUserId(), request.getSessionId());
+        return emitter;
     }
 
     /**
@@ -89,6 +100,10 @@ public class TdAgentChatController {
      */
     @PostMapping(value = "/approvals/approve", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter approve(Principal principal, @Valid @RequestBody ToolApprovalActionRequest request) {
+        log.info("[工具审批] 收到批准请求 - userId: {}, sessionId: {}, approvalIds: {}", 
+                principal != null ? principal.getName() : "unknown",
+                request.getSessionId(), 
+                request.getApprovalIds());
         request.setUserId(currentUserId(principal));
         return streamingService.approveAndResume(request);
     }
@@ -100,6 +115,10 @@ public class TdAgentChatController {
      */
     @PostMapping(value = "/approvals/reject", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter reject(Principal principal, @Valid @RequestBody ToolApprovalActionRequest request) {
+        log.info("[工具审批] 收到拒绝请求 - userId: {}, sessionId: {}, approvalIds: {}", 
+                principal != null ? principal.getName() : "unknown",
+                request.getSessionId(), 
+                request.getApprovalIds());
         request.setUserId(currentUserId(principal));
         return streamingService.rejectAndResume(request);
     }
@@ -125,8 +144,11 @@ public class TdAgentChatController {
     @PostMapping("/chat/interrupt")
     public ChatResponse interrupt(Principal principal, @Valid @RequestBody InterruptRequest request) {
         String userId = currentUserId(principal);
+        log.info("[中断会话] 收到中断请求 - userId: {}, sessionId: {}", userId, request.getSessionId());
         request.setUserId(userId);
         boolean interrupted = streamingService.interrupt(userId, request.getSessionId());
+        log.info("[中断会话] 中断结果 - userId: {}, sessionId: {}, success: {}", 
+                userId, request.getSessionId(), interrupted);
         return ChatResponse.builder()
                 .success(interrupted)
                 .commandHandled(false)

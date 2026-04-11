@@ -1,6 +1,8 @@
 package com.liangshou.tangdynasty.agentic.agents.streaming;
 
 import io.agentscope.core.ReActAgent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
@@ -26,6 +28,8 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class TdAgentActiveSessionRegistry {
 
+    private static final Logger log = LoggerFactory.getLogger(TdAgentActiveSessionRegistry.class);
+
     private final Map<String, ReActAgent> activeAgents = new ConcurrentHashMap<>();
 
     /**
@@ -35,7 +39,9 @@ public class TdAgentActiveSessionRegistry {
      * @param agent 参数
      */
     public void register(String key, ReActAgent agent) {
+        log.info("[会话注册] 注册活动会话 - key: {}, agentName: {}", key, agent.getName());
         activeAgents.put(key, agent);
+        log.debug("[会话注册] 会话已注册，当前活动会话数: {}", activeAgents.size());
     }
 
     /**
@@ -44,7 +50,13 @@ public class TdAgentActiveSessionRegistry {
      * @param key 会话键
      */
     public void unregister(String key) {
-        activeAgents.remove(key);
+        log.info("[会话注销] 注销活动会话 - key: {}", key);
+        ReActAgent removed = activeAgents.remove(key);
+        if (removed != null) {
+            log.debug("[会话注销] 会话已成功注销，当前活动会话数: {}", activeAgents.size());
+        } else {
+            log.warn("[会话注销] 尝试注销不存在的会话 - key: {}", key);
+        }
     }
 
     /**
@@ -54,11 +66,15 @@ public class TdAgentActiveSessionRegistry {
      * @return 返回结果
      */
     public boolean interrupt(String key) {
+        log.info("[会话中断] 尝试中断会话 - key: {}", key);
         ReActAgent agent = activeAgents.get(key);
         if (agent == null) {
+            log.warn("[会话中断] 未找到活动会话，无法中断 - key: {}", key);
             return false;
         }
+        log.info("[会话中断] 找到活动会话，调用 interrupt() 方法");
         agent.interrupt();
+        log.info("[会话中断] 中断信号已发送 - key: {}", key);
         return true;
     }
 }

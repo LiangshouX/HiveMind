@@ -19,7 +19,7 @@ tdagent:
     base-url: ${TDAGENT_MODEL_BASE_URL:https://dashscope.aliyuncs.com}
     endpoint-path: ${TDAGENT_MODEL_ENDPOINT_PATH:}
     model-name: ${TDAGENT_MODEL_NAME:qwen-max}
-    stream: false
+    stream: true
     enable-thinking: false
     max-iters: 8
   sandbox:

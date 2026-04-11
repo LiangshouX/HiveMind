@@ -9,6 +9,8 @@ import io.agentscope.core.model.DashScopeChatModel;
 import io.agentscope.core.model.GenerateOptions;
 import io.agentscope.core.model.Model;
 import io.agentscope.core.model.OpenAIChatModel;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 /**
@@ -34,6 +36,8 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class TdAgentModelFactory {
+
+    private static final Logger log = LoggerFactory.getLogger(TdAgentModelFactory.class);
 
     private final TdAgentProviderRegistry providerRegistry;
 
@@ -77,10 +81,16 @@ public class TdAgentModelFactory {
      */
     public Model create() {
         TdAgentResolvedModelConfig config = providerRegistry.resolveConfiguredModel();
-        return switch (config.getProviderType()) {
+        log.info("[模型工厂] 开始创建模型实例 - provider: {}, modelId: {}, stream: {}", 
+                config.getProviderType(), config.getModelId(), config.isStream());
+        
+        Model model = switch (config.getProviderType()) {
             case DASHSCOPE -> createDashScopeModel(config);
             case OPENAI -> createOpenAiCompatibleModel(config);
         };
+        
+        log.info("[模型工厂] 模型实例创建完成 - type: {}", model.getClass().getSimpleName());
+        return model;
     }
 
     /**
@@ -133,7 +143,9 @@ public class TdAgentModelFactory {
      * @return 配置完成的 DashScopeChatModel 实例
      */
     private DashScopeChatModel createDashScopeModel(TdAgentResolvedModelConfig config) {
-        return DashScopeChatModel.builder()
+        log.debug("[模型工厂-DashScope] 创建 DashScope 模型 - modelId: {}, stream: {}, enableThinking: {}", 
+                config.getModelId(), config.isStream(), config.isEnableThinking());
+        DashScopeChatModel model = DashScopeChatModel.builder()
                 .apiKey(config.getApiKey())
 //                .baseUrl(config.getBaseUrl())
                 .modelName(config.getModelId())
@@ -142,6 +154,8 @@ public class TdAgentModelFactory {
                 .defaultOptions(buildGenerateOptions(config))
                 .formatter(new DashScopeChatFormatter())
                 .build();
+        log.debug("[模型工厂-DashScope] DashScope 模型创建成功");
+        return model;
     }
 
     /**
@@ -179,6 +193,9 @@ public class TdAgentModelFactory {
      * @return 配置完成的 OpenAIChatModel 实例
      */
     private OpenAIChatModel createOpenAiCompatibleModel(TdAgentResolvedModelConfig config) {
+        log.debug("[模型工厂-OpenAI] 创建 OpenAI 兼容模型 - modelId: {}, stream: {}, formatter: {}", 
+                config.getModelId(), config.isStream(), config.getFormatter());
+        
         OpenAIChatModel.Builder builder =
                 OpenAIChatModel.builder()
                         .apiKey(config.getApiKey())
@@ -188,13 +205,18 @@ public class TdAgentModelFactory {
                         .generateOptions(buildGenerateOptions(config));
         if (config.getEndpointPath() != null && !config.getEndpointPath().isBlank()) {
             builder.endpointPath(config.getEndpointPath());
+            log.debug("[模型工厂-OpenAI] 使用自定义端点路径: {}", config.getEndpointPath());
         }
         if ("deepseek".equalsIgnoreCase(config.getFormatter())) {
             builder.formatter(new DeepSeekFormatter());
+            log.debug("[模型工厂-OpenAI] 使用 DeepSeekFormatter");
         } else {
             builder.formatter(new OpenAIChatFormatter());
+            log.debug("[模型工厂-OpenAI] 使用 OpenAIChatFormatter");
         }
-        return builder.build();
+        OpenAIChatModel model = builder.build();
+        log.debug("[模型工厂-OpenAI] OpenAI 兼容模型创建成功");
+        return model;
     }
 
     /**

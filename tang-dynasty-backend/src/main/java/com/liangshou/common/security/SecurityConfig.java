@@ -104,10 +104,18 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .exceptionHandling(exception -> exception
-                .authenticationEntryPoint((request, response, authException) ->
-                    writeErrorResponse(response, 401, Result.error(401, "未登录或登录已过期")))
-                .accessDeniedHandler((request, response, accessDeniedException) ->
-                    writeErrorResponse(response, 403, Result.error(403, "无权访问当前资源")))
+                .authenticationEntryPoint((request, response, authException) -> {
+                    // 防止在响应已提交时再次写入
+                    if (!response.isCommitted()) {
+                        writeErrorResponse(response, 401, Result.error(401, "未登录或登录已过期"));
+                    }
+                })
+                .accessDeniedHandler((request, response, accessDeniedException) -> {
+                    // 防止在响应已提交时再次写入（特别是 SSE 流式响应场景）
+                    if (!response.isCommitted()) {
+                        writeErrorResponse(response, 403, Result.error(403, "无权访问当前资源"));
+                    }
+                })
             )
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
@@ -131,7 +139,13 @@ public class SecurityConfig {
         configuration.setAllowedHeaders(List.of(
                 HttpHeaders.AUTHORIZATION,
                 HttpHeaders.CONTENT_TYPE,
-                HttpHeaders.ACCEPT
+                HttpHeaders.ACCEPT,
+                "Cache-Control",
+                "X-Requested-With"
+        ));
+        configuration.setExposedHeaders(List.of(
+                HttpHeaders.AUTHORIZATION,
+                "X-Total-Count"
         ));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);

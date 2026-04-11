@@ -20,6 +20,8 @@ import io.agentscope.core.agent.Event;
 import io.agentscope.core.agent.EventType;
 import io.agentscope.core.agent.StreamOptions;
 import io.agentscope.core.message.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import reactor.core.publisher.Flux;
@@ -54,6 +56,8 @@ import java.util.concurrent.atomic.AtomicReference;
 @Service
 @SuppressWarnings("unused")
 public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
+
+    private static final Logger log = LoggerFactory.getLogger(TdAgentStreamingServiceImpl.class);
 
     private final TdAgentFactory agentFactory;
     private final ITdAgentChatService chatService;
@@ -99,18 +103,34 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
      */
     @Override
     public SseEmitter stream(ChatRequest request) {
+        log.info("[流式服务] 开始处理流式请求 - userId: {}, sessionId: {}", 
+                request.getUserId(), request.getSessionId());
         ConversationSessionContext context = chatService.buildContext(request);
+        log.debug("[流式服务] 会话上下文已构建 - context: {}", context);
+        
         ChatResponse commandResponse = IChatCommandService.handleCommand(context, request.getMessage());
         if (commandResponse != null) {
+            log.info("[流式服务] 检测到命令请求，直接返回 - command: {}", request.getMessage());
             return singleResponseEmitter(context, commandResponse);
         }
+        
+        log.info("[流式服务] 创建 ReActAgent 实例");
         ReActAgent agent = agentFactory.createAgent(context);
+        log.info("[流式服务] ReActAgent 创建成功 - agentName: {}", agent.getName());
+        
+        log.debug("[流式服务] 恢复会话状态");
         agentSessionStateService.restore(context, agent);
+        
         Msg userMessage = Msg.builder()
                 .name(request.getUserName() == null ? "user" : request.getUserName())
                 .role(MsgRole.USER)
                 .textContent(request.getMessage())
                 .build();
+        log.info("[流式服务] 用户消息已构建 - messageId: {}, content length: {}", 
+                userMessage.getId(), 
+                request.getMessage().length());
+        
+        log.info("[流式服务] 开始执行流式调用");
         return execute(
                 context,
                 agent,
@@ -126,11 +146,16 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
      */
     @Override
     public SseEmitter approveAndResume(ToolApprovalActionRequest request) {
+        log.info("[流式服务-批准] 开始处理批准恢复 - userId: {}, sessionId: {}", 
+                request.getUserId(), request.getSessionId());
         ConversationSessionContext context =
                 chatService.buildContext(request.getUserId(), request.getSessionId(), request.getTitle());
         toolApprovalService.approve(request.getApprovalIds(), request.getComment());
+        log.info("[流式服务-批准] 工具审批已通过 - approvalIds: {}", request.getApprovalIds());
+        
         ReActAgent agent = agentFactory.createAgent(context);
         agentSessionStateService.restore(context, agent);
+        log.info("[流式服务-批准] 开始恢复执行");
         return execute(context, agent, agent.stream(streamOptions()), false);
     }
 
@@ -142,12 +167,18 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
      */
     @Override
     public SseEmitter rejectAndResume(ToolApprovalActionRequest request) {
+        log.info("[流式服务-拒绝] 开始处理拒绝恢复 - userId: {}, sessionId: {}", 
+                request.getUserId(), request.getSessionId());
         ConversationSessionContext context =
                 chatService.buildContext(request.getUserId(), request.getSessionId(), request.getTitle());
         List<ToolApprovalDocument> approvals =
                 toolApprovalService.reject(request.getApprovalIds(), request.getComment());
+        log.info("[流式服务-拒绝] 工具审批已拒绝 - approvalIds: {}, count: {}", 
+                request.getApprovalIds(), approvals.size());
+        
         ReActAgent agent = agentFactory.createAgent(context);
         agentSessionStateService.restore(context, agent);
+        
         Msg toolResponse =
                 Msg.builder()
                         .role(MsgRole.TOOL)
@@ -167,6 +198,7 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
                                                                         .build()))
                                         .toList())
                         .build();
+        log.info("[流式服务-拒绝] 构建拒绝响应消息，继续执行");
         return execute(context, agent, agent.stream(toolResponse, streamOptions()), false);
     }
 
@@ -179,7 +211,11 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
      */
     @Override
     public boolean interrupt(String userId, String sessionId) {
-        return activeSessionRegistry.interrupt(key(userId, sessionId));
+        String key = key(userId, sessionId);
+        log.info("[流式服务-中断] 尝试中断会话 - key: {}", key);
+        boolean result = activeSessionRegistry.interrupt(key);
+        log.info("[流式服务-中断] 中断结果 - key: {}, success: {}", key, result);
+        return result;
     }
 
     private SseEmitter execute(
@@ -187,32 +223,56 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
             ReActAgent agent,
             Flux<Event> eventFlux,
             boolean registerActive) {
+        String sessionKey = key(context);
+        log.info("[流式执行] 开始执行 - sessionKey: {}, registerActive: {}", sessionKey, registerActive);
+        
         SseEmitter emitter = new SseEmitter(0L);
         AtomicReference<Msg> finalMessage = new AtomicReference<>();
+        
         if (registerActive) {
-            activeSessionRegistry.register(key(context), agent);
+            activeSessionRegistry.register(sessionKey, agent);
+            log.info("[流式执行] 会话已注册到活动列表 - sessionKey: {}", sessionKey);
         }
+        
+        log.info("[流式执行] 开始订阅事件流");
         eventFlux.subscribe(
                 event -> {
+                    log.debug("[流式执行-事件] 收到事件 - type: {}, isLast: {}, messageId: {}", 
+                            event.getType(), 
+                            event.isLast(),
+                            event.getMessage() != null ? event.getMessage().getId() : "null");
+                    
                     if (event.getType() == EventType.AGENT_RESULT && event.getMessage() != null) {
                         finalMessage.set(event.getMessage());
+                        log.info("[流式执行-事件] 收到最终结果 - content length: {}", 
+                                event.getMessage().getTextContent().length());
                     }
-                    send(
-                            emitter,
-                            toStreamEvent(
-                                    context,
-                                    event.getType() == EventType.AGENT_RESULT
-                                            ? TdAgentStreamEventType.RESULT
-                                            : event.getType() == EventType.REASONING
-                                            ? TdAgentStreamEventType.REASONING
-                                            : event.getType() == EventType.TOOL_RESULT
-                                            ? TdAgentStreamEventType.TOOL_RESULT
-                                            : TdAgentStreamEventType.MESSAGE,
-                                    event.getMessage(),
-                                    event.isLast(),
-                                    Map.of("eventType", event.getType().name())));
+                    
+                    TdAgentStreamEventType streamEventType = event.getType() == EventType.AGENT_RESULT
+                            ? TdAgentStreamEventType.RESULT
+                            : event.getType() == EventType.REASONING
+                            ? TdAgentStreamEventType.REASONING
+                            : event.getType() == EventType.TOOL_RESULT
+                            ? TdAgentStreamEventType.TOOL_RESULT
+                            : TdAgentStreamEventType.MESSAGE;
+                    
+                    TdAgentStreamEvent streamEvent = toStreamEvent(
+                            context,
+                            streamEventType,
+                            event.getMessage(),
+                            event.isLast(),
+                            Map.of("eventType", event.getType().name()));
+                    
+                    log.debug("[流式执行-事件] 准备发送 SSE 事件 - type: {}, last: {}", 
+                            streamEventType, event.isLast());
+                    send(emitter, streamEvent);
+                    log.debug("[流式执行-事件] SSE 事件已发送");
                 },
                 throwable -> {
+                    log.error("[流式执行-错误] 事件流发生异常 - sessionKey: {}, error: {}", 
+                            sessionKey, 
+                            throwable.getMessage(), 
+                            throwable);
                     try {
                         send(
                                 emitter,
@@ -229,9 +289,13 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
                     }
                 },
                 () -> {
+                    log.info("[流式执行-完成] 事件流已完成 - sessionKey: {}", sessionKey);
                     Msg result = finalMessage.get();
                     boolean paused = isPaused(result) || agentSessionStateService.isPaused(context);
+                    log.info("[流式执行-完成] 检查暂停状态 - paused: {}", paused);
+                    
                     if (paused) {
+                        log.info("[流式执行-完成] 检测到需要审批的工具调用，发送 APPROVAL_REQUIRED 事件");
                         send(
                                 emitter,
                                 TdAgentStreamEvent.builder()
@@ -248,6 +312,8 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
                                                                 context.getSessionId())))
                                         .build());
                     }
+                    
+                    log.info("[流式执行-完成] 发送 DONE 事件");
                     send(
                             emitter,
                             TdAgentStreamEvent.builder()
@@ -261,8 +327,12 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
                                                     "paused", paused,
                                                     "timestamp", Instant.now().toString()))
                                     .build());
+                    
                     cleanup(context, agent, result, paused, emitter);
+                    log.info("[流式执行-完成] 清理工作已完成");
                 });
+        
+        log.info("[流式执行] 事件订阅已完成，返回 Emitter");
         return emitter;
     }
 
@@ -272,11 +342,20 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
             Msg finalMessage,
             boolean paused,
             SseEmitter emitter) {
+        String sessionKey = key(context);
+        log.info("[流式清理] 开始清理工作 - sessionKey: {}, paused: {}", sessionKey, paused);
+        
         agentSessionStateService.save(context, agent, paused);
-        activeSessionRegistry.unregister(key(context));
+        log.debug("[流式清理] 会话状态已保存");
+        
+        activeSessionRegistry.unregister(sessionKey);
+        log.debug("[流式清理] 会话已从活动列表注销");
+        
         try {
             emitter.complete();
-        } catch (Exception ignored) {
+            log.info("[流式清理] SSE Emitter 已完成");
+        } catch (Exception e) {
+            log.warn("[流式清理] 完成 Emitter 时发生异常 - error: {}", e.getMessage());
         }
     }
 
@@ -341,11 +420,18 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
 
     private void send(SseEmitter emitter, TdAgentStreamEvent event) {
         try {
+            log.trace("[SSE发送] 发送事件 - type: {}, sessionId: {}, content length: {}", 
+                    event.getType(), 
+                    event.getSessionId(),
+                    event.getContent() != null ? event.getContent().length() : 0);
             emitter.send(
                     SseEmitter.event()
                             .name(event.getType().name().toLowerCase())
                             .data(event));
+            log.trace("[SSE发送] 事件发送成功");
         } catch (IOException ex) {
+            log.error("[SSE发送] 发送 SSE 事件失败 - type: {}, error: {}", 
+                    event.getType(), ex.getMessage());
             throw new IllegalStateException("Failed to emit SSE event.", ex);
         }
     }

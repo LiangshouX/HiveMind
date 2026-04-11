@@ -477,7 +477,11 @@ export function useAgentConsole(user: AuthUser) {
 
   const handleStreamEvent = useCallback(
     (sessionId: string, assistantMessageId: string, event: TdAgentStreamEvent) => {
+      // 添加调试日志，验证实时接收
+      console.log('[SSE Event]', event.type, '内容长度:', event.content?.length, '时间:', new Date().toISOString());
+      
       if (event.type === "DONE") {
+        console.log('[SSE Done] 流式输出完成');
         patchMessage(sessionId, assistantMessageId, (message) => ({
           ...message,
           streaming: false,
@@ -495,6 +499,8 @@ export function useAgentConsole(user: AuthUser) {
       if (!block) {
         return;
       }
+
+      console.log('[SSE Block] 类型:', block.type, '内容:', block.content.substring(0, 50));
 
       patchMessage(sessionId, assistantMessageId, (message) => ({
         ...message,

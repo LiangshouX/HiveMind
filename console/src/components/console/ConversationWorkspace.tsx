@@ -119,7 +119,9 @@ export function ConversationWorkspace({
       key: message.id,
       role: message.role,
       placement: message.role === "user" ? ("end" as const) : ("start" as const),
-      typing: message.role === "assistant" && message.streaming ? { step: 3, interval: 14 } : false,
+      // 流式输出时启用 typing 动画，提供更好的视觉反馈
+      // 注意：这里只是视觉效果，实际内容通过 SSE 实时更新
+      typing: message.role === "assistant" && message.streaming ? { step: 2, interval: 20 } : false,
       content: (
         <div className="message-stack">
             <div className="message-meta">
