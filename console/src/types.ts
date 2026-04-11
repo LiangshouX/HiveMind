@@ -1,6 +1,3 @@
-export const FIXED_USER_ID = "user001";
-export const FIXED_USER_NAME = "XNLLUZ";
-
 export type TdAgentStreamEventType =
   | "MESSAGE"
   | "REASONING"
@@ -20,8 +17,44 @@ export interface TdAgentStreamEvent {
   metadata?: Record<string, unknown>;
 }
 
-export interface ChatRequestPayload {
+export interface ApiResult<T> {
+  code: number;
+  message: string;
+  data: T;
+}
+
+export interface AuthUser {
+  id: number;
   userId: string;
+  nickname: string;
+  role: string;
+  createTime?: string;
+  updateTime?: string;
+}
+
+export interface AuthSession {
+  token: string;
+  expiresAt: string;
+  user: AuthUser;
+}
+
+export interface LoginPayload {
+  userId: string;
+  password: string;
+}
+
+export interface RegisterPayload {
+  userId: string;
+  password: string;
+  nickname?: string;
+}
+
+export interface UpdateProfilePayload {
+  nickname?: string;
+  password?: string;
+}
+
+export interface ChatRequestPayload {
   sessionId: string;
   userName: string;
   title?: string;
@@ -29,7 +62,6 @@ export interface ChatRequestPayload {
 }
 
 export interface ToolApprovalActionPayload {
-  userId: string;
   sessionId: string;
   approvalIds: string[];
   title?: string;
@@ -130,5 +162,12 @@ export interface SessionState {
   pendingApprovals: ToolApproval[];
   loadingHistory?: boolean;
   temp?: boolean;
+}
+
+export interface ConversationGroupItem {
+  key: string;
+  label: string;
+  group: string;
+  timestamp: number;
 }
 

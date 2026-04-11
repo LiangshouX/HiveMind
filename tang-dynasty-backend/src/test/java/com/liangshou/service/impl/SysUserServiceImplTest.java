@@ -8,6 +8,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -19,6 +20,9 @@ class SysUserServiceImplTest {
     @Mock
     private ISysUserSupport support;
 
+    @Mock
+    private PasswordEncoder passwordEncoder;
+
     @InjectMocks
     private SysUserServiceImpl service;
 
@@ -26,10 +30,14 @@ class SysUserServiceImplTest {
     void testGetById() {
         SysUserPO po = new SysUserPO();
         po.setId(1L);
+        po.setUserId("user001");
+        po.setNickname("测试用户");
         when(support.getById(any())).thenReturn(po);
 
         SysUserVO vo = service.getById(1L);
         assertNotNull(vo);
         assertEquals(1L, vo.getId());
+        assertEquals("user001", vo.getUserId());
+        assertEquals("测试用户", vo.getNickname());
     }
 }

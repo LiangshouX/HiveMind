@@ -11,6 +11,7 @@ import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.security.Principal;
 import java.util.List;
 
 /**
@@ -65,7 +66,8 @@ public class TdAgentChatController {
      * @return 返回结果
      */
     @PostMapping("/chat")
-    public ChatResponse chat(@Valid @RequestBody ChatRequest request) {
+    public ChatResponse chat(Principal principal, @Valid @RequestBody ChatRequest request) {
+        applyCurrentUser(principal, request);
         return chatService.chat(request);
     }
 
@@ -75,7 +77,8 @@ public class TdAgentChatController {
      * @return 返回结果
      */
     @PostMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter stream(@Valid @RequestBody ChatRequest request) {
+    public SseEmitter stream(Principal principal, @Valid @RequestBody ChatRequest request) {
+        applyCurrentUser(principal, request);
         return streamingService.stream(request);
     }
 
@@ -85,7 +88,8 @@ public class TdAgentChatController {
      * @return 返回结果
      */
     @PostMapping(value = "/approvals/approve", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter approve(@Valid @RequestBody ToolApprovalActionRequest request) {
+    public SseEmitter approve(Principal principal, @Valid @RequestBody ToolApprovalActionRequest request) {
+        request.setUserId(currentUserId(principal));
         return streamingService.approveAndResume(request);
     }
 
@@ -95,20 +99,22 @@ public class TdAgentChatController {
      * @return 返回结果
      */
     @PostMapping(value = "/approvals/reject", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter reject(@Valid @RequestBody ToolApprovalActionRequest request) {
+    public SseEmitter reject(Principal principal, @Valid @RequestBody ToolApprovalActionRequest request) {
+        request.setUserId(currentUserId(principal));
         return streamingService.rejectAndResume(request);
     }
 
     /**
      * 执行 listApprovals 操作。
-     * @param userId 用户标识
      * @param sessionId 会话标识
      * @return 返回结果
      */
-    @GetMapping("/approvals/{userId}/{sessionId}")
+    @GetMapping("/approvals/me/{sessionId}")
     public List<ToolApprovalDocument> listApprovals(
-            @PathVariable String userId, @PathVariable String sessionId) {
-        return toolApprovalService.listPending(userId, sessionId);
+            Principal principal,
+            @PathVariable String sessionId
+    ) {
+        return toolApprovalService.listPending(currentUserId(principal), sessionId);
     }
 
     /**
@@ -117,12 +123,14 @@ public class TdAgentChatController {
      * @return 返回结果
      */
     @PostMapping("/chat/interrupt")
-    public ChatResponse interrupt(@Valid @RequestBody InterruptRequest request) {
-        boolean interrupted = streamingService.interrupt(request.getUserId(), request.getSessionId());
+    public ChatResponse interrupt(Principal principal, @Valid @RequestBody InterruptRequest request) {
+        String userId = currentUserId(principal);
+        request.setUserId(userId);
+        boolean interrupted = streamingService.interrupt(userId, request.getSessionId());
         return ChatResponse.builder()
                 .success(interrupted)
                 .commandHandled(false)
-                .userId(request.getUserId())
+                .userId(userId)
                 .sessionId(request.getSessionId())
                 .message(interrupted ? "已发送中断信号。" : "当前没有活动中的流式会话。")
                 .messageCount(0)
@@ -133,23 +141,37 @@ public class TdAgentChatController {
 
     /**
      * 列出会话列表。
-     * @param userId 用户标识
      * @return 返回结果
      */
-    @GetMapping("/sessions/{userId}")
-    public List<ConversationViewDocument> listSessions(@PathVariable String userId) {
-        return chatService.listSessions(userId);
+    @GetMapping("/sessions/me")
+    public List<ConversationViewDocument> listSessions(Principal principal) {
+        return chatService.listSessions(currentUserId(principal));
     }
 
     /**
      * 获取会话历史。
-     * @param userId 用户标识
      * @param sessionId 会话标识
      * @return 返回结果
      */
-    @GetMapping("/sessions/{userId}/{sessionId}")
+    @GetMapping("/sessions/me/{sessionId}")
     public SessionHistoryResponse getSessionHistory(
-            @PathVariable String userId, @PathVariable String sessionId) {
-        return chatService.getSessionHistory(userId, sessionId);
+            Principal principal,
+            @PathVariable String sessionId
+    ) {
+        return chatService.getSessionHistory(currentUserId(principal), sessionId);
+    }
+
+    private void applyCurrentUser(Principal principal, ChatRequest request) {
+        request.setUserId(currentUserId(principal));
+        if (request.getUserName() == null || request.getUserName().isBlank()) {
+            request.setUserName(principal.getName());
+        }
+    }
+
+    private String currentUserId(Principal principal) {
+        if (principal == null || principal.getName() == null || principal.getName().isBlank()) {
+            throw new IllegalArgumentException("未获取到当前登录用户");
+        }
+        return principal.getName();
     }
 }

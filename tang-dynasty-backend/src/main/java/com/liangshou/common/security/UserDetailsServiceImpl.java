@@ -1,5 +1,8 @@
 package com.liangshou.common.security;
 
+import com.liangshou.infrastructure.datasource.po.SysUserPO;
+import com.liangshou.infrastructure.datasource.support.ISysUserSupport;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -7,7 +10,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
-import java.util.Collections;
+import java.util.List;
 
 /**
  * 用户详情服务实现类。
@@ -20,10 +23,10 @@ import java.util.Collections;
  * @see UserDetailsService
  */
 @Service
+@RequiredArgsConstructor
 public class UserDetailsServiceImpl implements UserDetailsService {
 
-    // For demonstration, we just use a hardcoded user or would query from DB.
-    // In actual implementation, inject UserRepository/Service to load user.
+    private final ISysUserSupport sysUserSupport;
 
     /**
      * 根据用户名加载用户详情。
@@ -38,14 +41,17 @@ public class UserDetailsServiceImpl implements UserDetailsService {
      */
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        // Here we mock the database fetch
-        if ("admin".equals(username)) {
-            return new User(
-                    "admin",
-                    "$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi", // "admin123"
-                    Collections.singletonList(new SimpleGrantedAuthority("ROLE_ADMIN"))
-            );
+        SysUserPO user = sysUserSupport.lambdaQuery()
+                .eq(SysUserPO::getUserId, username)
+                .one();
+        if (user == null) {
+            throw new UsernameNotFoundException("User Not Found with userId: " + username);
         }
-        throw new UsernameNotFoundException("User Not Found with username: " + username);
+        String role = user.getRole() == null || user.getRole().isBlank() ? "USER" : user.getRole().trim();
+        return new User(
+                user.getUserId(),
+                user.getPassword(),
+                List.of(new SimpleGrantedAuthority("ROLE_" + role.toUpperCase()))
+        );
     }
 }

@@ -305,15 +305,30 @@ public class ConversationPersistenceService {
 
     private String resolveTitle(ConversationSessionContext context, List<StoredMessage> messages) {
         if (context.getSessionTitle() != null && !context.getSessionTitle().isBlank()) {
-            return context.getSessionTitle();
+            return normalizeTitle(context.getSessionTitle());
+        }
+        String existingTitle = loadMemoryDocument(context)
+                .map(ConversationMemoryDocument::getTitle)
+                .filter(title -> title != null && !title.isBlank())
+                .orElse("");
+        if (!existingTitle.isBlank()) {
+            return existingTitle;
         }
         return messages.stream()
                 .flatMap(message -> message.getContent().stream())
                 .map(StoredMessageContent::getText)
                 .filter(text -> text != null && !text.isBlank())
-                .map(text -> text.length() > 32 ? text.substring(0, 32) : text)
+                .map(this::normalizeTitle)
                 .findFirst()
                 .orElse(defaultTitle(context));
+    }
+
+    private String normalizeTitle(String title) {
+        String normalized = title == null ? "" : title.trim().replaceAll("\\s+", " ");
+        if (normalized.isEmpty()) {
+            return normalized;
+        }
+        return normalized.length() > 10 ? normalized.substring(0, 10) : normalized;
     }
 
     private long calculateRoundCount(List<Msg> messages) {

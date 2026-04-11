@@ -24,7 +24,6 @@ import lombok.Setter;
 @Setter
 public class InterruptRequest {
 
-    @NotBlank
     private String userId;
 
     @NotBlank

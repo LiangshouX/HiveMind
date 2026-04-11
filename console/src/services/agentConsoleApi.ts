@@ -6,21 +6,14 @@ import type {
   ToolApproval,
   ToolApprovalActionPayload,
 } from "../types";
+import { buildApiUrl, createHeaders, parseApiResult } from "./http";
 
-const API_BASE = (
-  import.meta.env.VITE_API_BASE?.trim() || "/api/v1/tdagent"
-).replace(/\/$/, "");
+const API_BASE = buildApiUrl(
+  (import.meta.env.VITE_AGENT_API_BASE?.trim() || "/tdagent").replace(/\/$/, ""),
+);
 
 function buildUrl(path: string) {
   return `${API_BASE}${path.startsWith("/") ? path : `/${path}`}`;
-}
-
-async function parseJson<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    const message = await response.text();
-    throw new Error(message || `请求失败: ${response.status}`);
-  }
-  return (await response.json()) as T;
 }
 
 function consumeSseBuffer(
@@ -74,17 +67,16 @@ async function postSse(
 ) {
   const response = await fetch(buildUrl(path), {
     method: "POST",
-    headers: {
+    headers: createHeaders({
       "Content-Type": "application/json",
       Accept: "text/event-stream",
-    },
+    }),
     body: JSON.stringify(payload),
     signal,
   });
 
   if (!response.ok || !response.body) {
-    const message = await response.text();
-    throw new Error(message || `流式请求失败: ${response.status}`);
+    throw new Error((await response.text()) || `流式请求失败: ${response.status}`);
   }
 
   const reader = response.body.getReader();
@@ -109,34 +101,35 @@ async function postSse(
 export const agentConsoleApi = {
   apiBase: API_BASE,
 
-  async listSessions(userId: string) {
-    const response = await fetch(buildUrl(`/sessions/${userId}`));
-    return parseJson<ConversationView[]>(response);
+  async listSessions() {
+    const response = await fetch(buildUrl("/sessions/me"), {
+      headers: createHeaders(),
+    });
+    return parseApiResult<ConversationView[]>(response);
   },
 
-  async getSessionHistory(userId: string, sessionId: string) {
-    const response = await fetch(buildUrl(`/sessions/${userId}/${sessionId}`));
-    return parseJson<SessionHistoryResponse>(response);
+  async getSessionHistory(sessionId: string) {
+    const response = await fetch(buildUrl(`/sessions/me/${sessionId}`), {
+      headers: createHeaders(),
+    });
+    return parseApiResult<SessionHistoryResponse>(response);
   },
 
-  async listPendingApprovals(userId: string, sessionId: string) {
-    const response = await fetch(buildUrl(`/approvals/${userId}/${sessionId}`));
-    return parseJson<ToolApproval[]>(response);
+  async listPendingApprovals(sessionId: string) {
+    const response = await fetch(buildUrl(`/approvals/me/${sessionId}`), {
+      headers: createHeaders(),
+    });
+    return parseApiResult<ToolApproval[]>(response);
   },
 
-  async interruptChat(userId: string, sessionId: string) {
+  async interruptChat(sessionId: string) {
     const response = await fetch(buildUrl("/chat/interrupt"), {
       method: "POST",
-      headers: {
+      headers: createHeaders({
         "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ userId, sessionId }),
+      }),
+      body: JSON.stringify({ sessionId }),
     });
-
-    if (!response.ok) {
-      throw new Error((await response.text()) || "发送中断失败");
-    }
-
     return response.json();
   },
 

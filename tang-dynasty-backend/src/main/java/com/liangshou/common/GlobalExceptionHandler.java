@@ -1,6 +1,5 @@
 package com.liangshou.common;
 
-import com.liangshou.common.utils.Result;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import com.liangshou.common.utils.Result;
@@ -92,6 +91,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Result<String>> handleAuthenticationException(AuthenticationException e) {
         log.warn("Authentication Error: {}", e.getMessage());
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Result.error(401, "Authentication Error"));
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Result<String>> handleIllegalArgumentException(IllegalArgumentException e) {
+        log.warn("Bad Request: {}", e.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Result.error(ErrorCode.PARAM_ERROR.getCode(), e.getMessage()));
     }
 
     /**

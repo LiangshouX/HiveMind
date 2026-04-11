@@ -3,7 +3,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { agentConsoleApi } from "../services/agentConsoleApi";
 import type {
+  AuthUser,
   ChatRequestPayload,
+  ConversationGroupItem,
   ConversationView,
   SessionHistoryResponse,
   SessionState,
@@ -15,7 +17,6 @@ import type {
   UiMessageBlock,
   UiMessageBlockType,
 } from "../types";
-import { FIXED_USER_ID, FIXED_USER_NAME } from "../types";
 
 const STORAGE_KEY = "td-agent-console-ui";
 
@@ -31,11 +32,37 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+function createSessionId() {
+  return `session-${crypto.randomUUID()}`;
+}
+
+function parseJsonSafely<T>(raw?: string): T | null {
+  if (!raw) {
+    return null;
+  }
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return null;
+  }
+}
+
+function normalizeText(value?: string) {
+  return value?.trim().replace(/\s+/g, " ") ?? "";
+}
+
+function deriveTitleFromText(text: string) {
+  const normalized = normalizeText(text);
+  if (!normalized) {
+    return "新对话";
+  }
+  return normalized.length > 10 ? normalized.slice(0, 10) : normalized;
+}
+
 function getRole(role?: string): UiMessage["role"] {
   if (!role) {
     return "assistant";
   }
-
   const normalized = role.toUpperCase();
   if (normalized === "USER") {
     return "user";
@@ -46,40 +73,40 @@ function getRole(role?: string): UiMessage["role"] {
   return "assistant";
 }
 
-function firstBlockText(blocks: UiMessageBlock[]) {
-  return blocks.find((block) => block.content.trim())?.content.trim() ?? "";
+function createBlock(
+  type: UiMessageBlockType,
+  title: string,
+  content: string,
+  extras?: Partial<UiMessageBlock>,
+): UiMessageBlock {
+  return {
+    id: createId("block"),
+    type,
+    title,
+    content,
+    ...extras,
+  };
 }
 
-function createSessionId() {
-  return `session-${crypto.randomUUID()}`;
+function firstBlockText(blocks: UiMessageBlock[]) {
+  return blocks.find((block) => block.content.trim())?.content.trim() ?? "";
 }
 
 function createSessionPreview(session: SessionState) {
   const lastMessage = [...session.messages]
     .reverse()
     .find((item) => item.role !== "system");
-
   if (!lastMessage) {
-    return "准备开始新的智能体协作";
+    return "等待你的首条输入";
   }
-
-  const text = firstBlockText(lastMessage.blocks);
-  return text || "空白消息";
+  return firstBlockText(lastMessage.blocks) || "空白消息";
 }
 
-function deriveTitleFromText(text: string) {
-  const normalized = text.trim().replace(/\s+/g, " ");
-  if (!normalized) {
-    return "未命名会话";
-  }
-  return normalized.length > 24 ? `${normalized.slice(0, 24)}...` : normalized;
-}
-
-function createUserMessage(content: string): UiMessage {
+function createUserMessage(content: string, user: AuthUser): UiMessage {
   return {
     id: createId("user"),
     role: "user",
-    name: FIXED_USER_NAME,
+    name: user.nickname || user.userId,
     createdAt: nowIso(),
     blocks: [
       {
@@ -103,34 +130,7 @@ function createAssistantMessage(): UiMessage {
   };
 }
 
-function createBlock(
-  type: UiMessageBlockType,
-  title: string,
-  content: string,
-  extras?: Partial<UiMessageBlock>,
-): UiMessageBlock {
-  return {
-    id: createId("block"),
-    type,
-    title,
-    content,
-    ...extras,
-  };
-}
-
-function parseJsonSafely<T>(raw?: string): T | null {
-  if (!raw) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    return null;
-  }
-}
-
-function mapStoredMessage(stored: StoredMessage): UiMessage {
+function mapStoredMessage(stored: StoredMessage, user: AuthUser): UiMessage {
   const role = getRole(stored.role);
   const blocks =
     stored.content?.map((item) => {
@@ -150,7 +150,7 @@ function mapStoredMessage(stored: StoredMessage): UiMessage {
         });
       }
       return createBlock(
-        role === "assistant" ? "text" : "text",
+        "text",
         role === "user" ? "你的输入" : "回复",
         item.text ?? item.inputRaw ?? item.input ?? "",
       );
@@ -161,7 +161,7 @@ function mapStoredMessage(stored: StoredMessage): UiMessage {
     role,
     name:
       role === "user"
-        ? stored.name || FIXED_USER_NAME
+        ? stored.name || user.nickname || user.userId
         : stored.name || (role === "system" ? "System" : "TDAgent"),
     createdAt: stored.timestamp || nowIso(),
     blocks,
@@ -178,7 +178,7 @@ function sortSessions(list: SessionState[]) {
 function normalizeConversationView(view: ConversationView): SessionState {
   return {
     sessionId: view.sessionId,
-    title: view.title?.trim() || `Session-${view.sessionId}`,
+    title: view.title?.trim() || "新对话",
     createdAt: view.createdAt || nowIso(),
     updatedAt: view.updatedAt || view.lastMessageAt || view.createdAt || nowIso(),
     messageCount: view.messageCount ?? 0,
@@ -192,25 +192,20 @@ function normalizeConversationView(view: ConversationView): SessionState {
 function normalizeHistory(
   history: SessionHistoryResponse,
   fallback: SessionState,
+  user: AuthUser,
 ): SessionState {
-  const messages = history.messages.map(mapStoredMessage);
-  const next: SessionState = {
+  const messages = history.messages.map((item) => mapStoredMessage(item, user));
+  return {
     ...fallback,
     title: history.session?.title?.trim() || fallback.title,
     createdAt: history.session?.createdAt || fallback.createdAt,
     updatedAt:
-      history.session?.updatedAt ||
-      history.session?.lastMessageAt ||
-      fallback.updatedAt,
+      history.session?.updatedAt || history.session?.lastMessageAt || fallback.updatedAt,
     messageCount: history.session?.messageCount ?? messages.length,
     unreadCount: history.session?.unreadCount ?? 0,
-    preview:
-      messages.length > 0
-        ? createSessionPreview({ ...fallback, messages })
-        : fallback.preview,
+    preview: messages.length ? createSessionPreview({ ...fallback, messages }) : fallback.preview,
     messages,
   };
-  return next;
 }
 
 function toEventBlock(event: TdAgentStreamEvent): UiMessageBlock | null {
@@ -225,20 +220,16 @@ function toEventBlock(event: TdAgentStreamEvent): UiMessageBlock | null {
       return createBlock("result", "最终结果", event.content);
     case "ERROR":
       return createBlock("error", "异常", event.content);
-    case "APPROVAL_REQUIRED": {
-      const approvals =
-        (event.metadata?.pendingApprovals as ToolApproval[] | undefined) ?? [];
-      return createBlock("approval", "等待审批", event.content, { approvals });
-    }
+    case "APPROVAL_REQUIRED":
+      return createBlock("approval", "等待审批", event.content, {
+        approvals: (event.metadata?.pendingApprovals as ToolApproval[] | undefined) ?? [],
+      });
     default:
       return null;
   }
 }
 
-function mergeStreamBlock(
-  blocks: UiMessageBlock[],
-  incoming: UiMessageBlock,
-): UiMessageBlock[] {
+function mergeStreamBlock(blocks: UiMessageBlock[], incoming: UiMessageBlock): UiMessageBlock[] {
   const previous = blocks.at(-1);
   if (
     previous &&
@@ -254,11 +245,10 @@ function mergeStreamBlock(
       },
     ];
   }
-
   return [...blocks, incoming];
 }
 
-export function useAgentConsole() {
+export function useAgentConsole(user: AuthUser) {
   const navigate = useNavigate();
   const { sessionId: routeSessionId } = useParams<{ sessionId: string }>();
 
@@ -269,6 +259,7 @@ export function useAgentConsole() {
   const [loadingSessions, setLoadingSessions] = useState(true);
   const [busy, setBusy] = useState(false);
   const [approvalComment, setApprovalComment] = useState("");
+  const [runningSessionId, setRunningSessionId] = useState<string>();
   const streamAbortRef = useRef<AbortController | null>(null);
   const hydratedRef = useRef(false);
   const sessionsRef = useRef<SessionState[]>([]);
@@ -287,33 +278,33 @@ export function useAgentConsole() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
   }, []);
 
-  // Sync route -> state (e.g., browser back/forward or initial load)
-  useEffect(() => {
-    if (routeSessionId !== activeSessionId) {
-      if (routeSessionId) {
-        setActiveSessionId(routeSessionId);
-        persistUiState(routeSessionId);
-      } else {
-        setActiveSessionId(undefined);
+  const activateSession = useCallback(
+    (sessionId?: string, replace = false) => {
+      setActiveSessionId(sessionId);
+      persistUiState(sessionId);
+      if (sessionId) {
+        navigate(`/${sessionId}`, { replace });
+      } else if (window.location.pathname !== "/") {
+        navigate("/", { replace });
       }
-    }
-  }, [routeSessionId, activeSessionId, persistUiState]);
+    },
+    [navigate, persistUiState],
+  );
 
-  // Sync state -> route (e.g., user clicked a session or created a new one)
   useEffect(() => {
-    if (activeSessionId && activeSessionId !== routeSessionId) {
-      navigate(`/${activeSessionId}`, { replace: !routeSessionId });
+    if (!routeSessionId) {
+      return;
     }
-  }, [activeSessionId, routeSessionId, navigate]);
+    if (routeSessionId !== activeSessionId) {
+      setActiveSessionId(routeSessionId);
+      persistUiState(routeSessionId);
+    }
+  }, [activeSessionId, persistUiState, routeSessionId]);
 
   const updateSession = useCallback(
     (sessionId: string, updater: (current: SessionState) => SessionState) => {
       setSessions((current) =>
-        sortSessions(
-          current.map((item) =>
-            item.sessionId === sessionId ? updater(item) : item,
-          ),
-        ),
+        sortSessions(current.map((item) => (item.sessionId === sessionId ? updater(item) : item))),
       );
     },
     [],
@@ -323,27 +314,22 @@ export function useAgentConsole() {
     setSessions((current) => {
       const exists = current.some((item) => item.sessionId === session.sessionId);
       const next = exists
-        ? current.map((item) =>
-            item.sessionId === session.sessionId ? session : item,
-          )
+        ? current.map((item) => (item.sessionId === session.sessionId ? session : item))
         : [session, ...current];
       return sortSessions(next);
     });
   }, []);
 
   const ensureSession = useCallback(
-    (sessionId: string, title?: string) => {
-      const existing = sessionsRef.current.find(
-        (item) => item.sessionId === sessionId,
-      );
+    (sessionId: string, title = "新对话") => {
+      const existing = sessionsRef.current.find((item) => item.sessionId === sessionId);
       if (existing) {
         return existing;
       }
-
       const created = nowIso();
       const next: SessionState = {
         sessionId,
-        title: title || `Session-${sessionId}`,
+        title,
         createdAt: created,
         updatedAt: created,
         messageCount: 0,
@@ -386,11 +372,7 @@ export function useAgentConsole() {
   );
 
   const patchMessage = useCallback(
-    (
-      sessionId: string,
-      messageId: string,
-      updater: (message: UiMessage) => UiMessage,
-    ) => {
+    (sessionId: string, messageId: string, updater: (message: UiMessage) => UiMessage) => {
       updateSession(sessionId, (session) => ({
         ...session,
         messages: session.messages.map((message) =>
@@ -404,10 +386,7 @@ export function useAgentConsole() {
   const syncPendingApprovals = useCallback(
     async (sessionId: string) => {
       try {
-        const approvals = await agentConsoleApi.listPendingApprovals(
-          FIXED_USER_ID,
-          sessionId,
-        );
+        const approvals = await agentConsoleApi.listPendingApprovals(sessionId);
         updateSession(sessionId, (session) => ({
           ...session,
           pendingApprovals: approvals,
@@ -425,74 +404,75 @@ export function useAgentConsole() {
         ...session,
         loadingHistory: true,
       }));
-
       try {
-        const history = await agentConsoleApi.getSessionHistory(
-          FIXED_USER_ID,
-          sessionId,
-        );
-        const base =
-          sessionsRef.current.find((item) => item.sessionId === sessionId) ||
-          ensureSession(sessionId);
-        const normalized = normalizeHistory(history, base);
+        const history = await agentConsoleApi.getSessionHistory(sessionId);
+        const base = sessionsRef.current.find((item) => item.sessionId === sessionId) || ensureSession(sessionId);
+        const normalized = normalizeHistory(history, base, user);
         upsertSession({
           ...normalized,
           loadingHistory: false,
+          temp: false,
         });
         await syncPendingApprovals(sessionId);
       } catch (error) {
-        messageApi.error(
-          error instanceof Error ? error.message : "读取会话历史失败",
-        );
+        messageApi.error(error instanceof Error ? error.message : "读取会话历史失败");
         updateSession(sessionId, (session) => ({
           ...session,
           loadingHistory: false,
         }));
       }
     },
-    [ensureSession, messageApi, syncPendingApprovals, updateSession, upsertSession],
+    [ensureSession, messageApi, syncPendingApprovals, updateSession, upsertSession, user],
   );
 
   const refreshSessions = useCallback(
     async (preferredSessionId?: string) => {
       setLoadingSessions(true);
       try {
-        const list = await agentConsoleApi.listSessions(FIXED_USER_ID);
+        const list = await agentConsoleApi.listSessions();
         const normalized = list.map(normalizeConversationView);
         setSessions((current) => {
           const merged = normalized.map((item) => {
-            const existing = current.find(
-              (candidate) => candidate.sessionId === item.sessionId,
-            );
-            return existing ? { ...item, ...existing, ...item } : item;
+            const existing = current.find((candidate) => candidate.sessionId === item.sessionId);
+            if (!existing) {
+              return item;
+            }
+            return {
+              ...item,
+              messages: existing.messages,
+              pendingApprovals: existing.pendingApprovals,
+              loadingHistory: existing.loadingHistory,
+              temp: false,
+              preview: existing.messages.length ? existing.preview : item.preview,
+            };
           });
           const tempOnly = current.filter(
             (item) =>
               item.temp &&
-              !merged.some((candidate) => candidate.sessionId === item.sessionId),
+              !merged.some((candidate) => candidate.sessionId === item.sessionId) &&
+              item.messages.length === 0,
           );
           return sortSessions([...merged, ...tempOnly]);
         });
 
+        const saved = parseJsonSafely<PersistedState>(localStorage.getItem(STORAGE_KEY) || undefined);
         const targetId =
-          preferredSessionId ||
-          activeSessionId ||
-          JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").activeSessionId ||
-          normalized[0]?.sessionId;
+          routeSessionId || preferredSessionId || activeSessionId || saved?.activeSessionId || normalized[0]?.sessionId;
 
         if (targetId) {
           setActiveSessionId(targetId);
           persistUiState(targetId);
+          if (!routeSessionId) {
+            navigate(`/${targetId}`, { replace: true });
+          }
         }
       } catch (error) {
-        messageApi.error(
-          error instanceof Error ? error.message : "读取会话列表失败",
-        );
+        messageApi.error(error instanceof Error ? error.message : "读取会话列表失败");
       } finally {
         setLoadingSessions(false);
       }
     },
-    [activeSessionId, messageApi, persistUiState],
+    [activeSessionId, messageApi, navigate, persistUiState, routeSessionId],
   );
 
   const handleStreamEvent = useCallback(
@@ -502,10 +482,11 @@ export function useAgentConsole() {
           ...message,
           streaming: false,
         }));
-
         const paused = Boolean(event.metadata?.paused);
         if (!paused) {
           void refreshSessions(sessionId);
+        } else {
+          void syncPendingApprovals(sessionId);
         }
         return;
       }
@@ -526,30 +507,24 @@ export function useAgentConsole() {
         ...session,
         updatedAt: nowIso(),
         preview:
-          block.type === "approval"
-            ? "等待审批继续执行"
-            : block.content.trim() || session.preview,
-        pendingApprovals:
-          block.type === "approval" ? block.approvals || [] : session.pendingApprovals,
+          block.type === "approval" ? "等待审批继续执行" : block.content.trim() || session.preview,
+        pendingApprovals: block.type === "approval" ? block.approvals || [] : session.pendingApprovals,
       }));
     },
-    [patchMessage, refreshSessions, updateSession],
+    [patchMessage, refreshSessions, syncPendingApprovals, updateSession],
   );
 
   const runStream = useCallback(
     async (
       sessionId: string,
       title: string,
-      requestFactory: (
-        assistantMessageId: string,
-        signal: AbortSignal,
-      ) => Promise<void>,
+      requestFactory: (assistantMessageId: string, signal: AbortSignal) => Promise<void>,
     ) => {
       setBusy(true);
+      setRunningSessionId(sessionId);
       streamAbortRef.current?.abort();
       const controller = new AbortController();
       streamAbortRef.current = controller;
-
       const assistantMessageId = createStreamingAssistant(sessionId);
 
       try {
@@ -559,23 +534,16 @@ export function useAgentConsole() {
         if (controller.signal.aborted) {
           return;
         }
-
         patchMessage(sessionId, assistantMessageId, (message) => ({
           ...message,
           streaming: false,
           failed: true,
           blocks: mergeStreamBlock(
             message.blocks,
-            createBlock(
-              "error",
-              "异常",
-              error instanceof Error ? error.message : "流式请求失败",
-            ),
+            createBlock("error", "异常", error instanceof Error ? error.message : "流式请求失败"),
           ),
         }));
-        messageApi.error(
-          error instanceof Error ? error.message : "流式请求失败，请稍后重试",
-        );
+        messageApi.error(error instanceof Error ? error.message : "流式请求失败，请稍后重试");
       } finally {
         updateSession(sessionId, (session) => ({
           ...session,
@@ -586,15 +554,10 @@ export function useAgentConsole() {
           streamAbortRef.current = null;
         }
         setBusy(false);
+        setRunningSessionId(undefined);
       }
     },
-    [
-      createStreamingAssistant,
-      messageApi,
-      patchMessage,
-      syncPendingApprovals,
-      updateSession,
-    ],
+    [createStreamingAssistant, messageApi, patchMessage, syncPendingApprovals, updateSession],
   );
 
   const sendMessage = useCallback(async () => {
@@ -602,26 +565,26 @@ export function useAgentConsole() {
     if (!text || busy) {
       return;
     }
-
     const sessionId = activeSessionId || createSessionId();
-    const title = activeSession?.title || deriveTitleFromText(text);
-    const session = ensureSession(sessionId, title);
-    const userMessage = createUserMessage(text);
+    const nextTitle =
+      activeSession?.temp || !activeSession?.messages.length
+        ? deriveTitleFromText(text)
+        : activeSession?.title || deriveTitleFromText(text);
+    const session = ensureSession(sessionId, activeSession?.temp ? "新对话" : nextTitle);
+    const userMessage = createUserMessage(text, user);
 
-    setActiveSessionId(sessionId);
-    persistUiState(sessionId);
+    activateSession(sessionId, !routeSessionId);
     appendMessage(sessionId, userMessage);
     setInput("");
 
     const payload: ChatRequestPayload = {
-      userId: FIXED_USER_ID,
       sessionId,
-      userName: FIXED_USER_NAME,
-      title: session.temp ? title : session.title,
+      userName: user.nickname || user.userId,
+      title: session.temp ? nextTitle : session.title,
       message: text,
     };
 
-    await runStream(sessionId, title, (assistantMessageId, signal) =>
+    await runStream(sessionId, payload.title || session.title, (assistantMessageId, signal) =>
       agentConsoleApi.streamChat(
         payload,
         (event) => handleStreamEvent(sessionId, assistantMessageId, event),
@@ -629,6 +592,7 @@ export function useAgentConsole() {
       ),
     );
   }, [
+    activateSession,
     activeSession,
     activeSessionId,
     appendMessage,
@@ -636,16 +600,17 @@ export function useAgentConsole() {
     ensureSession,
     handleStreamEvent,
     input,
-    persistUiState,
+    routeSessionId,
     runStream,
+    user,
   ]);
 
   const createNewSession = useCallback(() => {
     const sessionId = createSessionId();
     const createdAt = nowIso();
-    const session: SessionState = {
+    upsertSession({
       sessionId,
-      title: "新会话",
+      title: "新对话",
       createdAt,
       updatedAt: createdAt,
       messageCount: 0,
@@ -654,73 +619,58 @@ export function useAgentConsole() {
       messages: [],
       pendingApprovals: [],
       temp: true,
-    };
-    upsertSession(session);
-    setActiveSessionId(sessionId);
-    persistUiState(sessionId);
+    });
+    activateSession(sessionId);
     setInput("");
-  }, [persistUiState, upsertSession]);
+  }, [activateSession, upsertSession]);
 
   const selectSession = useCallback(
     async (sessionId: string) => {
-      setActiveSessionId(sessionId);
-      persistUiState(sessionId);
-
-      const current = sessionsRef.current.find(
-        (item) => item.sessionId === sessionId,
-      );
+      activateSession(sessionId);
+      const current = sessionsRef.current.find((item) => item.sessionId === sessionId);
       if (!current || current.messages.length === 0) {
         await loadSessionHistory(sessionId);
       } else {
         void syncPendingApprovals(sessionId);
       }
     },
-    [loadSessionHistory, persistUiState, syncPendingApprovals],
+    [activateSession, loadSessionHistory, syncPendingApprovals],
   );
 
   const interruptCurrent = useCallback(async () => {
-    if (!activeSessionId || !busy) {
+    if (!runningSessionId || !busy) {
       return;
     }
     streamAbortRef.current?.abort();
     streamAbortRef.current = null;
     setBusy(false);
-
+    setRunningSessionId(undefined);
     try {
-      await agentConsoleApi.interruptChat(FIXED_USER_ID, activeSessionId);
+      await agentConsoleApi.interruptChat(runningSessionId);
       messageApi.success("已发送中断信号");
     } catch (error) {
       messageApi.error(error instanceof Error ? error.message : "发送中断失败");
     }
-  }, [activeSessionId, busy, messageApi]);
+  }, [busy, messageApi, runningSessionId]);
 
   const handleApprovalAction = useCallback(
     async (action: "approve" | "reject") => {
       if (!activeSession || busy || activeSession.pendingApprovals.length === 0) {
         return;
       }
-
       const payload: ToolApprovalActionPayload = {
-        userId: FIXED_USER_ID,
         sessionId: activeSession.sessionId,
         approvalIds: activeSession.pendingApprovals.map((item) => item.id),
         title: activeSession.title,
         comment: approvalComment.trim() || undefined,
       };
-
       updateSession(activeSession.sessionId, (session) => ({
         ...session,
         pendingApprovals: [],
       }));
       setApprovalComment("");
-
-      await runStream(
-        activeSession.sessionId,
-        activeSession.title,
-        (assistantMessageId, signal) =>
-        (action === "approve"
-          ? agentConsoleApi.approveAndResume
-          : agentConsoleApi.rejectAndResume)(
+      await runStream(activeSession.sessionId, activeSession.title, (assistantMessageId, signal) =>
+        (action === "approve" ? agentConsoleApi.approveAndResume : agentConsoleApi.rejectAndResume)(
           payload,
           (event) => handleStreamEvent(activeSession.sessionId, assistantMessageId, event),
           signal,
@@ -730,17 +680,15 @@ export function useAgentConsole() {
     [activeSession, approvalComment, busy, handleStreamEvent, runStream, updateSession],
   );
 
-  const groupedConversationItems = useMemo(() => {
+  const groupedConversationItems = useMemo<ConversationGroupItem[]>(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-
     return sessions.map((session) => {
       const updated = new Date(session.updatedAt);
-      const group = updated.getTime() >= today.getTime() ? "今天" : "更早";
       return {
         key: session.sessionId,
         label: session.title,
-        group,
+        group: updated.getTime() >= today.getTime() ? "今天" : "更早",
         timestamp: updated.getTime(),
       };
     });
@@ -751,19 +699,14 @@ export function useAgentConsole() {
       return;
     }
     hydratedRef.current = true;
-
-    const saved = parseJsonSafely<PersistedState>(
-      localStorage.getItem(STORAGE_KEY) || undefined,
-    );
-
-    void refreshSessions(saved?.activeSessionId);
-  }, [refreshSessions]);
+    const saved = parseJsonSafely<PersistedState>(localStorage.getItem(STORAGE_KEY) || undefined);
+    void refreshSessions(routeSessionId || saved?.activeSessionId);
+  }, [refreshSessions, routeSessionId]);
 
   useEffect(() => {
     if (!activeSessionId) {
       return;
     }
-
     const current = sessions.find((item) => item.sessionId === activeSessionId);
     if (current && current.messages.length === 0 && !current.temp) {
       void loadSessionHistory(activeSessionId);
@@ -774,7 +717,6 @@ export function useAgentConsole() {
     contextHolder,
     loadingSessions,
     busy,
-    sessions,
     activeSession,
     activeSessionId,
     input,

@@ -23,7 +23,6 @@ import lombok.Setter;
 @Setter
 public class ChatRequest {
 
-    @NotBlank
     private String userId;
 
     @NotBlank

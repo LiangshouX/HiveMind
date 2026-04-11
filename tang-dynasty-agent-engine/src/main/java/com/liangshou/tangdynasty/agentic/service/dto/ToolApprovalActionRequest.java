@@ -26,7 +26,6 @@ import java.util.List;
 @Setter
 public class ToolApprovalActionRequest {
 
-    @NotBlank
     private String userId;
 
     @NotBlank

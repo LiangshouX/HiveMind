@@ -5,7 +5,7 @@ USE `tang_dynasty`;
 -- ========== 用户与权限 ==========
 CREATE TABLE IF NOT EXISTS `sys_user` (
   `id` BIGINT AUTO_INCREMENT COMMENT '主键',
-  `user_name` VARCHAR(50) NOT NULL COMMENT '用户名',
+  `user_id` VARCHAR(50) NOT NULL COMMENT '用户ID',
   `phone_number` VARCHAR(20) NOT NULL COMMENT '用户电话号码，包含国际区号',
   `password` VARCHAR(255) NOT NULL COMMENT '密码哈希',
   `nickname` VARCHAR(100) COMMENT '昵称',
@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS `sys_user` (
   `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_username` (`user_name`)
+  UNIQUE KEY `uk_userid` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统用户表';
 
 -- ================================ 御书房场景 ================================
