@@ -6,7 +6,6 @@ package com.liangshou.common.utils;
  * <p>此类为工具类，不可实例化，所有方法均为静态方法。</p>
  *
  * @author liangshou
- * @version 1.0
  */
 public final class StringUtils {
     private StringUtils() {}

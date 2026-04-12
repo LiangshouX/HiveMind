@@ -11,22 +11,21 @@ import {
   SendOutlined,
   StopOutlined,
   ToolOutlined,
-  UserOutlined,
 } from "@ant-design/icons";
-import { Bubble, Prompts, Sender, Welcome } from "@ant-design/x";
-import { Avatar, Button, Card, Flex, Space, Spin, Tag, Typography } from "antd";
+import {Bubble, Prompts, Sender, Welcome} from "@ant-design/x";
+import {Avatar, Button, Card, Flex, Space, Spin, Tag, Typography} from "antd";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import "dayjs/locale/zh-cn";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import type { AuthUser, SessionState } from "../../types";
-import { useTheme } from "../../providers/ThemeProvider";
+import type {AuthUser, SessionState} from "../../types";
+import {useTheme} from "../../providers/ThemeProvider";
 
 dayjs.extend(relativeTime);
 dayjs.locale("zh-cn");
 
-const { Text, Title, Paragraph } = Typography;
+const { Text, Title} = Typography;
 
 function formatTime(value?: string) {
   if (!value) {
@@ -265,7 +264,7 @@ export function ConversationWorkspace({
                       </Tag>
                       <Tag icon={<SendOutlined />}>{activeSession.messageCount} 条消息</Tag>
                     </Space>
-                    <Paragraph className="session-hero-text" style={{ color: isDarkMode ? '#f3f7ff' : '#2c3e50', margin: '8px 0 0 0' }}>{activeSession.preview}</Paragraph>
+                    {/*<Paragraph className="session-hero-text" style={{ color: isDarkMode ? '#f3f7ff' : '#2c3e50', margin: '8px 0 0 0' }}>{activeSession.preview}</Paragraph>*/}
                   </div>
                 </div>
 

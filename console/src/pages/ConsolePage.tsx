@@ -1,12 +1,12 @@
-import { Avatar, Button, ConfigProvider, Layout, Space, theme, Typography } from "antd";
-import { LogoutOutlined, MoonOutlined, SettingOutlined, SunOutlined } from "@ant-design/icons";
-import { useNavigate } from "react-router-dom";
-import { ApprovalDrawerPanel } from "../components/console/ApprovalDrawerPanel";
-import { ConsoleSidebar } from "../components/console/ConsoleSidebar";
-import { ConversationWorkspace } from "../components/console/ConversationWorkspace";
-import { useAgentConsole } from "../hooks/useAgentConsole";
-import { useAuth } from "../providers/AuthProvider";
-import { useTheme } from "../providers/ThemeProvider";
+import {Avatar, Button, ConfigProvider, Layout, Space, theme, Typography} from "antd";
+import {LogoutOutlined, MoonOutlined, SunOutlined, UserOutlined} from "@ant-design/icons";
+import {useNavigate} from "react-router-dom";
+import {ApprovalDrawerPanel} from "../components/console/ApprovalDrawerPanel";
+import {ConsoleSidebar} from "../components/console/ConsoleSidebar";
+import {ConversationWorkspace} from "../components/console/ConversationWorkspace";
+import {useAgentConsole} from "../hooks/useAgentConsole";
+import {useAuth} from "../providers/AuthProvider";
+import {useTheme} from "../providers/ThemeProvider";
 
 const { Header, Sider, Content } = Layout;
 const { Text } = Typography;
@@ -71,13 +71,13 @@ export function ConsolePage() {
             </Button>
             <Button 
               type="text" 
-              icon={<SettingOutlined />} 
+              icon={<UserOutlined />}
               onClick={() => navigate("/profile")}
               style={{ color: isDarkMode ? '#f3f7ff' : '#2c3e50' }}
             >
               个人资料
             </Button>
-            <Button 
+            <Button
               type="text" 
               icon={<LogoutOutlined />} 
               onClick={() => {

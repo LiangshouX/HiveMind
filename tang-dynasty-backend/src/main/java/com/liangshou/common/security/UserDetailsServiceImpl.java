@@ -24,6 +24,7 @@ import java.util.List;
  */
 @Service
 @RequiredArgsConstructor
+@SuppressWarnings("unused")
 public class UserDetailsServiceImpl implements UserDetailsService {
 
     private final ISysUserSupport sysUserSupport;

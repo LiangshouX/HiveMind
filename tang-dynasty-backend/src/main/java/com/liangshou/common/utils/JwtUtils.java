@@ -4,6 +4,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
+import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
@@ -18,6 +19,7 @@ import java.util.Map;
 public class JwtUtils {
 
     private final Key secretKey;
+    @Getter
     private final long expirationTime;
 
     public JwtUtils(
@@ -40,10 +42,6 @@ public class JwtUtils {
 
     public String extractUsername(String token) {
         return extractAllClaims(token).getSubject();
-    }
-
-    public long getExpirationTime() {
-        return expirationTime;
     }
 
     private String createToken(Map<String, Object> claims, String subject) {

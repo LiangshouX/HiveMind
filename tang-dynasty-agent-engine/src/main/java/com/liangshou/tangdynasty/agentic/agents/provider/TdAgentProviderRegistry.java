@@ -45,6 +45,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * @author LiangshouX
  */
 @Component
+@SuppressWarnings("unused")
 public class TdAgentProviderRegistry {
 
     private static final TypeReference<List<TdAgentProviderDescriptor>> PROVIDER_LIST_TYPE =

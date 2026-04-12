@@ -12,7 +12,10 @@ import cn.hutool.crypto.digest.DigestUtil;
  * @see DigestUtil
  */
 public final class CryptoUtils {
-    private CryptoUtils() {}
+
+    private CryptoUtils() {
+        // 私有构造函数，防止实例化
+    }
 
     /**
      * 计算字符串的 MD5 哈希值。

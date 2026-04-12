@@ -15,7 +15,10 @@ import java.time.format.DateTimeFormatter;
  * @see DateTimeFormatter
  */
 public final class DateUtils {
-    private DateUtils() {}
+
+    private DateUtils() {
+        // 私有构造函数，防止实例化
+    }
 
     private static final DateTimeFormatter DEFAULT_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 

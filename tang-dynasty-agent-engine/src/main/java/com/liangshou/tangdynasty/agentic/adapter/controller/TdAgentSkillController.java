@@ -28,6 +28,7 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/api/v1/tdagent/skills")
+@SuppressWarnings("unused")
 public class TdAgentSkillController {
 
     private final TdAgentSkillService skillService;
