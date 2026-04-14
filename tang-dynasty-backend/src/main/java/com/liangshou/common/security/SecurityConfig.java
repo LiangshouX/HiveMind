@@ -3,6 +3,8 @@ package com.liangshou.common.security;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.liangshou.common.utils.Result;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
@@ -49,8 +51,10 @@ import java.util.List;
 @SuppressWarnings("unused")
 public class SecurityConfig {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(SecurityConfig.class);
+
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
-    private final ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
      * 配置密码编码器。
@@ -100,31 +104,35 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(AbstractHttpConfigurer::disable)
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .exceptionHandling(exception -> exception
-                .authenticationEntryPoint((request, response, authException) -> {
-                    // 防止在响应已提交时再次写入
-                    if (!response.isCommitted()) {
-                        writeErrorResponse(response, 401, Result.error(401, "未登录或登录已过期"));
-                    }
-                })
-                .accessDeniedHandler((request, response, accessDeniedException) -> {
-                    // 防止在响应已提交时再次写入（特别是 SSE 流式响应场景）
-                    if (!response.isCommitted()) {
-                        writeErrorResponse(response, 403, Result.error(403, "无权访问当前资源"));
-                    }
-                })
-            )
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                .requestMatchers("/api/v1/auth/**").permitAll()
-                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**").permitAll()
-                .anyRequest().authenticated()
-            )
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
-        
+                .csrf(AbstractHttpConfigurer::disable)
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            // 防止在响应已提交时再次写入
+                            if (!response.isCommitted()) {
+                                LOGGER.warn("认证失败: {} - {}", request.getRequestURI(), authException.getMessage());
+                                writeErrorResponse(response, 401, Result.error(401, "未登录或登录已过期，请重新登录"));
+                            }
+                        })
+                        .accessDeniedHandler((request, response, accessDeniedException) -> {
+                            // 防止在响应已提交时再次写入（特别是 SSE 流式响应场景）
+                            if (!response.isCommitted()) {
+                                LOGGER.warn("访问被拒绝: " + request.getRequestURI() + " - " + accessDeniedException.getMessage());
+                                writeErrorResponse(response, 403, Result.error(403, "无权访问当前资源，请检查权限配置"));
+                            }
+                        })
+                )
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers("/api/v1/auth/**").permitAll()
+                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**").permitAll()
+                        // 根据实际需求添加其他公开访问的端点
+                        // .requestMatchers("/api/public/**").permitAll()
+                        .anyRequest().authenticated()
+                )
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+
         return http.build();
     }
 

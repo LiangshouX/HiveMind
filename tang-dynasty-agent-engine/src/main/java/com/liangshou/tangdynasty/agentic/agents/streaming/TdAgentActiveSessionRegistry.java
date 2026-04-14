@@ -30,7 +30,7 @@ public class TdAgentActiveSessionRegistry {
 
     private static final Logger log = LoggerFactory.getLogger(TdAgentActiveSessionRegistry.class);
 
-    private final Map<String, ReActAgent> activeAgents = new ConcurrentHashMap<>();
+    private static final Map<String, ReActAgent> activeAgents = new ConcurrentHashMap<>();
 
     /**
      * 执行 register 操作。

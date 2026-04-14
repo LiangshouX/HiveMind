@@ -1,5 +1,6 @@
 package com.liangshou.tangdynasty.agentic.agents.provider;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -51,6 +52,7 @@ public class TdAgentProviderDescriptor {
 
     private boolean freezeUrl;
 
+    @JsonProperty("isCustom")
     private boolean isCustom;
 
     private boolean supportModelDiscovery;

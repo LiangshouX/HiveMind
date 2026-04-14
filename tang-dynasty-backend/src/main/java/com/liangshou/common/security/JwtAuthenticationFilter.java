@@ -6,6 +6,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -28,6 +29,7 @@ import java.io.IOException;
  * @see OncePerRequestFilter
  * @see JwtUtils
  */
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -69,11 +71,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                 userDetails, null, userDetails.getAuthorities());
                         authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                         SecurityContextHolder.getContext().setAuthentication(authentication);
+                        log.debug("用户认证成功: {} - URI: {}", username, request.getRequestURI());
+                    } else {
+                        log.warn("JWT Token 验证失败: {} - URI: {}", username, request.getRequestURI());
                     }
+                } else {
+                    log.debug("无法从 JWT 中提取用户名 - URI: {}", request.getRequestURI());
                 }
+            } else if (!StringUtils.hasText(jwt)) {
+                // 仅在调试模式下记录，避免日志过多
+                log.trace("请求未携带 JWT Token - URI: {}", request.getRequestURI());
             }
         } catch (Exception ex) {
-            logger.error("Could not set user authentication in security context", ex);
+            log.error("JWT 认证处理异常 - URI: {}", request.getRequestURI(), ex);
         }
 
         filterChain.doFilter(request, response);

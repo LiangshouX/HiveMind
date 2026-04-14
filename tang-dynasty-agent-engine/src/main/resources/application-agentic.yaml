@@ -21,7 +21,7 @@ tdagent:
     model-name: ${TDAGENT_MODEL_NAME:qwen-max}
     stream: true
     enable-thinking: false
-    max-iters: 8
+    max-iters: 200
   sandbox:
     enabled: true
     browser-enabled: true

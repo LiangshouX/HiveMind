@@ -6,7 +6,7 @@ USE `tang_dynasty`;
 CREATE TABLE IF NOT EXISTS `sys_user` (
   `id` BIGINT AUTO_INCREMENT COMMENT '主键',
   `user_id` VARCHAR(50) NOT NULL COMMENT '用户ID',
-  `phone_number` VARCHAR(20) NOT NULL COMMENT '用户电话号码，包含国际区号',
+  `phone_number` VARCHAR(20) DEFAULT NULL COMMENT '用户电话号码，包含国际区号',
   `password` VARCHAR(255) NOT NULL COMMENT '密码哈希',
   `nickname` VARCHAR(100) COMMENT '昵称',
   `role` VARCHAR(50) DEFAULT 'USER' COMMENT '角色',
