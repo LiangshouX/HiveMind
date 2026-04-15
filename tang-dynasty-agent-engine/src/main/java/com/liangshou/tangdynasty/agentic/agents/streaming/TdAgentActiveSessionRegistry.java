@@ -69,12 +69,28 @@ public class TdAgentActiveSessionRegistry {
         log.info("[会话中断] 尝试中断会话 - key: {}", key);
         ReActAgent agent = activeAgents.get(key);
         if (agent == null) {
-            log.warn("[会话中断] 未找到活动会话，无法中断 - key: {}", key);
+            log.warn("[会话中断] 未找到活动会话，可能已被注销 - key: {}", key);
             return false;
         }
-        log.info("[会话中断] 找到活动会话，调用 interrupt() 方法");
-        agent.interrupt();
-        log.info("[会话中断] 中断信号已发送 - key: {}", key);
-        return true;
+        try {
+            log.info("[会话中断] 找到活动会话，调用 interrupt() 方法 - agentName: {}", agent.getName());
+            agent.interrupt();
+            log.info("[会话中断] 中断信号已发送 - key: {}", key);
+            return true;
+        } catch (Exception e) {
+            log.error("[会话中断] 发送中断信号失败 - key: {}, error: {}", key, e.getMessage(), e);
+            // 即使中断失败，也尝试注销该会话
+            unregister(key);
+            return false;
+        }
+    }
+
+    /**
+     * 获取当前活动会话数量。
+     *
+     * @return 活动会话数量
+     */
+    public int getActiveSessionCount() {
+        return activeAgents.size();
     }
 }

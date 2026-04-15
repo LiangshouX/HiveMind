@@ -56,25 +56,6 @@ export function ConsoleSidebar({
             onActiveChange={(value) => value && void onSelectSession(value)}
             groupable
             className="conversation-list"
-            style={{
-              background: 'transparent',
-              '& .ant-conversations-item': {
-                backgroundColor: 'transparent',
-                borderBottom: `1px solid ${isDarkMode ? '#1e3a5f' : '#e9ecef'}`,
-                '&:hover': {
-                  backgroundColor: isDarkMode ? 'rgba(110, 168, 255, 0.1)' : 'rgba(74, 137, 220, 0.05)'
-                }
-              },
-              '& .ant-conversations-item-active': {
-                backgroundColor: isDarkMode ? 'rgba(110, 168, 255, 0.2)' : 'rgba(74, 137, 220, 0.1)',
-                borderLeft: '3px solid #4a89dc'
-              },
-              '& .ant-conversations-group-title': {
-                color: isDarkMode ? '#a0b3d6' : '#6c757d',
-                fontSize: '12px',
-                fontWeight: 600
-              }
-            }}
           />
         </div>
       </div>

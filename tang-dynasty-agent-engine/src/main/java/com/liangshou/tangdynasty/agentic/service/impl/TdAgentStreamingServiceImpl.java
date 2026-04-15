@@ -368,11 +368,21 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
         String sessionKey = key(context);
         log.info("[流式清理] 开始清理工作 - sessionKey: {}, paused: {}", sessionKey, paused);
 
-        agentSessionStateService.save(context, agent, paused);
-        log.debug("[流式清理] 会话状态已保存");
+        try {
+            // 保存会话状态（必须在 unregister 之前执行）
+            agentSessionStateService.save(context, agent, paused);
+            log.debug("[流式清理] 会话状态已保存");
+        } catch (Exception e) {
+            log.error("[流式清理] 保存会话状态失败 - error: {}", e.getMessage(), e);
+        }
 
-//        activeSessionRegistry.unregister(sessionKey);
-//        log.debug("[流式清理] 会话已从活动列表注销");
+        // 注销活动会话（恢复执行，避免内存泄漏）
+        try {
+            activeSessionRegistry.unregister(sessionKey);
+            log.debug("[流式清理] 会话已从活动列表注销");
+        } catch (Exception e) {
+            log.warn("[流式清理] 注销会话时发生异常 - error: {}", e.getMessage());
+        }
 
         try {
             emitter.complete();
@@ -380,6 +390,8 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
         } catch (Exception e) {
             log.warn("[流式清理] 完成 Emitter 时发生异常 - error: {}", e.getMessage());
         }
+        
+        log.info("[流式清理] 清理工作已完成 - sessionKey: {}", sessionKey);
     }
 
     private TdAgentStreamEvent toStreamEvent(
@@ -451,10 +463,16 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
                     SseEmitter.event()
                             .name(event.getType().name().toLowerCase())
                             .data(event));
-            log.trace("[SSE发送] 事件发送成功");
+            log.trace("[SSE发送] 事件发送成功 - type: {}", event.getType());
         } catch (IOException ex) {
-            log.error("[SSE发送] 发送 SSE 事件失败 - type: {}, error: {}",
+            // 客户端断开连接是正常情况（如用户中断），使用 WARN 级别
+            log.warn("[SSE发送] 客户端可能已断开 - type: {}, error: {}",
                     event.getType(), ex.getMessage());
+            throw new IllegalStateException("Failed to emit SSE event.", ex);
+        } catch (Exception ex) {
+            // 其他异常使用 ERROR 级别
+            log.error("[SSE发送] 发送 SSE 事件失败 - type: {}, error: {}",
+                    event.getType(), ex.getMessage(), ex);
             throw new IllegalStateException("Failed to emit SSE event.", ex);
         }
     }

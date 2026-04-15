@@ -24,7 +24,6 @@ export function ConsolePage() {
     input,
     approvalComment,
     groupedConversationItems,
-    apiBase,
     setInput,
     setApprovalComment,
     createNewSession,

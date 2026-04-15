@@ -118,9 +118,8 @@ export function ConversationWorkspace({
       key: message.id,
       role: message.role,
       placement: message.role === "user" ? ("end" as const) : ("start" as const),
-      // 流式输出时启用 typing 动画，提供更好的视觉反馈
-      // 注意：这里只是视觉效果，实际内容通过 SSE 实时更新
-      typing: message.role === "assistant" && message.streaming ? { step: 2, interval: 20 } : false,
+      // 禁用 typing 动画以避免与 SSE 实时更新冲突，提升流式输出流畅度
+      typing: false,
       content: (
         <div className="message-stack">
             <div className="message-meta">
@@ -336,6 +335,7 @@ export function ConversationWorkspace({
               value={input}
               onChange={onInputChange}
               onSubmit={() => void onSend()}
+              onCancel={() => void onInterrupt()}
               loading={busy}
               submitType="enter"
               autoSize={{ minRows: 2, maxRows: 8 }}
@@ -346,16 +346,6 @@ export function ConversationWorkspace({
                   <Tag color="geekblue">SSE</Tag>
                 </Space>
               }
-              actions={(origin) => (
-                <Space size={8}>
-                  {busy ? (
-                    <Button danger icon={<StopOutlined />} onClick={() => void onInterrupt()}>
-                      停止
-                    </Button>
-                  ) : null}
-                  {origin}
-                </Space>
-              )}
               footer={() => (
                 <Flex justify="space-between" align="center" className="sender-footer">
                   <Text className="sender-hint" style={{ color: isDarkMode ? '#a0b3d6' : '#6c757d' }}>

@@ -22,16 +22,16 @@ function consumeSseBuffer(
 ): string {
   let buffer = source;
 
+  // 使用 indexOf 替代正则表达式，提升大缓冲区的解析性能
   while (true) {
-    const match = buffer.match(/\r?\n\r?\n/);
-    if (!match || match.index === undefined) {
+    // 查找双换行分隔符（支持 \n\n, \r\n\r\n, \r\n\n, \n\r\n）
+    const doubleNewlinePos = findDoubleNewline(buffer);
+    if (doubleNewlinePos === -1) {
       break;
     }
-    const boundaryIndex = match.index;
-    const boundaryLength = match[0].length;
 
-    const chunk = buffer.slice(0, boundaryIndex).trim();
-    buffer = buffer.slice(boundaryIndex + boundaryLength);
+    const chunk = buffer.slice(0, doubleNewlinePos).trim();
+    buffer = buffer.slice(doubleNewlinePos + getNewlineLength(buffer, doubleNewlinePos));
 
     if (!chunk) {
       continue;
@@ -59,13 +59,51 @@ function consumeSseBuffer(
   return buffer;
 }
 
+// 查找双换行符的位置
+function findDoubleNewline(buffer: string): number {
+  const len = buffer.length;
+  for (let i = 0; i < len - 1; i++) {
+    const char = buffer[i];
+    const nextChar = buffer[i + 1];
+    
+    // 检查 \n\n, \n\r, \r\n
+    if (char === "\n" && (nextChar === "\n" || nextChar === "\r")) {
+      return i;
+    }
+    if (char === "\r" && nextChar === "\n") {
+      // 继续检查下一个字符
+      if (i + 2 < len) {
+        const thirdChar = buffer[i + 2];
+        if (thirdChar === "\n" || thirdChar === "\r") {
+          return i;
+        }
+      }
+    }
+  }
+  return -1;
+}
+
+// 获取换行符的长度
+function getNewlineLength(buffer: string, pos: number): number {
+  const char = buffer[pos];
+  const nextChar = buffer[pos + 1];
+  
+  if (char === "\n" && nextChar === "\r") return 2;
+  if (char === "\n" && nextChar === "\n") return 2;
+  if (char === "\r" && nextChar === "\n") {
+    const thirdChar = buffer[pos + 2];
+    if (thirdChar === "\n" || thirdChar === "\r") return 3;
+    return 2;
+  }
+  return 2;
+}
+
 async function postSse(
   path: string,
   payload: unknown,
   onEvent: (event: TdAgentStreamEvent) => void,
   signal?: AbortSignal,
 ) {
-  console.log('[SSE] 开始流式请求:', path);
   const response = await fetch(buildUrl(path), {
     method: "POST",
     headers: createHeaders({
@@ -80,29 +118,17 @@ async function postSse(
     throw new Error((await response.text()) || `流式请求失败: ${response.status}`);
   }
 
-  console.log('[SSE] 连接已建立，状态码:', response.status);
   const reader = response.body.getReader();
   const decoder = new TextDecoder("utf-8");
   let buffer = "";
-  let eventCount = 0;
 
   while (true) {
     const { value, done } = await reader.read();
     if (done) {
-      console.log('[SSE] 流结束，共接收', eventCount, '个事件');
       break;
     }
     buffer += decoder.decode(value, { stream: true });
-    const oldBufferLength = buffer.length;
-    buffer = consumeSseBuffer(buffer, (event) => {
-      eventCount++;
-      console.log('[SSE] 解析到事件 #', eventCount, '类型:', event.type);
-      onEvent(event);
-    });
-    const processedLength = oldBufferLength - buffer.length;
-    if (processedLength > 0) {
-      console.log('[SSE] 处理了', processedLength, '字节');
-    }
+    buffer = consumeSseBuffer(buffer, onEvent);
   }
 
   buffer += decoder.decode();
