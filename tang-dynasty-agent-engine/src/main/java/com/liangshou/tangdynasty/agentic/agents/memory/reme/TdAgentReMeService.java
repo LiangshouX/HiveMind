@@ -50,7 +50,13 @@ public class TdAgentReMeService {
      */
     public TdAgentReMeService(TdAgentProperties properties) {
         this.properties = properties;
-        this.reMeClient = new ReMeClient(properties.getReme().getBaseUrl());
+        // 使用带 timeout 的构造器
+        // 注意：API Key 认证通过系统属性或环境变量自动处理
+        // ReMeClient 会读取 REME_API_KEY 或 tdagent.reme.api-key 配置
+        this.reMeClient = new ReMeClient(
+                properties.getReme().getBaseUrl(),
+                java.time.Duration.ofSeconds(properties.getReme().getTimeoutSeconds())
+        );
     }
 
     /**

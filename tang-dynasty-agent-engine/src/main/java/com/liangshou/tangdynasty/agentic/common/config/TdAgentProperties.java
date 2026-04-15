@@ -144,6 +144,8 @@ public class TdAgentProperties {
 
         private String baseUrl = "http://localhost:8085";
 
+        private String apiKey;
+
         private int timeoutSeconds = 60;
 
         private int topK = 5;

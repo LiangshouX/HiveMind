@@ -1,5 +1,4 @@
 import {
-  ApiOutlined,
   BranchesOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
@@ -9,23 +8,23 @@ import {
   RadarChartOutlined,
   RobotOutlined,
   SendOutlined,
-  StopOutlined,
   ToolOutlined,
 } from "@ant-design/icons";
 import {Bubble, Prompts, Sender, Welcome} from "@ant-design/x";
-import {Avatar, Button, Card, Flex, Space, Spin, Tag, Typography} from "antd";
+import {Avatar, Card, Flex, Space, Spin, Tag, Typography} from "antd";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import "dayjs/locale/zh-cn";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import {useEffect, useRef, useState} from "react";
 import type {AuthUser, SessionState} from "../../types";
 import {useTheme} from "../../providers/ThemeProvider";
 
 dayjs.extend(relativeTime);
 dayjs.locale("zh-cn");
 
-const { Text, Title} = Typography;
+const { Text } = Typography;
 
 function formatTime(value?: string) {
   if (!value) {
@@ -108,11 +107,15 @@ export function ConversationWorkspace({
   activeSession,
   activeSessionId,
   onInputChange,
-  onRefreshSession,
   onInterrupt,
   onSend,
 }: ConversationWorkspaceProps) {
   const { isDarkMode } = useTheme();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [prevMessageCount, setPrevMessageCount] = useState(0);
+  const prevSessionIdRef = useRef<string | undefined>(undefined);
+  const [shouldScroll, setShouldScroll] = useState(false);
+  
   const bubbleItems =
     activeSession?.messages.map((message) => ({
       key: message.id,
@@ -178,40 +181,57 @@ export function ConversationWorkspace({
       ),
     })) ?? [];
 
+  // 监听消息变化，有新消息时自动滚动到底部
+  useEffect(() => {
+    if (!activeSession || !activeSession.messages.length) {
+      return;
+    }
+    
+    const currentCount = activeSession.messages.length;
+    
+    // 如果消息数量增加，说明有新消息，滚动到底部
+    if (currentCount > prevMessageCount) {
+      setShouldScroll(true);
+    }
+    
+    setPrevMessageCount(currentCount);
+  }, [activeSession?.messages.length, prevMessageCount, activeSession]);
+
+  // 监听会话切换，打开新会话时自动滚动到底部
+  useEffect(() => {
+    const currentSessionId = activeSessionId;
+    const prevSessionId = prevSessionIdRef.current;
+    
+    // 如果会话 ID 发生变化，说明切换了会话
+    if (currentSessionId && currentSessionId !== prevSessionId) {
+      prevSessionIdRef.current = currentSessionId;
+      setShouldScroll(true);
+    }
+  }, [activeSessionId]);
+
+  // 执行滚动
+  useEffect(() => {
+    if (shouldScroll && messagesEndRef.current) {
+      // 使用 requestAnimationFrame 确保 DOM 渲染完成后滚动
+      requestAnimationFrame(() => {
+        // 找到最近的滚动父容器并滚动到底部
+        const scrollParent = messagesEndRef.current.closest('.chat-scroll-area');
+        if (scrollParent) {
+          scrollParent.scrollTo({
+            top: scrollParent.scrollHeight,
+            behavior: 'smooth',
+          });
+        } else {
+          // 备用方案：使用 scrollIntoView
+          messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }
+      });
+      setShouldScroll(false);
+    }
+  }, [shouldScroll, bubbleItems.length]);
+
   return (
     <>
-      <div className="main-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-        <div>
-          <Space size={10} align="center">
-            <Title level={3} className="header-title" style={{ margin: 0, color: isDarkMode ? '#f3f7ff' : '#2c3e50' }}>
-              {activeSession?.title || "Agent 对话工作台"}
-            </Title>
-            {busy ? (
-              <Tag color="processing" icon={<LoadingOutlined />}>
-                智能体运行中
-              </Tag>
-            ) : activeSession?.pendingApprovals.length ? (
-              <Tag color="warning" icon={<ClockCircleOutlined />}>
-                等待审批
-              </Tag>
-            ) : (
-              <Tag color="success" icon={<CheckCircleOutlined />}>
-                已就绪
-              </Tag>
-            )}
-          </Space>
-        </div>
-
-        <Space size={12}>
-          <Button icon={<ApiOutlined />} onClick={onRefreshSession} disabled={!activeSessionId} style={{ background: isDarkMode ? '#0d1b33' : '#f1f3f5', border: `1px solid ${isDarkMode ? '#1e3a5f' : '#dee2e6'}`, color: isDarkMode ? '#f3f7ff' : '#2c3e50' }}>
-            同步后端
-          </Button>
-          <Button danger icon={<StopOutlined />} onClick={() => void onInterrupt()} disabled={!busy}>
-            中断执行
-          </Button>
-        </Space>
-      </div>
-
       <div className="main-content">
         <div className="conversation-surface">
           <div className="conversation-surface-glow" />
@@ -281,10 +301,10 @@ export function ConversationWorkspace({
                     />
                   </div>
                 ) : (
-                  <Bubble.List
-                    items={bubbleItems}
-                    autoScroll
-                    roles={{
+                  <>
+                    <Bubble.List
+                      items={bubbleItems}
+                      roles={{
                       user: {
                         placement: "end",
                         variant: "filled",
@@ -320,11 +340,14 @@ export function ConversationWorkspace({
                             background: isDarkMode ? "rgba(255,255,255,0.08)" : "#e9ecef",
                             color: isDarkMode ? "#ffffff" : "#2c3e50",
                           },
-                          icon: <ApiOutlined />,
+                          icon: <RobotOutlined />,
                         },
                       },
                     }}
                   />
+                  {/* 滚动锚点 */}
+                  <div ref={messagesEndRef} style={{ height: "1px" }} />
+                </>
                 )}
               </>
             )}
