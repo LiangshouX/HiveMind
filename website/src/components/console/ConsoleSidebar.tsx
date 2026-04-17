@@ -1,0 +1,142 @@
+import { PlusOutlined, ReloadOutlined } from "@ant-design/icons";
+import { Badge, Button, Flex, Space, Tooltip, Typography } from "antd";
+import type { ConversationGroupItem } from "../../types";
+
+const { Text } = Typography;
+
+interface ConsoleSidebarProps {
+  activeSessionId?: string;
+  loadingSessions: boolean;
+  groupedConversationItems: ConversationGroupItem[];
+  onCreateSession: () => void;
+  onRefreshSessions: () => void;
+  onSelectSession: (sessionId: string) => void | Promise<void>;
+}
+
+export function ConsoleSidebar({
+  activeSessionId,
+  loadingSessions,
+  groupedConversationItems,
+  onCreateSession,
+  onRefreshSessions,
+  onSelectSession,
+}: ConsoleSidebarProps) {
+  return (
+    <div style={{ 
+      height: '100%', 
+      display: 'flex', 
+      flexDirection: 'column',
+      background: 'var(--td-bg-elevated)',
+      borderRadius: '12px',
+      border: '1px solid var(--td-border-light)',
+      boxShadow: 'var(--td-shadow-base)',
+      overflow: 'hidden'
+    }}>
+      {/* 新建对话按钮 */}
+      <div style={{ padding: '20px', borderBottom: '1px solid var(--td-border-light)' }}>
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={onCreateSession}
+          block
+          style={{
+            height: '44px',
+            borderRadius: '8px',
+            background: 'var(--td-primary)',
+            border: 'none',
+            boxShadow: 'var(--td-shadow-primary)',
+            fontSize: '16px',
+            fontWeight: 'bold',
+            letterSpacing: '2px',
+            color: 'var(--td-text-inverse)'
+          }}
+        >
+          宣召入朝
+        </Button>
+      </div>
+
+      {/* 会话列表面板 */}
+      <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        {/* 面板头部 */}
+        <Flex align="center" justify="space-between" style={{ marginBottom: '12px', padding: '16px 16px 8px' }}>
+          <Space size={8}>
+            <Badge status={loadingSessions ? "processing" : "success"} />
+            <Text style={{ 
+              color: 'var(--td-text-base)', 
+              fontWeight: 600,
+              fontSize: '14px'
+            }}>
+              近期朝会
+            </Text>
+          </Space>
+          <Tooltip title="刷新会话">
+            <Button 
+              type="text" 
+              icon={<ReloadOutlined />} 
+              onClick={onRefreshSessions} 
+              size="small"
+              style={{ color: 'var(--td-text-tertiary)' }} 
+            />
+          </Tooltip>
+        </Flex>
+
+        {/* 会话列表 */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '12px', minHeight: 0 }}>
+          {groupedConversationItems.map((item) => {
+            const isActive = item.key === activeSessionId;
+            return (
+              <div
+                key={item.key}
+                onClick={() => onSelectSession(item.key)}
+                style={{
+                  padding: '16px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  marginBottom: '8px',
+                  background: isActive ? 'var(--td-item-selected-bg)' : 'transparent',
+                  border: `1px solid ${isActive ? 'var(--td-border-color)' : 'transparent'}`,
+                  transition: 'all 0.3s ease',
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}
+                className="chat-session-item"
+              >
+                {isActive && (
+                  <div style={{ 
+                    position: 'absolute', 
+                    left: 0, 
+                    top: 0, 
+                    bottom: 0, 
+                    width: '3px', 
+                    background: 'var(--td-highlight)' 
+                  }} />
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <Text 
+                    strong 
+                    style={{ 
+                      color: isActive ? 'var(--td-highlight)' : 'var(--td-text-base)', 
+                      fontSize: '14px',
+                      maxWidth: '180px',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    {item.label}
+                  </Text>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <style>{`
+        .chat-session-item:hover {
+          background: var(--td-item-hover-bg) !important;
+        }
+      `}</style>
+    </div>
+  );
+}

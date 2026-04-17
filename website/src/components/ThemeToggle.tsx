@@ -7,10 +7,21 @@ type Theme = 'light' | 'dark';
 const ThemeToggle: React.FC = () => {
   const [theme, setTheme] = useState<Theme>('light');
 
+  // 将toggleTheme声明提前，以便在useEffect中使用
+  const toggleTheme = () => {
+    setTheme(prevTheme => {
+      const newTheme = prevTheme === 'light' ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+      return newTheme;
+    });
+  };
+
   // 初始化和持久化逻辑
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') as Theme;
     if (savedTheme) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTheme(savedTheme);
       document.documentElement.setAttribute('data-theme', savedTheme);
     } else {
@@ -30,7 +41,7 @@ const ThemeToggle: React.FC = () => {
       }
     };
     mediaQuery.addEventListener('change', handleChange);
-    
+
     // 监听快捷键
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'l') {
@@ -44,14 +55,7 @@ const ThemeToggle: React.FC = () => {
       mediaQuery.removeEventListener('change', handleChange);
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, []);
-
-  const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
-    setTheme(newTheme);
-    document.documentElement.setAttribute('data-theme', newTheme);
-    localStorage.setItem('theme', newTheme);
-  };
+  }, [toggleTheme]);
 
   return (
     <Tooltip title={`切换至${theme === 'light' ? '暗黑' : '明亮'}主题 (Ctrl/Cmd+Shift+L)`}>

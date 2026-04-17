@@ -197,7 +197,7 @@ const OfficialManagement: React.FC = () => {
                 <List
                   size="small"
                   dataSource={sel.participated_edicts || []}
-                  renderItem={(e: any) => (
+                  renderItem={(e: Record<string, string>) => (
                     <List.Item 
                       style={{ cursor: 'pointer' }}
                       onClick={() => setModalTaskId(e.id)}

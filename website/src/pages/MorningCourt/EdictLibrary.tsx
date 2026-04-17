@@ -43,12 +43,12 @@ const EdictLibrary: React.FC = () => {
       const values = await form.validateFields();
       if (!formTpl) return;
       setPreviewCmd(buildCmd(formTpl, values));
-    } catch (error) {
+    } catch {
       message.error('请填写必填参数');
     }
   };
 
-  const execute = async (values: any) => {
+  const execute = async (values: Record<string, string>) => {
     if (!formTpl) return;
     const cmd = buildCmd(formTpl, values);
     if (!cmd.trim()) {

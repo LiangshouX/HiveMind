@@ -212,7 +212,7 @@ const EdictBoard: React.FC = () => {
             { label: '全部', value: 'all' }
           ]}
           value={edictFilter}
-          onChange={(val) => setEdictFilter(val as any)}
+          onChange={(val) => setEdictFilter(val as 'active' | 'archived' | 'all')}
         />
         
         {unArchivedDone.length > 0 && (

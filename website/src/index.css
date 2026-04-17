@@ -60,3 +60,425 @@ body {
   transform: translateY(-2px);
   box-shadow: var(--td-shadow-elevated) !important;
 }
+
+/* ==========================================================================
+   TangDynasty Agent Console - 迁移自console项目的样式
+   ========================================================================== */
+
+/* 路由加载 shells */
+.route-loading-shell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: var(--td-bg-base);
+}
+
+/* Auth Shell */
+.auth-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  gap: 32px;
+  background: var(--td-bg-base);
+}
+
+.auth-hero {
+  max-width: 680px;
+  text-align: center;
+}
+
+.auth-hero-badge {
+  display: inline-block;
+  padding: 6px 16px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, var(--td-primary), #c7a434);
+  color: var(--td-text-inverse);
+  font-weight: 700;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.auth-hero-title {
+  font-size: 32px;
+  font-weight: 800;
+  margin: 0 0 12px 0;
+  color: var(--td-text-base);
+}
+
+.auth-hero-description {
+  font-size: 15px;
+  color: var(--td-text-secondary);
+  margin: 0 0 24px 0;
+}
+
+.auth-hero-tag {
+  font-size: 13px;
+}
+
+.auth-card {
+  max-width: 480px;
+  width: 100%;
+  border-radius: 16px;
+  box-shadow: var(--td-shadow-base);
+  background: var(--td-bg-container);
+}
+
+.auth-card-header {
+  margin-bottom: 24px;
+}
+
+.auth-card-kicker {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--td-primary);
+  display: block;
+  margin-bottom: 8px;
+}
+
+.auth-card-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0 0 8px 0;
+  color: var(--td-text-base);
+}
+
+.auth-card-subtitle {
+  font-size: 14px;
+  color: var(--td-text-secondary);
+  margin: 0;
+}
+
+.auth-card-body {
+  /* Body content area */
+}
+
+.auth-card-footer {
+  margin-top: 24px;
+  text-align: center;
+}
+
+.auth-footer-text {
+  font-size: 14px;
+  color: var(--td-text-secondary);
+}
+
+.auth-footer-text a {
+  color: var(--td-primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.auth-footer-text a:hover {
+  text-decoration: underline;
+}
+
+.auth-submit-button {
+  border-radius: 10px;
+  height: 44px;
+  font-weight: 600;
+}
+
+/* Profile Shell */
+.profile-shell {
+  min-height: 100vh;
+  padding: 24px;
+}
+
+.profile-card {
+  border-radius: 16px;
+  box-shadow: var(--td-shadow-base);
+}
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 24px;
+}
+
+@media (max-width: 768px) {
+  .profile-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.profile-summary-card {
+  border-radius: 12px;
+  text-align: center;
+  padding: 32px;
+}
+
+.profile-form-card {
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.metric-label {
+  font-size: 12px;
+}
+
+.metric-foot {
+  font-size: 13px;
+}
+
+/* Main Content */
+.main-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.conversation-surface {
+  position: relative;
+  background: var(--td-bg-container);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: var(--td-shadow-base);
+  min-height: calc(100vh - 180px);
+}
+
+.conversation-surface-glow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 16px;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 0%, rgba(179, 41, 52, 0.05) 0%, transparent 60%);
+}
+
+.chat-scroll-area {
+  max-height: calc(100vh - 380px);
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+/* Session Hero */
+.session-hero {
+  margin-bottom: 24px;
+}
+
+/* Message Stack */
+.message-stack {
+  width: 100%;
+}
+
+.message-meta {
+  margin-bottom: 8px;
+}
+
+.message-author {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.message-time {
+  font-size: 12px;
+  color: var(--td-text-tertiary);
+}
+
+/* Message Block */
+.message-block {
+  margin-bottom: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--td-bg-elevated);
+  border: 1px solid var(--td-border-light);
+}
+
+.message-block-title {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.message-raw {
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-family: var(--td-font-mono);
+  overflow-x: auto;
+  margin: 8px 0;
+}
+
+/* Approval Inline */
+.approval-inline {
+  margin-top: 12px;
+}
+
+.approval-inline-card {
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+
+/* Empty State */
+.empty-state-shell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  text-align: center;
+}
+
+/* Loading Shell */
+.loading-shell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+}
+
+/* Sender Shell */
+.sender-shell {
+  margin-top: 16px;
+  border-radius: 12px;
+  padding: 16px;
+  background: var(--td-bg-elevated);
+  border: 1px solid var(--td-border-light);
+}
+
+.sender-footer {
+  margin-top: 8px;
+}
+
+.sender-hint {
+  font-size: 12px;
+  color: var(--td-text-tertiary);
+}
+
+/* Session Panel */
+.session-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.session-panel-head {
+  margin-bottom: 12px;
+}
+
+.session-head-title {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.conversation-list {
+  flex: 1;
+  overflow: auto;
+}
+
+.new-chat-button {
+  height: 44px;
+  font-weight: 600;
+  border-radius: 10px;
+}
+
+/* Approval Drawer */
+.approval-drawer {
+  border-radius: 16px 0 0 16px;
+}
+
+/* Markdown Body */
+.markdown-body {
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.markdown-body p {
+  margin: 0 0 8px 0;
+}
+
+.markdown-body p:last-child {
+  margin-bottom: 0;
+}
+
+.markdown-body pre {
+  background: var(--td-bg-base);
+  border: 1px solid var(--td-border-light);
+  border-radius: 8px;
+  padding: 12px;
+  overflow-x: auto;
+  margin: 8px 0;
+}
+
+.markdown-body code {
+  background: var(--td-bg-base);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: var(--td-font-mono);
+  font-size: 13px;
+}
+
+.markdown-body pre code {
+  background: transparent;
+  padding: 0;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+  padding-left: 20px;
+  margin: 8px 0;
+}
+
+.markdown-body blockquote {
+  border-left: 3px solid var(--td-primary);
+  padding-left: 12px;
+  margin: 8px 0;
+  color: var(--td-text-secondary);
+}
+
+.markdown-body table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 8px 0;
+}
+
+.markdown-body th,
+.markdown-body td {
+  border: 1px solid var(--td-border-light);
+  padding: 8px;
+  text-align: left;
+}
+
+.markdown-body th {
+  background: var(--td-bg-elevated);
+  font-weight: 600;
+}
+
+/* Tone Variants */
+.tone-reasoning {
+  border-left: 3px solid #a78bfa;
+  background: rgba(167, 139, 250, 0.05);
+}
+
+.tone-tool {
+  border-left: 3px solid #60a5fa;
+  background: rgba(96, 165, 250, 0.05);
+}
+
+.tone-approval {
+  border-left: 3px solid #fbbf24;
+  background: rgba(251, 191, 36, 0.05);
+}
+
+.tone-error {
+  border-left: 3px solid #f87171;
+  background: rgba(248, 113, 113, 0.05);
+}
+
+.tone-result {
+  border-left: 3px solid #34d399;
+  background: rgba(52, 211, 153, 0.05);
+}
+

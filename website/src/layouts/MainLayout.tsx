@@ -15,12 +15,14 @@ import {
   BookOutlined,
   ApiOutlined,
   MenuUnfoldOutlined,
-  MenuFoldOutlined
+  MenuFoldOutlined,
+  LogoutOutlined
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
-import { Layout, Menu, theme, Button, Typography, Space } from 'antd';
+import { Layout, Menu, theme, Button, Typography, Space, Avatar } from 'antd';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import ThemeToggle from '../components/ThemeToggle';
+import { useAuth } from '../providers/AuthProvider';
 
 const { Header, Content, Footer, Sider } = Layout;
 const { Title, Text } = Typography;
@@ -45,6 +47,8 @@ const items: MenuItem[] = [
   getItem('早朝', 'morning-court', <CommentOutlined />, [
     getItem('上朝', '/chat', <MessageOutlined />),
     getItem('旨意库', '/edict-library', <BookOutlined />),
+      // TODO：DELETE ME
+      getItem('早朝', '/cha', <MessageOutlined />),
   ]),
   getItem('御书房', 'imperial-study', <ReadOutlined />, [
     getItem('翰林学士', '/channels', <AppstoreOutlined />),
@@ -74,6 +78,7 @@ const MainLayout: React.FC = () => {
   } = theme.useToken();
   const navigate = useNavigate();
   const location = useLocation();
+  const { authenticated, user, logout } = useAuth();
 
   const onClick: MenuProps['onClick'] = (e) => {
     navigate(e.key);
@@ -81,7 +86,7 @@ const MainLayout: React.FC = () => {
 
   const selectedKeys = [location.pathname];
   const defaultOpenKeys = items
-    .filter(item => item && 'children' in item && item.children?.some((child: any) => child.key === location.pathname))
+    .filter(item => item && 'children' in item && item.children?.some((child: MenuItem) => child?.key === location.pathname))
     .map(item => item?.key as string);
 
   return (
@@ -163,6 +168,54 @@ const MainLayout: React.FC = () => {
           <div style={{ flex: 1 }} />
           <Space style={{ paddingRight: 24 }} size="large">
             <ThemeToggle />
+            {/* 用户登录/个人中心区域 */}
+            {authenticated ? (
+              <Space>
+                <Button
+                  type="text"
+                  icon={<UserOutlined />}
+                  onClick={() => navigate("/profile")}
+                  style={{ color: 'var(--td-highlight)' }}
+                >
+                  个人资料
+                </Button>
+                <Button
+                  type="text"
+                  icon={<LogoutOutlined />}
+                  onClick={() => {
+                    logout();
+                    navigate("/login", { replace: true });
+                  }}
+                  style={{ color: 'var(--td-text-tertiary)' }}
+                >
+                  退出登录
+                </Button>
+                <Avatar
+                  size={32}
+                  style={{
+                    background: 'linear-gradient(135deg, var(--td-primary), #c7a434)',
+                    color: 'var(--td-text-inverse)',
+                    fontWeight: 800,
+                    cursor: 'pointer'
+                  }}
+                  onClick={() => navigate("/profile")}
+                >
+                  {user?.nickname?.slice(0, 1).toUpperCase()}
+                </Avatar>
+              </Space>
+            ) : (
+              <Button
+                type="primary"
+                onClick={() => navigate("/login")}
+                style={{
+                  background: 'var(--td-primary)',
+                  border: 'none',
+                  borderRadius: '8px'
+                }}
+              >
+                登录
+              </Button>
+            )}
             <Space>
               <Text style={{ color: 'var(--td-text-secondary)' }}>当前朝代：</Text>
               <Text strong style={{ color: 'var(--td-highlight)' }}>贞观</Text>

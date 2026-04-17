@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import axios from 'axios';
 
 // 统一 baseURL
@@ -197,3 +198,5 @@ export interface RemoteSkillItem {
   lastUpdated?: string;
   addedAt?: string;
 }
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
