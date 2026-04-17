@@ -28,6 +28,9 @@ const MOCK_MESSAGES = [
   { id: '3', role: 'ai', department: '尚书省', content: '臣尚书仆射奉命执行：\n\n1. 户部已获取 InfoQ 最新动态。\n2. 礼部已完成格式化整理。\n\n呈上今日早报：\n- GPT-5 传闻将于下月发布\n- 芯片产能突破...', time: '2026-03-12 10:01:10' },
 ];
 
+/**
+ * @deprecated 此组件已弃用，请使用 ConversationWorkspace 组件替代
+ */
 const Chat: React.FC = () => {
   const [inputValue, setInputValue] = useState('');
   const [messages, setMessages] = useState(MOCK_MESSAGES);

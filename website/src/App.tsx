@@ -24,7 +24,6 @@ import { ChatPage } from './pages/MorningCourt/ChatPage.tsx';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
 import { AuthProvider } from './providers/AuthProvider';
 import { ThemeProvider } from './providers/ThemeProvider';
-import Chat from "./pages/MorningCourt/Chat.tsx";
 
 const App: React.FC = () => {
   const [isDark, setIsDark] = useState(true);
@@ -89,15 +88,6 @@ const App: React.FC = () => {
                     <ChatPage />
                   </ProtectedRoute>
                 }
-              />
-
-              <Route
-                  path="cha"
-                  element={
-                    <ProtectedRoute>
-                      <Chat />
-                    </ProtectedRoute>
-                  }
               />
               
               <Route path="edict-library" element={<EdictLibrary />} />
