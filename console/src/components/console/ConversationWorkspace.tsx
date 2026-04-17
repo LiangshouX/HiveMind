@@ -241,7 +241,7 @@ export function ConversationWorkspace({
                 <Welcome
                   variant="borderless"
                   icon={<RobotOutlined />}
-                  title="精致的 Agent 交互操作台"
+                  title="TD Agent 交互操作台"
                   description="侧栏管理会话，主区流式查看回答、推理、工具结果与审批状态。未发送首条消息前，不会在后端落库空会话。"
                 />
                 <Prompts

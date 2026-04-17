@@ -620,16 +620,43 @@ export function useAgentConsole(user: AuthUser) {
           console.log("[流式请求] 用户主动中断");
           return;
         }
-        patchMessage(sessionId, assistantMessageId, (message) => ({
-          ...message,
-          streaming: false,
-          failed: true,
-          blocks: mergeStreamBlock(
-            message.blocks,
-            createBlock("error", "异常", error instanceof Error ? error.message : "流式请求失败"),
-          ),
-        }));
-        messageApi.error(error instanceof Error ? error.message : "流式请求失败，请稍后重试");
+        
+        // 检查是否是最大迭代次数错误且 ReMe 不可用
+        const errorMessage = error instanceof Error ? error.message : "流式请求失败，请稍后重试";
+        const isMaxItersError = errorMessage.toLowerCase().includes("最大执行次数") || 
+                                errorMessage.toLowerCase().includes("max iterations") ||
+                                errorMessage.toLowerCase().includes("max_iters");
+        
+        // 检查 ReMe 不可用的提示
+        const isRemeUnavailable = errorMessage.toLowerCase().includes("reme 不可用") ||
+                                  errorMessage.toLowerCase().includes("reme unavailable") ||
+                                  errorMessage.toLowerCase().includes("reme 服务不可用");
+        
+        // 如果是最大迭代次数错误且 ReMe 不可用，显示友好提示
+        if (isMaxItersError || isRemeUnavailable) {
+          const friendlyMessage = "已达到最大执行次数，ReMe 长期记忆服务不可用，请开启新对话。";
+          patchMessage(sessionId, assistantMessageId, (message) => ({
+            ...message,
+            streaming: false,
+            failed: true,
+            blocks: mergeStreamBlock(
+              message.blocks,
+              createBlock("error", "服务降级提示", friendlyMessage),
+            ),
+          }));
+          messageApi.warning(friendlyMessage);
+        } else {
+          patchMessage(sessionId, assistantMessageId, (message) => ({
+            ...message,
+            streaming: false,
+            failed: true,
+            blocks: mergeStreamBlock(
+              message.blocks,
+              createBlock("error", "异常", errorMessage),
+            ),
+          }));
+          messageApi.error(errorMessage);
+        }
       } finally {
         // 确保在所有情况下都正确清理状态
         updateSession(sessionId, (session) => ({

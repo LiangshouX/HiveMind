@@ -33,7 +33,7 @@ tdagent:
     pending-expire-minutes: 60
   reme:
     enabled: true
-    base-url: ${TDAGENT_REME_BASE_URL:http://localhost:8085}
+    base-url: ${TDAGENT_REME_BASE_URL:http://localhost:8002}
     timeout-seconds: 60
     top-k: 5
   compaction:

@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 interface ThemeContextValue {
   isDarkMode: boolean;
@@ -20,6 +20,16 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       return next;
     });
   }, []);
+
+  // 同步主题到 HTML 元素的 data-theme 属性
+  useEffect(() => {
+    const root = document.documentElement;
+    if (isDarkMode) {
+      root.setAttribute("data-theme", "dark");
+    } else {
+      root.setAttribute("data-theme", "light");
+    }
+  }, [isDarkMode]);
 
   const value = useMemo<ThemeContextValue>(
     () => ({
