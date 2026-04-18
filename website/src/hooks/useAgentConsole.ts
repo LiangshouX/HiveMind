@@ -463,18 +463,30 @@ export function useAgentConsole(
               !merged.some((candidate) => candidate.sessionId === item.sessionId) &&
               item.messages.length === 0,
           );
-          return sortSessions([...merged, ...tempOnly]);
+          // 如果temp会话有消息（用户输入过但后端还没保存），保留它
+          // 否则不保留空的temp会话（刷新后应该消失）
+          const tempToKeep = tempOnly.filter((item) => item.messages.length > 0);
+          return sortSessions([...merged, ...tempToKeep]);
         });
 
         const saved = parseJsonSafely<PersistedState>(localStorage.getItem(STORAGE_KEY) || undefined);
+        
+        // 判断当前是否在"新对话"（temp=true，没有实际消息）
+        const currentActive = sessionsRef.current.find((s) => s.sessionId === activeSessionId);
+        const isOnTempSession = currentActive?.temp && currentActive.messages.length === 0;
+
         const targetId =
           routeSessionId || preferredSessionId || activeSessionId || saved?.activeSessionId || normalized[0]?.sessionId;
 
         if (targetId) {
-          setActiveSessionId(targetId);
-          persistUiState(targetId);
-          if (!routeSessionId) {
-            onNavigateToSession?.(targetId, true);
+          // 只有在非temp会话，或targetId就是当前temp会话时，才更新路由
+          // 避免在"新对话"中刷新时强制切换到后端返回的会话
+          if (!isOnTempSession || targetId === activeSessionId) {
+            setActiveSessionId(targetId);
+            persistUiState(targetId);
+            if (!routeSessionId) {
+              onNavigateToSession?.(targetId, true);
+            }
           }
         }
       } catch (error) {

@@ -39,18 +39,6 @@ export function ChatPage() {
         },
     });
 
-    // 包装 selectSession 以确保路由在 /chat 下
-    const handleSelectSession = async (sessionId: string) => {
-        navigate(`/chat/${sessionId}`, {replace: false});
-        await selectSession(sessionId);
-    };
-
-    // 包装 createNewSession 以确保路由在 /chat 下
-    const handleCreateNewSession = () => {
-        createNewSession();
-        navigate(`/chat`, {replace: false});
-    };
-
     return (
         <ConfigProvider
             theme={{
@@ -92,9 +80,9 @@ export function ChatPage() {
                         activeSessionId={activeSessionId}
                         loadingSessions={loadingSessions}
                         groupedConversationItems={groupedConversationItems}
-                        onCreateSession={handleCreateNewSession}
+                        onCreateSession={createNewSession}
                         onRefreshSessions={() => void refreshSessions(activeSessionId)}
-                        onSelectSession={handleSelectSession}
+                        onSelectSession={selectSession}
                     />
                 </Sider>
 

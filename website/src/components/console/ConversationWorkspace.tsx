@@ -374,7 +374,27 @@ export function ConversationWorkspace({
                                     boxShadow: 'none',
                                     background: 'transparent'
                                 }}
-                                suffix={(
+                                suffix={busy ? (
+                                    <Tooltip title="中断输出">
+                                        <Button
+                                            type="primary"
+                                            danger
+                                            icon={<PauseCircleOutlined/>}
+                                            onClick={() => void onInterrupt()}
+                                            style={{
+                                                background: 'var(--td-primary)',
+                                                borderColor: 'var(--td-primary)',
+                                                borderRadius: '8px',
+                                                height: '40px',
+                                                padding: '0 20px',
+                                                fontWeight: 600,
+                                                letterSpacing: '1px'
+                                            }}
+                                        >
+                                            停
+                                        </Button>
+                                    </Tooltip>
+                                ) : (
                                     <ImperialSendButton
                                         disabled={!input.trim()}
                                         loading={busy}
