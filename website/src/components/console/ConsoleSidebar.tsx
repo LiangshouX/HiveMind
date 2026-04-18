@@ -1,6 +1,7 @@
 import { PlusOutlined, ReloadOutlined } from "@ant-design/icons";
 import { Badge, Button, Flex, Space, Tooltip, Typography } from "antd";
 import type { ConversationGroupItem } from "../../types";
+import { useMemo } from "react";
 
 const { Text } = Typography;
 
@@ -13,6 +14,9 @@ interface ConsoleSidebarProps {
   onSelectSession: (sessionId: string) => void | Promise<void>;
 }
 
+// 分组顺序
+const GROUP_ORDER = ["今天", "七天内", "更早"];
+
 export function ConsoleSidebar({
   activeSessionId,
   loadingSessions,
@@ -21,10 +25,30 @@ export function ConsoleSidebar({
   onRefreshSessions,
   onSelectSession,
 }: ConsoleSidebarProps) {
+  // 按 group 分组
+  const groupedItems = useMemo(() => {
+    const groups = new Map<string, ConversationGroupItem[]>();
+    for (const item of groupedConversationItems) {
+      const group = item.group || "更早";
+      if (!groups.has(group)) {
+        groups.set(group, []);
+      }
+      groups.get(group)!.push(item);
+    }
+    // 按指定顺序排序
+    const sorted = GROUP_ORDER
+      .filter((g) => groups.has(g))
+      .map((group) => ({
+        group,
+        items: groups.get(group)!,
+      }));
+    return sorted;
+  }, [groupedConversationItems]);
+
   return (
-    <div style={{ 
-      height: '100%', 
-      display: 'flex', 
+    <div style={{
+      height: '100%',
+      display: 'flex',
       flexDirection: 'column',
       background: 'var(--td-bg-elevated)',
       borderRadius: '12px',
@@ -61,8 +85,8 @@ export function ConsoleSidebar({
         <Flex align="center" justify="space-between" style={{ marginBottom: '12px', padding: '16px 16px 8px' }}>
           <Space size={8}>
             <Badge status={loadingSessions ? "processing" : "success"} />
-            <Text style={{ 
-              color: 'var(--td-text-base)', 
+            <Text style={{
+              color: 'var(--td-text-base)',
               fontWeight: 600,
               fontSize: '14px'
             }}>
@@ -70,65 +94,92 @@ export function ConsoleSidebar({
             </Text>
           </Space>
           <Tooltip title="刷新会话">
-            <Button 
-              type="text" 
-              icon={<ReloadOutlined />} 
-              onClick={onRefreshSessions} 
+            <Button
+              type="text"
+              icon={<ReloadOutlined />}
+              onClick={onRefreshSessions}
               size="small"
-              style={{ color: 'var(--td-text-tertiary)' }} 
+              style={{ color: 'var(--td-text-tertiary)' }}
             />
           </Tooltip>
         </Flex>
 
-        {/* 会话列表 */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '12px', minHeight: 0 }}>
-          {groupedConversationItems.map((item) => {
-            const isActive = item.key === activeSessionId;
-            return (
-              <div
-                key={item.key}
-                onClick={() => onSelectSession(item.key)}
-                style={{
-                  padding: '16px',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  marginBottom: '8px',
-                  background: isActive ? 'var(--td-item-selected-bg)' : 'transparent',
-                  border: `1px solid ${isActive ? 'var(--td-border-color)' : 'transparent'}`,
-                  transition: 'all 0.3s ease',
-                  position: 'relative',
-                  overflow: 'hidden'
-                }}
-                className="chat-session-item"
-              >
-                {isActive && (
-                  <div style={{ 
-                    position: 'absolute', 
-                    left: 0, 
-                    top: 0, 
-                    bottom: 0, 
-                    width: '3px', 
-                    background: 'var(--td-highlight)' 
-                  }} />
-                )}
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <Text 
-                    strong 
-                    style={{ 
-                      color: isActive ? 'var(--td-highlight)' : 'var(--td-text-base)', 
-                      fontSize: '14px',
-                      maxWidth: '180px',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap'
-                    }}
-                  >
-                    {item.label}
-                  </Text>
+        {/* 会话列表 - 带分组 */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '0 12px 12px', minHeight: 0 }}>
+          {groupedItems.length === 0 ? (
+            <div style={{
+              padding: '40px 16px',
+              textAlign: 'center',
+              color: 'var(--td-text-tertiary)',
+              fontSize: '13px'
+            }}>
+              暂无朝会记录
+            </div>
+          ) : (
+            groupedItems.map(({ group, items }) => (
+              <div key={group} style={{ marginBottom: group !== groupedItems[0].group ? '8px' : '0' }}>
+                {/* 分组标题 */}
+                <div style={{
+                  padding: '8px 8px 4px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  color: 'var(--td-text-tertiary)',
+                  letterSpacing: '1px',
+                  textTransform: 'uppercase'
+                }}>
+                  {group}
                 </div>
+                {/* 分组下的会话项 */}
+                {items.map((item) => {
+                  const isActive = item.key === activeSessionId;
+                  return (
+                    <div
+                      key={item.key}
+                      onClick={() => onSelectSession(item.key)}
+                      style={{
+                        padding: '16px',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        marginBottom: '8px',
+                        background: isActive ? 'var(--td-item-selected-bg)' : 'transparent',
+                        border: `1px solid ${isActive ? 'var(--td-border-color)' : 'transparent'}`,
+                        transition: 'all 0.3s ease',
+                        position: 'relative',
+                        overflow: 'hidden'
+                      }}
+                      className="chat-session-item"
+                    >
+                      {isActive && (
+                        <div style={{
+                          position: 'absolute',
+                          left: 0,
+                          top: 0,
+                          bottom: 0,
+                          width: '3px',
+                          background: 'var(--td-highlight)'
+                        }} />
+                      )}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                        <Text
+                          strong
+                          style={{
+                            color: isActive ? 'var(--td-highlight)' : 'var(--td-text-base)',
+                            fontSize: '14px',
+                            maxWidth: '180px',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          {item.label}
+                        </Text>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            );
-          })}
+            ))
+          )}
         </div>
       </div>
 

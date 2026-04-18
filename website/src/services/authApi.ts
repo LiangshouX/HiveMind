@@ -1,6 +1,5 @@
-import { buildApiUrl, createHeaders, parseApiResult } from "./http";
-import type { AuthSession, AuthUser, LoginPayload, RegisterPayload, UpdateProfilePayload } from "../types";
-import { postJson } from "./http";
+import {buildApiUrl, createHeaders, parseApiResult, postJson, putJson} from "./http";
+import type {AuthSession, AuthUser, LoginPayload, RegisterPayload, UpdateProfilePayload} from "../types";
 
 export const authApi = {
   login(payload: LoginPayload) {
@@ -19,6 +18,6 @@ export const authApi = {
   },
 
   updateProfile(payload: UpdateProfilePayload) {
-    return postJson<AuthUser>("/auth/me", payload);
+    return putJson<AuthUser>("/auth/me", payload);
   },
 };

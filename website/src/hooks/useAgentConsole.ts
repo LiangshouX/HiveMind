@@ -892,12 +892,22 @@ export function useAgentConsole(
   const groupedConversationItems = useMemo<ConversationGroupItem[]>(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    const sevenDaysAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
     return sessions.map((session) => {
       const updated = new Date(session.updatedAt);
+      const time = updated.getTime();
+      let group: string;
+      if (time >= today.getTime()) {
+        group = "今天";
+      } else if (time >= sevenDaysAgo.getTime()) {
+        group = "七天内";
+      } else {
+        group = "更早";
+      }
       return {
         key: session.sessionId,
         label: session.title,
-        group: updated.getTime() >= today.getTime() ? "今天" : "更早",
+        group,
         timestamp: updated.getTime(),
       };
     });
