@@ -5,9 +5,9 @@ import com.liangshou.service.vo.SysChannelsVO;
 import com.liangshou.common.utils.PageResult;
 
 public interface ISysChannelsService {
-    SysChannelsVO getById(Long id);
-    PageResult<SysChannelsVO> page(int current, int size);
-    boolean save(SysChannelsDTO dto);
-    boolean update(SysChannelsDTO dto);
-    boolean delete(Long id);
+    SysChannelsVO getById(String userId, Long id);
+    PageResult<SysChannelsVO> page(String userId, int current, int size);
+    boolean save(String userId, SysChannelsDTO dto);
+    boolean update(String userId, SysChannelsDTO dto);
+    boolean delete(String userId, Long id);
 }

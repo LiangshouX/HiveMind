@@ -90,20 +90,21 @@ const App: React.FC = () => {
                 }
               />
               
-              <Route path="edict-library" element={<EdictLibrary />} />
-              <Route path="channels" element={<Channels />} />
-              <Route path="edict-board" element={<EdictBoard />} />
-              <Route path="memorials" element={<Memorials />} />
-              <Route path="scheduled-tasks" element={<ScheduledTasks />} />
-              <Route path="court-rules" element={<CourtRules />} />
-              <Route path="skill-library" element={<SkillLibrary />} />
-              <Route path="tool-library" element={<ToolLibrary />} />
-              <Route path="mcp" element={<MCP />} />
-              <Route path="official-management" element={<OfficialManagement />} />
-              <Route path="models" element={<Models />} />
-              <Route path="env-vars" element={<EnvVars />} />
-              <Route path="security" element={<Security />} />
-              <Route path="token-usage" element={<TokenUsage />} />
+              {/* 需要登录的页面 - 全部受 ProtectedRoute 保护 */}
+              <Route path="edict-library" element={<ProtectedRoute><EdictLibrary /></ProtectedRoute>} />
+              <Route path="channels" element={<ProtectedRoute><Channels /></ProtectedRoute>} />
+              <Route path="edict-board" element={<ProtectedRoute><EdictBoard /></ProtectedRoute>} />
+              <Route path="memorials" element={<ProtectedRoute><Memorials /></ProtectedRoute>} />
+              <Route path="scheduled-tasks" element={<ProtectedRoute><ScheduledTasks /></ProtectedRoute>} />
+              <Route path="court-rules" element={<ProtectedRoute><CourtRules /></ProtectedRoute>} />
+              <Route path="skill-library" element={<ProtectedRoute><SkillLibrary /></ProtectedRoute>} />
+              <Route path="tool-library" element={<ProtectedRoute><ToolLibrary /></ProtectedRoute>} />
+              <Route path="mcp" element={<ProtectedRoute><MCP /></ProtectedRoute>} />
+              <Route path="official-management" element={<ProtectedRoute><OfficialManagement /></ProtectedRoute>} />
+              <Route path="models" element={<ProtectedRoute><Models /></ProtectedRoute>} />
+              <Route path="env-vars" element={<ProtectedRoute><EnvVars /></ProtectedRoute>} />
+              <Route path="security" element={<ProtectedRoute><Security /></ProtectedRoute>} />
+              <Route path="token-usage" element={<ProtectedRoute><TokenUsage /></ProtectedRoute>} />
             </Route>
           </Routes>
         </BrowserRouter>

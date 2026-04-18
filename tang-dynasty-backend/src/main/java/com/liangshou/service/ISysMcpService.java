@@ -5,9 +5,9 @@ import com.liangshou.service.vo.SysMcpVO;
 import com.liangshou.common.utils.PageResult;
 
 public interface ISysMcpService {
-    SysMcpVO getById(Long id);
-    PageResult<SysMcpVO> page(int current, int size);
-    boolean save(SysMcpDTO dto);
-    boolean update(SysMcpDTO dto);
-    boolean delete(Long id);
+    SysMcpVO getById(String userId, Long id);
+    PageResult<SysMcpVO> page(String userId, int current, int size);
+    boolean save(String userId, SysMcpDTO dto);
+    boolean update(String userId, SysMcpDTO dto);
+    boolean delete(String userId, Long id);
 }

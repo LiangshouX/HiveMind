@@ -39,3 +39,7 @@ example
 .vscode
 */.vscode
 *.py
+
+# vibe coding cli
+.qwen
+*/.qwen

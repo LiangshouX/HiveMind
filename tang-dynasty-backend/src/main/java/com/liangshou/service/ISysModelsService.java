@@ -5,9 +5,9 @@ import com.liangshou.service.vo.SysModelsVO;
 import com.liangshou.common.utils.PageResult;
 
 public interface ISysModelsService {
-    SysModelsVO getById(Long id);
-    PageResult<SysModelsVO> page(int current, int size);
-    boolean save(SysModelsDTO dto);
-    boolean update(SysModelsDTO dto);
-    boolean delete(Long id);
+    SysModelsVO getById(String userId, Long id);
+    PageResult<SysModelsVO> page(String userId, int current, int size);
+    boolean save(String userId, SysModelsDTO dto);
+    boolean update(String userId, SysModelsDTO dto);
+    boolean delete(String userId, Long id);
 }

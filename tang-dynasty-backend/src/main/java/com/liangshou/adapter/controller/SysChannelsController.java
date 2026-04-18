@@ -5,6 +5,7 @@ import com.liangshou.service.dto.SysChannelsDTO;
 import com.liangshou.service.vo.SysChannelsVO;
 import com.liangshou.common.utils.Result;
 import com.liangshou.common.utils.PageResult;
+import com.liangshou.common.utils.SecurityUtils;
 import org.springframework.web.bind.annotation.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -32,7 +33,8 @@ public class SysChannelsController {
     @Operation(summary = "查询详情", description = "根据主键获取单条记录")
     @GetMapping("/{id}")
     public Result<SysChannelsVO> getById(@PathVariable Long id) {
-        return Result.success(service.getById(id));
+        String userId = SecurityUtils.getCurrentUserId();
+        return Result.success(service.getById(userId, id));
     }
 
     @Operation(summary = "分页查询", description = "分页获取数据列表")
@@ -40,7 +42,8 @@ public class SysChannelsController {
     public Result<PageResult<SysChannelsVO>> page(
             @RequestParam(defaultValue = "1") int current,
             @RequestParam(defaultValue = "10") int size) {
-        return Result.success(service.page(current, size));
+        String userId = SecurityUtils.getCurrentUserId();
+        return Result.success(service.page(userId, current, size));
     }
 
     /**
@@ -52,7 +55,8 @@ public class SysChannelsController {
     @Operation(summary = "新增记录", description = "创建一条新的数据记录")
     @PostMapping
     public Result<Boolean> save(@RequestBody SysChannelsDTO dto) {
-        return Result.success(service.save(dto));
+        String userId = SecurityUtils.getCurrentUserId();
+        return Result.success(service.save(userId, dto));
     }
 
     /**
@@ -65,8 +69,9 @@ public class SysChannelsController {
     @Operation(summary = "更新记录", description = "根据主键更新已有记录")
     @PutMapping("/{id}")
     public Result<Boolean> update(@PathVariable Long id, @RequestBody SysChannelsDTO dto) {
+        String userId = SecurityUtils.getCurrentUserId();
         dto.setId(id);
-        return Result.success(service.update(dto));
+        return Result.success(service.update(userId, dto));
     }
 
     /**
@@ -78,6 +83,7 @@ public class SysChannelsController {
     @Operation(summary = "删除记录", description = "根据主键逻辑删除一条记录")
     @DeleteMapping("/{id}")
     public Result<Boolean> delete(@PathVariable Long id) {
-        return Result.success(service.delete(id));
+        String userId = SecurityUtils.getCurrentUserId();
+        return Result.success(service.delete(userId, id));
     }
 }

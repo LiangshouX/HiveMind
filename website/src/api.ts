@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import axios from 'axios';
+import { clearAuthSession, getAuthToken } from './services/authStorage';
 
 // 统一 baseURL
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080';
@@ -13,7 +14,7 @@ const request = axios.create({
 // 请求拦截器：token 注入
 request.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    const token = getAuthToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -36,8 +37,8 @@ request.interceptors.response.use(
     if (error.response) {
       const { status } = error.response;
       if (status === 401) {
-        // 未授权，清除 token 并跳转登录（需要配合路由处理）
-        localStorage.removeItem('token');
+        // 未授权，清除认证信息并跳转登录
+        clearAuthSession();
         window.location.href = '/login';
       } else if (status === 403) {
         console.error('无权限访问');

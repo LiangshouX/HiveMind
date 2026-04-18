@@ -56,7 +56,6 @@ export interface UpdateProfilePayload {
 
 export interface ChatRequestPayload {
   sessionId: string;
-  userName: string;
   title?: string;
   message: string;
 }

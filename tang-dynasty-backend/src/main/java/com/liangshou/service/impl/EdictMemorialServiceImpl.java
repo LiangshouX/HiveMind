@@ -6,6 +6,7 @@ import com.liangshou.service.vo.EdictMemorialVO;
 import com.liangshou.infrastructure.datasource.po.EdictMemorialPO;
 import com.liangshou.infrastructure.datasource.support.IEdictMemorialSupport;
 import com.liangshou.common.utils.PageResult;
+import com.liangshou.common.utils.SecurityUtils;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,8 +20,11 @@ public class EdictMemorialServiceImpl implements IEdictMemorialService {
     private final IEdictMemorialSupport support;
 
     @Override
-    public EdictMemorialVO getById(Long id) {
-        EdictMemorialPO po = support.getById(id);
+    public EdictMemorialVO getById(String userId, Long id) {
+        EdictMemorialPO po = support.lambdaQuery()
+                .eq(EdictMemorialPO::getId, id)
+                .eq(EdictMemorialPO::getUserId, Long.valueOf(userId))
+                .one();
         if (po == null) return null;
         EdictMemorialVO vo = new EdictMemorialVO();
         vo.setId(po.getId());
@@ -28,8 +32,10 @@ public class EdictMemorialServiceImpl implements IEdictMemorialService {
     }
 
     @Override
-    public PageResult<EdictMemorialVO> page(int current, int size) {
-        Page<EdictMemorialPO> page = support.page(new Page<>(current, size));
+    public PageResult<EdictMemorialVO> page(String userId, int current, int size) {
+        Page<EdictMemorialPO> page = support.lambdaQuery()
+                .eq(EdictMemorialPO::getUserId, Long.valueOf(userId))
+                .page(new Page<>(current, size));
         return PageResult.of(
             page.getTotal(),
             page.getRecords().stream().map(po -> {
@@ -44,23 +50,37 @@ public class EdictMemorialServiceImpl implements IEdictMemorialService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean save(EdictMemorialDTO dto) {
+    public boolean save(String userId, EdictMemorialDTO dto) {
         EdictMemorialPO po = new EdictMemorialPO();
         po.setId(dto.getId());
+        po.setUserId(Long.valueOf(userId));
         return support.save(po);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean update(EdictMemorialDTO dto) {
-        EdictMemorialPO po = new EdictMemorialPO();
+    public boolean update(String userId, EdictMemorialDTO dto) {
+        EdictMemorialPO po = support.lambdaQuery()
+                .eq(EdictMemorialPO::getId, dto.getId())
+                .eq(EdictMemorialPO::getUserId, Long.valueOf(userId))
+                .one();
+        if (po == null) {
+            throw new RuntimeException("记录不存在或无权限修改");
+        }
         po.setId(dto.getId());
         return support.updateById(po);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean delete(Long id) {
+    public boolean delete(String userId, Long id) {
+        EdictMemorialPO po = support.lambdaQuery()
+                .eq(EdictMemorialPO::getId, id)
+                .eq(EdictMemorialPO::getUserId, Long.valueOf(userId))
+                .one();
+        if (po == null) {
+            throw new RuntimeException("记录不存在或无权限删除");
+        }
         return support.removeById(id);
     }
 }

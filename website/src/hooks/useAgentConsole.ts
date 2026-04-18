@@ -710,7 +710,6 @@ export function useAgentConsole(
 
     const payload: ChatRequestPayload = {
       sessionId,
-      userName: user.nickname || user.userId,
       title: session.temp ? nextTitle : session.title,
       message: text,
     };

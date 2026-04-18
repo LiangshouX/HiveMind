@@ -6,6 +6,7 @@ import com.liangshou.service.vo.ScheduledJobVO;
 import com.liangshou.infrastructure.datasource.po.ScheduledJobPO;
 import com.liangshou.infrastructure.datasource.support.IScheduledJobSupport;
 import com.liangshou.common.utils.PageResult;
+import com.liangshou.common.utils.SecurityUtils;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,8 +20,11 @@ public class ScheduledJobServiceImpl implements IScheduledJobService {
     private final IScheduledJobSupport support;
 
     @Override
-    public ScheduledJobVO getById(Long id) {
-        ScheduledJobPO po = support.getById(id);
+    public ScheduledJobVO getById(String userId, Long id) {
+        ScheduledJobPO po = support.lambdaQuery()
+                .eq(ScheduledJobPO::getId, id)
+                .eq(ScheduledJobPO::getUserId, Long.valueOf(userId))
+                .one();
         if (po == null) return null;
         ScheduledJobVO vo = new ScheduledJobVO();
         vo.setId(po.getId());
@@ -28,8 +32,10 @@ public class ScheduledJobServiceImpl implements IScheduledJobService {
     }
 
     @Override
-    public PageResult<ScheduledJobVO> page(int current, int size) {
-        Page<ScheduledJobPO> page = support.page(new Page<>(current, size));
+    public PageResult<ScheduledJobVO> page(String userId, int current, int size) {
+        Page<ScheduledJobPO> page = support.lambdaQuery()
+                .eq(ScheduledJobPO::getUserId, Long.valueOf(userId))
+                .page(new Page<>(current, size));
         return PageResult.of(
             page.getTotal(),
             page.getRecords().stream().map(po -> {
@@ -44,23 +50,37 @@ public class ScheduledJobServiceImpl implements IScheduledJobService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean save(ScheduledJobDTO dto) {
+    public boolean save(String userId, ScheduledJobDTO dto) {
         ScheduledJobPO po = new ScheduledJobPO();
         po.setId(dto.getId());
+        po.setUserId(Long.valueOf(userId));
         return support.save(po);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean update(ScheduledJobDTO dto) {
-        ScheduledJobPO po = new ScheduledJobPO();
+    public boolean update(String userId, ScheduledJobDTO dto) {
+        ScheduledJobPO po = support.lambdaQuery()
+                .eq(ScheduledJobPO::getId, dto.getId())
+                .eq(ScheduledJobPO::getUserId, Long.valueOf(userId))
+                .one();
+        if (po == null) {
+            throw new RuntimeException("记录不存在或无权限修改");
+        }
         po.setId(dto.getId());
         return support.updateById(po);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean delete(Long id) {
+    public boolean delete(String userId, Long id) {
+        ScheduledJobPO po = support.lambdaQuery()
+                .eq(ScheduledJobPO::getId, id)
+                .eq(ScheduledJobPO::getUserId, Long.valueOf(userId))
+                .one();
+        if (po == null) {
+            throw new RuntimeException("记录不存在或无权限删除");
+        }
         return support.removeById(id);
     }
 }
