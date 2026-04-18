@@ -112,7 +112,7 @@ function createUserMessage(content: string, user: AuthUser): UiMessage {
       {
         id: createId("block"),
         type: "text",
-        title: "你的输入",
+        title: "",
         content,
       },
     ],
@@ -132,29 +132,38 @@ function createAssistantMessage(): UiMessage {
 
 function mapStoredMessage(stored: StoredMessage, user: AuthUser): UiMessage {
   const role = getRole(stored.role);
-  const blocks =
-    stored.content?.map((item) => {
-      if (item.type === "thinking") {
-        return createBlock("reasoning", "推理", item.text ?? "");
-      }
-      if (item.type === "tool_use") {
-        return createBlock("tool_use", "工具调用", item.inputRaw || item.input || "", {
-          toolName: item.name,
-          rawInput: item.input,
-        });
-      }
-      if (item.type === "tool_result") {
-        return createBlock("tool_result", "工具结果", item.text ?? "", {
-          toolName: item.name,
-          rawInput: item.inputRaw,
-        });
-      }
-      return createBlock(
-        "text",
-        role === "user" ? "你的输入" : "回复",
-        item.text ?? item.inputRaw ?? item.input ?? "",
-      );
-    }) ?? [];
+  const contentItems = stored.content ?? [];
+  
+  // 为 assistant 角色智能识别最后一条 text block 作为"最终结果"
+  const isAssistant = role === "assistant";
+  const lastTextIndex = isAssistant ? contentItems.findLastIndex((item) => item.type === "text") : -1;
+  
+  const blocks = contentItems.map((item, index) => {
+    if (item.type === "thinking") {
+      return createBlock("reasoning", "推理", item.text ?? "");
+    }
+    if (item.type === "tool_use") {
+      return createBlock("tool_use", "工具调用", item.inputRaw || item.input || "", {
+        toolName: item.name,
+        rawInput: item.input,
+      });
+    }
+    if (item.type === "tool_result") {
+      return createBlock("tool_result", "工具结果", item.text ?? "", {
+        toolName: item.name,
+        rawInput: item.inputRaw,
+      });
+    }
+    // text 类型：如果是 assistant 的最后一条 text，标记为"最终结果"
+    if (item.type === "text" && isAssistant && index === lastTextIndex && contentItems.length > 1) {
+      return createBlock("result", "最终结果", item.text ?? "");
+    }
+    return createBlock(
+      "text",
+      "",
+      item.text ?? item.inputRaw ?? item.input ?? "",
+    );
+  });
 
   return {
     id: stored.msgId || createId("history"),
@@ -211,7 +220,7 @@ function normalizeHistory(
 function toEventBlock(event: TdAgentStreamEvent): UiMessageBlock | null {
   switch (event.type) {
     case "MESSAGE":
-      return createBlock("text", "流式回复", event.content);
+      return createBlock("text", "", event.content);
     case "REASONING":
       return createBlock("reasoning", "推理", event.content);
     case "TOOL_RESULT":

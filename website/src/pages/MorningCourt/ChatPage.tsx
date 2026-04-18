@@ -100,6 +100,7 @@ export function ChatPage() {
                     minHeight: 0
                 }}>
                     <ConversationWorkspace
+                        user={user!}
                         busy={busy}
                         input={input}
                         activeSession={activeSession}

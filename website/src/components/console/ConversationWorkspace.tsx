@@ -105,6 +105,7 @@ interface ConversationWorkspaceProps {
 }
 
 export function ConversationWorkspace({
+                                          user,
                                           busy,
                                           input,
                                           activeSession,
@@ -112,7 +113,7 @@ export function ConversationWorkspace({
                                           onInputChange,
                                           onInterrupt,
                                           onSend,
-                                      }: Omit<ConversationWorkspaceProps, 'user'>) {
+                                      }: ConversationWorkspaceProps) {
     const {isDarkMode} = useTheme();
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const [prevMessageCount, setPrevMessageCount] = useState(0);
@@ -123,7 +124,6 @@ export function ConversationWorkspace({
         activeSession?.messages.map((message) => ({
             key: message.id,
             role: message.role,
-            placement: message.role === "user" ? ("end" as const) : ("start" as const),
             // 禁用 typing 动画以避免与 SSE 实时更新冲突，提升流式输出流畅度
             typing: false,
             content: (
@@ -146,13 +146,15 @@ export function ConversationWorkspace({
 
                     {message.blocks.map((block) => (
                         <div key={block.id} className={`message-block tone-${blockTone(block.type)}`}>
-                            <div className="message-block-title" style={{color: isDarkMode ? '#f3f7ff' : '#2c3e50'}}>
-                                <Space size={8}>
-                                    {toneIcon(block.type)}
-                                    <span>{block.title}</span>
-                                    {block.toolName ? <Tag>{block.toolName}</Tag> : null}
-                                </Space>
-                            </div>
+                            {block.title || block.toolName ? (
+                                <div className="message-block-title" style={{color: isDarkMode ? '#f3f7ff' : '#2c3e50'}}>
+                                    <Space size={8}>
+                                        {toneIcon(block.type)}
+                                        {block.title ? <span>{block.title}</span> : null}
+                                        {block.toolName ? <Tag>{block.toolName}</Tag> : null}
+                                    </Space>
+                                </div>
+                            ) : null}
 
                             {block.rawInput ? <pre className="message-raw" style={{
                                 background: isDarkMode ? '#07111f' : '#f1f3f5',
@@ -332,6 +334,58 @@ export function ConversationWorkspace({
                                     <>
                                         <Bubble.List
                                             items={bubbleItems}
+                                            role={{
+                                                user: {
+                                                    placement: "end",
+                                                    variant: "filled",
+                                                    shape: "corner",
+                                                    avatar: (
+                                                        <Avatar
+                                                            size={32}
+                                                            style={{
+                                                                background:
+                                                                    "linear-gradient(135deg, var(--td-primary), var(--td-highlight))",
+                                                                color: "var(--td-text-inverse)",
+                                                                fontWeight: 600,
+                                                            }}
+                                                        >
+                                                            {(user.nickname || user.userId).slice(0, 1).toUpperCase()}
+                                                        </Avatar>
+                                                    ),
+                                                },
+                                                assistant: {
+                                                    placement: "start",
+                                                    variant: "shadow",
+                                                    shape: "round",
+                                                    avatar: (
+                                                        <Avatar
+                                                            size={32}
+                                                            style={{
+                                                                background: "linear-gradient(135deg, var(--td-primary), var(--td-highlight))",
+                                                                color: "var(--td-text-inverse)",
+                                                                fontWeight: 600,
+                                                            }}
+                                                        >
+                                                            唐
+                                                        </Avatar>
+                                                    ),
+                                                },
+                                                system: {
+                                                    placement: "start",
+                                                    variant: "outlined",
+                                                    avatar: (
+                                                        <Avatar
+                                                            size={32}
+                                                            style={{
+                                                                background: "var(--td-bg-container)",
+                                                                color: "var(--td-text-secondary)",
+                                                                border: `1px solid var(--td-border-color)`,
+                                                            }}
+                                                            icon={<RobotOutlined />}
+                                                        />
+                                                    ),
+                                                },
+                                            }}
                                         />
                                         {/* 滚动锚点 */}
                                         <div ref={messagesEndRef} style={{height: "1px"}}/>
