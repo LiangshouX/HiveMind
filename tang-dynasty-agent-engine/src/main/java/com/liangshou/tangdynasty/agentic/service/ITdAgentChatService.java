@@ -43,6 +43,14 @@ public interface ITdAgentChatService {
     SessionHistoryResponse getSessionHistory(String userId, String sessionId);
 
     /**
+     * 删除会话（包括会话视图和历史记录）。
+     *
+     * @param userId    用户标识
+     * @param sessionId 会话标识
+     */
+    void deleteSession(String userId, String sessionId);
+
+    /**
      * 构建会话上下文。
      *
      * @param request 请求对象{@link ChatRequest}

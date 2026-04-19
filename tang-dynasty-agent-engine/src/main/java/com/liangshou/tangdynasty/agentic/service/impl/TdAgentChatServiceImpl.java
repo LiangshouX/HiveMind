@@ -154,6 +154,11 @@ public class TdAgentChatServiceImpl implements ITdAgentChatService {
     }
 
     @Override
+    public void deleteSession(String userId, String sessionId) {
+        persistenceService.deleteSession(userId, sessionId);
+    }
+
+    @Override
     public ConversationSessionContext buildContext(ChatRequest request) {
         return ConversationSessionContext.builder()
                 .userId(request.getUserId())

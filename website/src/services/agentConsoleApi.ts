@@ -154,6 +154,16 @@ export const agentConsoleApi = {
     return parseApiResult<SessionHistoryResponse>(response);
   },
 
+  async deleteSession(sessionId: string) {
+    const response = await fetch(buildUrl(`/sessions/me/${sessionId}`), {
+      method: "DELETE",
+      headers: createHeaders(),
+    });
+    if (!response.ok) {
+      throw new Error("删除会话失败");
+    }
+  },
+
   async listPendingApprovals(sessionId: string) {
     const response = await fetch(buildUrl(`/approvals/me/${sessionId}`), {
       headers: createHeaders(),

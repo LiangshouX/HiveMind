@@ -1,5 +1,5 @@
-import { PlusOutlined, ReloadOutlined } from "@ant-design/icons";
-import { Badge, Button, Flex, Space, Tooltip, Typography } from "antd";
+import { MoreOutlined, PlusOutlined, ReloadOutlined } from "@ant-design/icons";
+import { Badge, Button, Dropdown, Flex, Space, Tooltip, Typography, Modal } from "antd";
 import type { ConversationGroupItem } from "../../types";
 import { useMemo } from "react";
 
@@ -12,6 +12,7 @@ interface ConsoleSidebarProps {
   onCreateSession: () => void;
   onRefreshSessions: () => void;
   onSelectSession: (sessionId: string) => void | Promise<void>;
+  onDeleteSession: (sessionId: string) => void | Promise<void>;
 }
 
 // 分组顺序
@@ -24,6 +25,7 @@ export function ConsoleSidebar({
   onCreateSession,
   onRefreshSessions,
   onSelectSession,
+  onDeleteSession,
 }: ConsoleSidebarProps) {
   // 按 group 分组
   const groupedItems = useMemo(() => {
@@ -135,9 +137,8 @@ export function ConsoleSidebar({
                   return (
                     <div
                       key={item.key}
-                      onClick={() => onSelectSession(item.key)}
                       style={{
-                        padding: '16px',
+                        padding: '12px 16px',
                         borderRadius: '8px',
                         cursor: 'pointer',
                         marginBottom: '8px',
@@ -159,20 +160,63 @@ export function ConsoleSidebar({
                           background: 'var(--td-highlight)'
                         }} />
                       )}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                        <Text
-                          strong
-                          style={{
-                            color: isActive ? 'var(--td-highlight)' : 'var(--td-text-base)',
-                            fontSize: '14px',
-                            maxWidth: '180px',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap'
-                          }}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div
+                          style={{ flex: 1, minWidth: 0, marginRight: '8px' }}
+                          onClick={() => onSelectSession(item.key)}
                         >
-                          {item.label}
-                        </Text>
+                          <Text
+                            strong
+                            style={{
+                              color: isActive ? 'var(--td-highlight)' : 'var(--td-text-base)',
+                              fontSize: '14px',
+                              display: 'block',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap'
+                            }}
+                          >
+                            {item.label}
+                          </Text>
+                        </div>
+                        <Dropdown
+                          menu={{
+                            items: [
+                              {
+                                key: 'delete',
+                                label: '删除此对话',
+                                danger: true,
+                                icon: <span style={{ color: '#ff4d4f' }}>🗑️</span>,
+                              },
+                            ],
+                            onClick: ({ key }) => {
+                              if (key === 'delete') {
+                                Modal.confirm({
+                                  title: '确认删除',
+                                  content: `确定要删除"${item.label}"吗？此操作不可恢复。`,
+                                  okText: '确认删除',
+                                  okType: 'danger',
+                                  cancelText: '取消',
+                                  onOk: () => onDeleteSession(item.key),
+                                });
+                              }
+                            },
+                          }}
+                          trigger={['click']}
+                          placement="bottomRight"
+                        >
+                          <Button
+                            type="text"
+                            size="small"
+                            icon={<MoreOutlined style={{ fontSize: '16px' }} />}
+                            onClick={(e) => e.stopPropagation()}
+                            style={{
+                              color: 'var(--td-text-tertiary)',
+                              padding: '4px',
+                              height: 'auto',
+                            }}
+                          />
+                        </Dropdown>
                       </div>
                     </div>
                   );

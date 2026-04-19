@@ -788,6 +788,41 @@ export function useAgentConsole(
     [activateSession, loadSessionHistory, syncPendingApprovals],
   );
 
+  const deleteSession = useCallback(
+    async (sessionId: string) => {
+      // 如果删除的是当前活跃会话，切换到其他会话或创建新会话
+      const isCurrentActive = activeSessionId === sessionId;
+      
+      try {
+        await agentConsoleApi.deleteSession(sessionId);
+        
+        // 从本地状态中移除
+        setSessions((current) => current.filter((item) => item.sessionId !== sessionId));
+        
+        // 如果删除的是当前活跃会话，自动切换到其他会话
+        if (isCurrentActive) {
+          const remaining = sessionsRef.current.filter((item) => item.sessionId !== sessionId);
+          if (remaining.length > 0) {
+            // 切换到第一个可用会话
+            const nextSession = remaining[0];
+            activateSession(nextSession.sessionId);
+            if (nextSession.messages.length === 0) {
+              void loadSessionHistory(nextSession.sessionId);
+            }
+          } else {
+            // 没有剩余会话，创建新会话
+            createNewSession();
+          }
+        }
+        
+        messageApi.success("会话已删除");
+      } catch (error) {
+        messageApi.error(error instanceof Error ? error.message : "删除会话失败");
+      }
+    },
+    [activeSessionId, activateSession, createNewSession, loadSessionHistory, messageApi],
+  );
+
   const interruptCurrent = useCallback(async () => {
     if (!runningSessionId || !busy) {
       return;
@@ -955,6 +990,7 @@ export function useAgentConsole(
     setApprovalComment,
     createNewSession,
     selectSession,
+    deleteSession,
     sendMessage,
     interruptCurrent,
     refreshSessions,

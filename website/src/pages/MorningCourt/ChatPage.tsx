@@ -26,6 +26,7 @@ export function ChatPage() {
         setApprovalComment,
         createNewSession,
         selectSession,
+        deleteSession,
         sendMessage,
         interruptCurrent,
         refreshSessions,
@@ -83,6 +84,7 @@ export function ChatPage() {
                         onCreateSession={createNewSession}
                         onRefreshSessions={() => void refreshSessions(activeSessionId)}
                         onSelectSession={selectSession}
+                        onDeleteSession={deleteSession}
                     />
                 </Sider>
 

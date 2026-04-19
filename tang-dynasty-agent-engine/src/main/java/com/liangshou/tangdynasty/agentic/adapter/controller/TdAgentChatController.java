@@ -51,8 +51,9 @@ public class TdAgentChatController {
 
     /**
      * 构造器
-     * @param chatService 聊天服务
-     * @param streamingService 流式服务
+     *
+     * @param chatService         聊天服务
+     * @param streamingService    流式服务
      * @param toolApprovalService 工具审批服务
      */
     public TdAgentChatController(
@@ -66,6 +67,7 @@ public class TdAgentChatController {
 
     /**
      * 处理聊天请求。
+     *
      * @param request 请求对象
      * @return 返回结果
      */
@@ -77,32 +79,34 @@ public class TdAgentChatController {
 
     /**
      * 启动流式请求。
+     *
      * @param request 请求对象
      * @return 返回结果
      */
     @PostMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter stream(Principal principal, @Valid @RequestBody ChatRequest request) {
-        log.info("[流式聊天] 收到流式请求 - userId: {}, sessionId: {}, message: {}", 
-                principal != null ? principal.getName() : "unknown", 
-                request.getSessionId(), 
+        log.info("[流式聊天] 收到流式请求 - userId: {}, sessionId: {}, message: {}",
+                principal != null ? principal.getName() : "unknown",
+                request.getSessionId(),
                 request.getMessage());
         applyCurrentUser(principal, request);
         SseEmitter emitter = streamingService.stream(request);
-        log.info("[流式聊天] SSE Emitter 已创建并返回 - userId: {}, sessionId: {}", 
+        log.info("[流式聊天] SSE Emitter 已创建并返回 - userId: {}, sessionId: {}",
                 request.getUserId(), request.getSessionId());
         return emitter;
     }
 
     /**
      * 执行 approve 操作。
+     *
      * @param request 请求对象
      * @return 返回结果
      */
     @PostMapping(value = "/approvals/approve", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter approve(Principal principal, @Valid @RequestBody ToolApprovalActionRequest request) {
-        log.info("[工具审批] 收到批准请求 - userId: {}, sessionId: {}, approvalIds: {}", 
+        log.info("[工具审批] 收到批准请求 - userId: {}, sessionId: {}, approvalIds: {}",
                 principal != null ? principal.getName() : "unknown",
-                request.getSessionId(), 
+                request.getSessionId(),
                 request.getApprovalIds());
         request.setUserId(currentUserId(principal));
         return streamingService.approveAndResume(request);
@@ -110,14 +114,15 @@ public class TdAgentChatController {
 
     /**
      * 执行 reject 操作。
+     *
      * @param request 请求对象
      * @return 返回结果
      */
     @PostMapping(value = "/approvals/reject", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter reject(Principal principal, @Valid @RequestBody ToolApprovalActionRequest request) {
-        log.info("[工具审批] 收到拒绝请求 - userId: {}, sessionId: {}, approvalIds: {}", 
+        log.info("[工具审批] 收到拒绝请求 - userId: {}, sessionId: {}, approvalIds: {}",
                 principal != null ? principal.getName() : "unknown",
-                request.getSessionId(), 
+                request.getSessionId(),
                 request.getApprovalIds());
         request.setUserId(currentUserId(principal));
         return streamingService.rejectAndResume(request);
@@ -125,6 +130,7 @@ public class TdAgentChatController {
 
     /**
      * 执行 listApprovals 操作。
+     *
      * @param sessionId 会话标识
      * @return 返回结果
      */
@@ -138,6 +144,7 @@ public class TdAgentChatController {
 
     /**
      * 中断当前执行。
+     *
      * @param request 请求对象
      * @return 返回结果
      */
@@ -147,7 +154,7 @@ public class TdAgentChatController {
         log.info("[中断会话] 收到中断请求 - userId: {}, sessionId: {}", userId, request.getSessionId());
         request.setUserId(userId);
         boolean interrupted = streamingService.interrupt(userId, request.getSessionId());
-        log.info("[中断会话] 中断结果 - userId: {}, sessionId: {}, success: {}", 
+        log.info("[中断会话] 中断结果 - userId: {}, sessionId: {}, success: {}",
                 userId, request.getSessionId(), interrupted);
         return ChatResponse.builder()
                 .success(interrupted)
@@ -163,6 +170,7 @@ public class TdAgentChatController {
 
     /**
      * 列出会话列表。
+     *
      * @return 返回结果
      */
     @GetMapping("/sessions/me")
@@ -172,6 +180,7 @@ public class TdAgentChatController {
 
     /**
      * 获取会话历史。
+     *
      * @param sessionId 会话标识
      * @return 返回结果
      */
@@ -181,6 +190,19 @@ public class TdAgentChatController {
             @PathVariable String sessionId
     ) {
         return chatService.getSessionHistory(currentUserId(principal), sessionId);
+    }
+
+    /**
+     * 删除会话。
+     *
+     * @param sessionId 会话标识
+     */
+    @DeleteMapping("/sessions/me/{sessionId}")
+    public void deleteSession(
+            Principal principal,
+            @PathVariable String sessionId
+    ) {
+        chatService.deleteSession(currentUserId(principal), sessionId);
     }
 
     private void applyCurrentUser(Principal principal, ChatRequest request) {

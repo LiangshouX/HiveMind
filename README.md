@@ -369,9 +369,9 @@ tdagent:
 |------|------|
 | [后端详设](docs/Tang%20Dynasty%20后端详设说明书.md) | 539 行完整后端设计文档 |
 | [Edict 后端](docs/Edict_Backend_项目详设文档.md) | 事件驱动架构设计 |
-| [CoPaw Agent](docs/CoPaw/CoPaw_Agent_项目详设文档.md) | Agent 框架详细设计 |
-| [请求链路](docs/CoPaw/请求链路.md) | 请求处理流程 |
-| [Sandbox 指南](docs/AgentScope-Guide/SandBox.md) | 沙箱镜像配置 |
+| [CoPaw Agent](docs/copaw/CoPaw_Agent_项目详设文档.md) | Agent 框架详细设计 |
+| [请求链路](docs/copaw/请求链路.md) | 请求处理流程 |
+| [Sandbox 指南](docs/agentscope/SandBox.md) | 沙箱镜像配置 |
 | [ReMe 认证](reme-server/AUTH.md) | API Key 认证配置 |
 | [ReMe 说明](reme-server/README.md) | ReMe Server 使用文档 |
 

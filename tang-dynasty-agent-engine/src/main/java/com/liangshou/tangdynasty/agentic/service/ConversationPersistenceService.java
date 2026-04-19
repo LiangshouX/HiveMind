@@ -9,6 +9,8 @@ import com.liangshou.tangdynasty.agentic.repository.ConversationMemoryRepository
 import com.liangshou.tangdynasty.agentic.repository.ConversationViewRepository;
 import com.liangshou.tangdynasty.agentic.utils.MessageMapper;
 import io.agentscope.core.message.Msg;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -40,6 +42,8 @@ import java.util.stream.Collectors;
  */
 @Service
 public class ConversationPersistenceService {
+
+    private static final Logger log = LoggerFactory.getLogger(ConversationPersistenceService.class);
 
     private final ConversationMemoryRepository conversationMemoryRepository;
     private final ConversationViewRepository conversationViewRepository;
@@ -126,6 +130,34 @@ public class ConversationPersistenceService {
             conversationMemoryRepository.save(document);
         });
         saveOrUpdateView(context, defaultTitle(context), 0, Instant.now());
+    }
+
+    /**
+     * 删除会话（包括会话视图和历史记录）。
+     *
+     * @param userId    用户标识
+     * @param sessionId 会话标识
+     */
+    public void deleteSession(String userId, String sessionId) {
+        // 删除会话历史记录
+        try {
+            conversationMemoryRepository.findByUserIdAndSessionId(userId, sessionId)
+                    .ifPresent(conversationMemoryRepository::delete);
+            log.info("成功删除会话历史记录 - userId: {}, sessionId: {}", userId, sessionId);
+        } catch (Exception e) {
+            log.error("删除会话历史记录失败 - userId: {}, sessionId: {}, error: {}", 
+                    userId, sessionId, e.getMessage(), e);
+        }
+        
+        // 删除会话视图
+        try {
+            conversationViewRepository.findByUserIdAndSessionId(userId, sessionId)
+                    .ifPresent(conversationViewRepository::delete);
+            log.info("成功删除会话视图 - userId: {}, sessionId: {}", userId, sessionId);
+        } catch (Exception e) {
+            log.error("删除会话视图失败 - userId: {}, sessionId: {}, error: {}", 
+                    userId, sessionId, e.getMessage(), e);
+        }
     }
 
     /**
