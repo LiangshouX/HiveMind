@@ -118,7 +118,6 @@ public class MongoAgentSession implements Session {
         repository.save(document);
     }
 
-    @SuppressWarnings("unchecked")
     private Map<String, Object> loadPayload(SessionKey sessionKey) {
         return repository.findByUserIdAndSessionId(userId, sessionKey.toString())
                 .map(AgentSessionStateDocument::getStateJson)

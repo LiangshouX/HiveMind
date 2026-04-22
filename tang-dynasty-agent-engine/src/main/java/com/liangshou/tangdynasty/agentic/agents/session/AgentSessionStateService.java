@@ -76,9 +76,9 @@ public class AgentSessionStateService {
      * @param agent 参数
      */
     public void restore(ConversationSessionContext context, ReActAgent agent) {
-        if (!agentSessionStateRepository
+        if (agentSessionStateRepository
                 .findByUserIdAndSessionId(context.getUserId(), context.getSessionId())
-                .isPresent()) {
+                .isEmpty()) {
             return;
         }
         MongoAgentSession session =
@@ -94,7 +94,7 @@ public class AgentSessionStateService {
     public boolean isPaused(ConversationSessionContext context) {
         return agentSessionStateRepository
                 .findByUserIdAndSessionId(context.getUserId(), context.getSessionId())
-                .map(document -> document.isPaused())
+                .map(AgentSessionStateDocument::isPaused)
                 .orElse(false);
     }
 
