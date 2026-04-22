@@ -1,7 +1,7 @@
 package com.liangshou.tangdynasty.agentic.repository;
 
 
-import com.liangshou.tangdynasty.agentic.domain.document.ConversationViewDocument;
+import com.liangshou.tangdynasty.agentic.domain.document.memory.ConversationViewDocument;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
 import java.util.List;

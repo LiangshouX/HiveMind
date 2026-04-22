@@ -2,6 +2,7 @@ package com.liangshou.tangdynasty.agentic.agents.session;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.liangshou.tangdynasty.agentic.agents.ConversationSessionContext;
+import com.liangshou.tangdynasty.agentic.domain.document.memory.AgentSessionStateDocument;
 import com.liangshou.tangdynasty.agentic.repository.AgentSessionStateRepository;
 import io.agentscope.core.ReActAgent;
 import io.agentscope.core.state.SimpleSessionKey;
@@ -28,7 +29,7 @@ import java.time.Instant;
  * </ul>
  *
  * <p>底层通过 {@link MongoAgentSession} 实现 AgentScope 的 {@link io.agentscope.core.session.Session} 接口，
- * 将 Agent 状态以 JSON 格式存储在 {@link com.liangshou.tangdynasty.agentic.domain.document.AgentSessionStateDocument} 中。</p>
+ * 将 Agent 状态以 JSON 格式存储在 {@link AgentSessionStateDocument} 中。</p>
  *
  * @author LiangshouX
  */

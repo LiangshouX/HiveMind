@@ -2,8 +2,8 @@ package com.liangshou.tangdynasty.agentic.utils;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.liangshou.tangdynasty.agentic.domain.document.StoredMessage;
-import com.liangshou.tangdynasty.agentic.domain.document.StoredMessageContent;
+import com.liangshou.tangdynasty.agentic.domain.document.memory.StoredMessage;
+import com.liangshou.tangdynasty.agentic.domain.document.memory.StoredMessageContent;
 import io.agentscope.core.message.*;
 import org.springframework.stereotype.Component;
 

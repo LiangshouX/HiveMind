@@ -1,6 +1,6 @@
 package com.liangshou.tangdynasty.agentic.repository;
 
-import com.liangshou.tangdynasty.agentic.domain.document.ConversationMemoryDocument;
+import com.liangshou.tangdynasty.agentic.domain.document.memory.ConversationMemoryDocument;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
 import java.util.Optional;

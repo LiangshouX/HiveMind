@@ -2,8 +2,8 @@ package com.liangshou.tangdynasty.agentic.adapter.controller;
 
 import com.liangshou.tangdynasty.agentic.agents.guard.approval.ToolApprovalService;
 import com.liangshou.tangdynasty.agentic.service.ITdAgentStreamingService;
-import com.liangshou.tangdynasty.agentic.domain.document.ConversationViewDocument;
-import com.liangshou.tangdynasty.agentic.domain.document.ToolApprovalDocument;
+import com.liangshou.tangdynasty.agentic.domain.document.memory.ConversationViewDocument;
+import com.liangshou.tangdynasty.agentic.domain.document.tool.ToolApprovalDocument;
 import com.liangshou.tangdynasty.agentic.service.ITdAgentChatService;
 import com.liangshou.tangdynasty.agentic.service.dto.*;
 import jakarta.validation.Valid;

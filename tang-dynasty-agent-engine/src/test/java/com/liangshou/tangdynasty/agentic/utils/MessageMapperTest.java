@@ -1,6 +1,7 @@
 package com.liangshou.tangdynasty.agentic.utils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.liangshou.tangdynasty.agentic.domain.document.memory.StoredMessage;
 import io.agentscope.core.message.Msg;
 import io.agentscope.core.message.MsgRole;
 import io.agentscope.core.message.TextBlock;
@@ -12,13 +13,12 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * {@link MessageMapper} 单元测试
  *
  * <p>本测试类验证消息映射器的双向转换功能，确保 AgentScope 的 {@link io.agentscope.core.message.Msg}
- * 对象与存储格式 {@link com.liangshou.tangdynasty.agentic.domain.document.StoredMessage}
+ * 对象与存储格式 {@link StoredMessage}
  * 之间能够正确互转。</p>
  *
  * <p><strong>核心测试场景：</strong></p>
@@ -37,7 +37,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * @author LiangshouX
  * @see MessageMapper
  * @see io.agentscope.core.message.Msg
- * @see com.liangshou.tangdynasty.agentic.domain.document.StoredMessage
+ * @see StoredMessage
  */
 class MessageMapperTest {
 

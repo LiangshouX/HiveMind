@@ -1,4 +1,4 @@
-package com.liangshou.tangdynasty.agentic.domain.document;
+package com.liangshou.tangdynasty.agentic.domain.document.memory;
 
 import com.liangshou.tangdynasty.agentic.utils.MessageMapper;
 import lombok.*;

@@ -8,7 +8,7 @@ import com.liangshou.tangdynasty.agentic.agents.streaming.TdAgentActiveSessionRe
 import com.liangshou.tangdynasty.agentic.agents.streaming.TdAgentStreamEvent;
 import com.liangshou.tangdynasty.agentic.common.config.TdAgentProperties;
 import com.liangshou.tangdynasty.agentic.common.enums.TdAgentStreamEventType;
-import com.liangshou.tangdynasty.agentic.domain.document.ToolApprovalDocument;
+import com.liangshou.tangdynasty.agentic.domain.document.tool.ToolApprovalDocument;
 import com.liangshou.tangdynasty.agentic.service.IChatCommandService;
 import com.liangshou.tangdynasty.agentic.service.ITdAgentChatService;
 import com.liangshou.tangdynasty.agentic.service.ITdAgentStreamingService;

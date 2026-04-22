@@ -1,10 +1,10 @@
 package com.liangshou.tangdynasty.agentic.service;
 
 import com.liangshou.tangdynasty.agentic.agents.ConversationSessionContext;
-import com.liangshou.tangdynasty.agentic.domain.document.ConversationMemoryDocument;
-import com.liangshou.tangdynasty.agentic.domain.document.ConversationViewDocument;
-import com.liangshou.tangdynasty.agentic.domain.document.StoredMessage;
-import com.liangshou.tangdynasty.agentic.domain.document.StoredMessageContent;
+import com.liangshou.tangdynasty.agentic.domain.document.memory.ConversationMemoryDocument;
+import com.liangshou.tangdynasty.agentic.domain.document.memory.ConversationViewDocument;
+import com.liangshou.tangdynasty.agentic.domain.document.memory.StoredMessage;
+import com.liangshou.tangdynasty.agentic.domain.document.memory.StoredMessageContent;
 import com.liangshou.tangdynasty.agentic.repository.ConversationMemoryRepository;
 import com.liangshou.tangdynasty.agentic.repository.ConversationViewRepository;
 import com.liangshou.tangdynasty.agentic.utils.MessageMapper;
