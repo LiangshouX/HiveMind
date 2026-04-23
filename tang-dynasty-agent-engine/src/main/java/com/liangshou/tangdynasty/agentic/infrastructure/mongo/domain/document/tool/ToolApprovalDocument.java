@@ -1,4 +1,4 @@
-package com.liangshou.tangdynasty.agentic.domain.document.tool;
+package com.liangshou.tangdynasty.agentic.infrastructure.mongo.domain.document.tool;
 
 import com.liangshou.tangdynasty.agentic.common.enums.ToolApprovalStatus;
 import lombok.*;

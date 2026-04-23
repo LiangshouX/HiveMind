@@ -1,7 +1,7 @@
-package com.liangshou.tangdynasty.agentic.repository;
+package com.liangshou.tangdynasty.agentic.infrastructure.mongo.repository;
 
 import com.liangshou.tangdynasty.agentic.common.enums.ToolApprovalStatus;
-import com.liangshou.tangdynasty.agentic.domain.document.tool.ToolApprovalDocument;
+import com.liangshou.tangdynasty.agentic.infrastructure.mongo.domain.document.tool.ToolApprovalDocument;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
 import java.util.Collection;

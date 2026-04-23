@@ -1,7 +1,7 @@
 package com.liangshou.tangdynasty.agentic.service.dto;
 
-import com.liangshou.tangdynasty.agentic.domain.document.memory.ConversationViewDocument;
-import com.liangshou.tangdynasty.agentic.domain.document.memory.StoredMessage;
+import com.liangshou.tangdynasty.agentic.infrastructure.mongo.domain.document.memory.ConversationViewDocument;
+import com.liangshou.tangdynasty.agentic.infrastructure.mongo.domain.document.memory.StoredMessage;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;

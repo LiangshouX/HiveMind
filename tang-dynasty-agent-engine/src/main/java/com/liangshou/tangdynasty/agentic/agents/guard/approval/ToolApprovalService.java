@@ -6,8 +6,8 @@ import com.liangshou.tangdynasty.agentic.agents.ConversationSessionContext;
 import com.liangshou.tangdynasty.agentic.agents.guard.ToolGuardDecision;
 import com.liangshou.tangdynasty.agentic.common.config.TdAgentProperties;
 import com.liangshou.tangdynasty.agentic.common.enums.ToolApprovalStatus;
-import com.liangshou.tangdynasty.agentic.domain.document.tool.ToolApprovalDocument;
-import com.liangshou.tangdynasty.agentic.repository.ToolApprovalRepository;
+import com.liangshou.tangdynasty.agentic.infrastructure.mongo.domain.document.tool.ToolApprovalDocument;
+import com.liangshou.tangdynasty.agentic.infrastructure.mongo.repository.ToolApprovalRepository;
 import io.agentscope.core.message.ToolUseBlock;
 import org.springframework.stereotype.Service;
 

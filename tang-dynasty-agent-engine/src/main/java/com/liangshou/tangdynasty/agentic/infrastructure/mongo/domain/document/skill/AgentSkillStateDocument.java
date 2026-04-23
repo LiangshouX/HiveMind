@@ -1,4 +1,4 @@
-package com.liangshou.tangdynasty.agentic.domain.document.skill;
+package com.liangshou.tangdynasty.agentic.infrastructure.mongo.domain.document.skill;
 
 import lombok.*;
 import org.springframework.data.annotation.Id;

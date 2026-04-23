@@ -1,0 +1,30 @@
+package com.liangshou.tangdynasty.agentic.infrastructure.mysql.support;
+
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.service.IService;
+import com.liangshou.tangdynasty.agentic.infrastructure.mysql.po.SkillMetaManagePO;
+import com.liangshou.tangdynasty.agentic.infrastructure.mysql.support.dto.SkillPageQuery;
+
+import java.util.List;
+import java.util.Map;
+
+public interface SkillMetaManageSupport extends IService<SkillMetaManagePO> {
+
+    /** 分页查询（支持用户隔离、关键词、标签、状态过滤） */
+    IPage<SkillMetaManagePO> pageSkills(SkillPageQuery query);
+
+    /** 公开技能关键词检索（用于全局搜索/推荐） */
+    List<SkillMetaManagePO> searchPublicSkills(String keyword, int limit);
+
+    /** 按标签匹配（支持 OR/AND 策略切换） */
+    List<SkillMetaManagePO> findByTags(List<String> tags, boolean matchAny);
+
+    /** 状态机：发布技能 */
+    boolean publishSkill(String skillId, String targetVersion);
+
+    /** 状态机：下架/归档技能 */
+    boolean archiveSkill(String skillId);
+
+    /** 更新文件清单（原子替换 manifest） */
+    boolean updateFileManifest(String skillId, Map<String, Object> manifest);
+}

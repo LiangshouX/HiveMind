@@ -2,8 +2,8 @@ package com.liangshou.tangdynasty.agentic.agents.session;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.liangshou.tangdynasty.agentic.agents.ConversationSessionContext;
-import com.liangshou.tangdynasty.agentic.domain.document.memory.AgentSessionStateDocument;
-import com.liangshou.tangdynasty.agentic.repository.AgentSessionStateRepository;
+import com.liangshou.tangdynasty.agentic.infrastructure.mongo.domain.document.memory.AgentSessionStateDocument;
+import com.liangshou.tangdynasty.agentic.infrastructure.mongo.repository.AgentSessionStateRepository;
 import io.agentscope.core.ReActAgent;
 import io.agentscope.core.state.SimpleSessionKey;
 import org.springframework.stereotype.Service;

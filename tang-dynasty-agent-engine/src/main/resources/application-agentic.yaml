@@ -1,9 +1,10 @@
 spring:
   application:
     name: tang-dynasty-agentic
-  data:
-    mongodb:
-      uri: ${MONGODB_URI:mongodb://localhost:27017/tang_dynasty}
+  mongodb:
+    # Spring Boot 4.0 变更: MongoDB 基础连接属性前缀从 spring.data.mongodb 改为 spring.mongodb
+    # 参考: https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-4.0-Configuration-Changelog
+    uri: ${MONGODB_URI:mongodb://localhost:27017/tang_dynasty}
 
 tdagent:
   system-prompt:

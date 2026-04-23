@@ -1,7 +1,7 @@
 package com.liangshou.tangdynasty.agentic.utils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.liangshou.tangdynasty.agentic.domain.document.memory.StoredMessage;
+import com.liangshou.tangdynasty.agentic.infrastructure.mongo.domain.document.memory.StoredMessage;
 import io.agentscope.core.message.Msg;
 import io.agentscope.core.message.MsgRole;
 import io.agentscope.core.message.TextBlock;

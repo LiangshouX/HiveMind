@@ -1,7 +1,7 @@
 package com.liangshou.tangdynasty.agentic.service;
 
 import com.liangshou.tangdynasty.agentic.agents.ConversationSessionContext;
-import com.liangshou.tangdynasty.agentic.domain.document.memory.ConversationViewDocument;
+import com.liangshou.tangdynasty.agentic.infrastructure.mongo.domain.document.memory.ConversationViewDocument;
 import com.liangshou.tangdynasty.agentic.service.dto.ChatRequest;
 import com.liangshou.tangdynasty.agentic.service.dto.ChatResponse;
 import com.liangshou.tangdynasty.agentic.service.dto.SessionHistoryResponse;
