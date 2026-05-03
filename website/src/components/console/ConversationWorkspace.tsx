@@ -137,7 +137,7 @@ export function ConversationWorkspace({
                         </Space>
                         {message.streaming ? (
                             <Tag color="processing" icon={<LoadingOutlined/>}>
-                                流式输出中
+                                思考中……
                             </Tag>
                         ) : message.failed ? (
                             <Tag color="error">已中断</Tag>
