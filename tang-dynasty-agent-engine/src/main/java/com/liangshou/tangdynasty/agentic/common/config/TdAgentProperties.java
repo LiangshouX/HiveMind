@@ -43,6 +43,8 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "tdagent")
 public class TdAgentProperties {
 
+    private Observability observability = new Observability();
+
     private SystemPrompt systemPrompt = new SystemPrompt();
 
     private Model model = new Model();
@@ -58,6 +60,18 @@ public class TdAgentProperties {
     private Streaming streaming = new Streaming();
 
     private Skill skill = new Skill();
+
+    /**
+     * 可观测性相关配置
+     */
+    @Getter
+    @Setter
+    public static class Observability {
+
+        private boolean enabled = true;
+
+        private String url;
+    }
 
     /**
      * System prompt 相关配置。
