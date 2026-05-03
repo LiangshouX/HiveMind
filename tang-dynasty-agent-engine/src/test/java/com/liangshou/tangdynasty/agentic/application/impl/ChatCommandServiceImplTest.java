@@ -39,7 +39,7 @@ import static org.mockito.Mockito.when;
  *     <li>未知命令的降级处理策略</li>
  * </ol>
  *
- * <p><strong>设计模式：</strong>使用 Mockito 框架模拟依赖服务（{@link com.liangshou.tangdynasty.agentic.application.ConversationPersistenceService}
+ * <p><strong>设计模式：</strong>使用 Mockito 框架模拟依赖服务（{@link com.liangshou.tangdynasty.agentic.application.IConversationPersistenceService}
  * 和 {@link com.liangshou.tangdynasty.agentic.agents.session.AgentSessionStateService}），
  * 确保测试聚焦于命令处理逻辑本身，而不受外部服务实现的影响。</p>
  *

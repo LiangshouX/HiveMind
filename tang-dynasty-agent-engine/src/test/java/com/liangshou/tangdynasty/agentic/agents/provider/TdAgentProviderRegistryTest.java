@@ -107,7 +107,7 @@ class TdAgentProviderRegistryTest {
             TdAgentProviderRegistry registry = new TdAgentProviderRegistry(
                     properties, objectMapper, resourceLoader);
 
-            assertThrows(IllegalStateException.class, () -> registry.initialize());
+            assertThrows(IllegalStateException.class, registry::initialize);
         }
 
         @Test
@@ -127,7 +127,7 @@ class TdAgentProviderRegistryTest {
             TdAgentProviderRegistry registry = new TdAgentProviderRegistry(
                     properties, objectMapper, resourceLoader);
 
-            assertThrows(IllegalStateException.class, () -> registry.initialize());
+            assertThrows(IllegalStateException.class, registry::initialize);
         }
 
         @Test
@@ -155,7 +155,7 @@ class TdAgentProviderRegistryTest {
             TdAgentProviderRegistry registry = new TdAgentProviderRegistry(
                     properties, objectMapper, resourceLoader);
 
-            assertThrows(IllegalStateException.class, () -> registry.initialize());
+            assertThrows(IllegalStateException.class, registry::initialize);
         }
 
         @Test
@@ -176,7 +176,7 @@ class TdAgentProviderRegistryTest {
             TdAgentProviderRegistry registry = new TdAgentProviderRegistry(
                     properties, objectMapper, resourceLoader);
 
-            assertThrows(IllegalArgumentException.class, () -> registry.initialize());
+            assertThrows(IllegalArgumentException.class, registry::initialize);
         }
     }
 
@@ -244,7 +244,7 @@ class TdAgentProviderRegistryTest {
                     properties, objectMapper, resourceLoader);
             registry.initialize();
 
-            assertThrows(IllegalStateException.class, () -> registry.resolveConfiguredModel());
+            assertThrows(IllegalStateException.class, registry::resolveConfiguredModel);
         }
 
         @Test
@@ -272,7 +272,7 @@ class TdAgentProviderRegistryTest {
                     properties, objectMapper, resourceLoader);
             registry.initialize();
 
-            assertThrows(IllegalStateException.class, () -> registry.resolveConfiguredModel());
+            assertThrows(IllegalStateException.class, registry::resolveConfiguredModel);
         }
 
         @Test
@@ -301,7 +301,7 @@ class TdAgentProviderRegistryTest {
                     properties, objectMapper, resourceLoader);
             registry.initialize();
 
-            assertThrows(IllegalStateException.class, () -> registry.resolveConfiguredModel());
+            assertThrows(IllegalStateException.class, registry::resolveConfiguredModel);
         }
 
         @Test
@@ -324,7 +324,7 @@ class TdAgentProviderRegistryTest {
                     properties, objectMapper, resourceLoader);
             registry.initialize();
 
-            assertThrows(IllegalStateException.class, () -> registry.resolveConfiguredModel());
+            assertThrows(IllegalStateException.class, registry::resolveConfiguredModel);
         }
 
         @Test
@@ -696,7 +696,7 @@ class TdAgentProviderRegistryTest {
                     properties, objectMapper, resourceLoader);
             registry.initialize();
 
-            assertThrows(IllegalStateException.class, () -> registry.resolveConfiguredModel());
+            assertThrows(IllegalStateException.class, registry::resolveConfiguredModel);
 
             Thread.sleep(20L);
             Files.writeString(

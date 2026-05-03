@@ -39,7 +39,7 @@ import java.util.concurrent.atomic.AtomicReference;
  *     <li>API Key 必须提供，否则抛出异常</li>
  * </ol>
  *
- * <p>支持的供应商类型由 {@link com.liangshou.tangdynasty.agentic.common.enums.TdAgentProviderType} 定义，
+ * <p>支持的供应商类型由 {@link com.liangshou.tangdynasty.agentic.domain.shared.enums.TdAgentProviderType} 定义，
  * 目前包括 DASHSCOPE 和 OPENAI。</p>
  *
  * @author LiangshouX

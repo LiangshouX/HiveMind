@@ -33,7 +33,7 @@ import java.util.List;
  *     <li>复合唯一索引 (userId, session_id) 确保每个用户的每个会话只有一条记忆记录</li>
  * </ul>
  *
- * <p>该文档由 {@link com.liangshou.tangdynasty.agentic.application.ConversationPersistenceService} 管理，
+ * <p>该文档由 {@link com.liangshou.tangdynasty.agentic.application.IConversationPersistenceService} 管理，
  * 支持对话历史的加载、保存、搜索和压缩操作。</p>
  *
  * @author LiangshouX
