@@ -8,7 +8,7 @@ import com.liangshou.tangdynasty.agentic.agents.memory.TdAgentMemoryManager;
 import com.liangshou.tangdynasty.agentic.agents.memory.reme.TdAgentReMeService;
 import com.liangshou.tangdynasty.agentic.agents.skill.TdAgentSkillService;
 import com.liangshou.tangdynasty.agentic.common.config.TdAgentProperties;
-import com.liangshou.tangdynasty.agentic.service.ConversationPersistenceService;
+import com.liangshou.tangdynasty.agentic.application.IConversationPersistenceService;
 import io.agentscope.core.ReActAgent;
 import io.agentscope.core.memory.LongTermMemoryMode;
 import io.agentscope.core.memory.reme.ReMeLongTermMemory;
@@ -51,7 +51,7 @@ public class TdAgentFactory {
     private final TdAgentModelFactory modelFactory;
     private final TdAgentToolkitFactory toolkitFactory;
     private final TdAgentPromptService promptService;
-    private final ConversationPersistenceService persistenceService;
+    private final IConversationPersistenceService persistenceService;
     private final ToolGuardEngine toolGuardEngine;
     private final ToolApprovalService toolApprovalService;
     private final TdAgentMemoryManager memoryManager;
@@ -77,7 +77,7 @@ public class TdAgentFactory {
             TdAgentModelFactory modelFactory,
             TdAgentToolkitFactory toolkitFactory,
             TdAgentPromptService promptService,
-            ConversationPersistenceService persistenceService,
+            IConversationPersistenceService persistenceService,
             ToolGuardEngine toolGuardEngine,
             ToolApprovalService toolApprovalService,
             TdAgentMemoryManager memoryManager,

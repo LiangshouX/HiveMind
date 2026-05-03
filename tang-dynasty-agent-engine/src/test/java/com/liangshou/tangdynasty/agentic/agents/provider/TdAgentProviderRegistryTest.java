@@ -2,7 +2,7 @@ package com.liangshou.tangdynasty.agentic.agents.provider;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.liangshou.tangdynasty.agentic.common.config.TdAgentProperties;
-import com.liangshou.tangdynasty.agentic.common.enums.TdAgentProviderType;
+import com.liangshou.tangdynasty.agentic.domain.shared.enums.TdAgentProviderType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;

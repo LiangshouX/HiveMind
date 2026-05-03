@@ -1,7 +1,7 @@
 package com.liangshou.tangdynasty.agentic.agents.tools;
 
 import com.liangshou.tangdynasty.agentic.agents.ConversationSessionContext;
-import com.liangshou.tangdynasty.agentic.service.ConversationPersistenceService;
+import com.liangshou.tangdynasty.agentic.application.IConversationPersistenceService;
 import io.agentscope.core.tool.Tool;
 import io.agentscope.core.tool.ToolParam;
 
@@ -29,7 +29,7 @@ import io.agentscope.core.tool.ToolParam;
 public class TdAgentBuiltinTools {
 
     private final ConversationSessionContext context;
-    private final ConversationPersistenceService persistenceService;
+    private final IConversationPersistenceService persistenceService;
 
     /**
      * 构造器
@@ -38,7 +38,7 @@ public class TdAgentBuiltinTools {
      * @param persistenceService 持久化服务
      */
     public TdAgentBuiltinTools(
-            ConversationSessionContext context, ConversationPersistenceService persistenceService) {
+            ConversationSessionContext context, IConversationPersistenceService persistenceService) {
         this.context = context;
         this.persistenceService = persistenceService;
     }

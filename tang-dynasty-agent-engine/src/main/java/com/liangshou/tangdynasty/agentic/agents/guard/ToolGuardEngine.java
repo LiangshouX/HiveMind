@@ -3,7 +3,7 @@ package com.liangshou.tangdynasty.agentic.agents.guard;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.liangshou.tangdynasty.agentic.common.config.TdAgentProperties;
-import com.liangshou.tangdynasty.agentic.common.enums.ToolRiskLevel;
+import com.liangshou.tangdynasty.agentic.domain.shared.enums.ToolRiskLevel;
 import org.springframework.stereotype.Component;
 
 import java.util.List;

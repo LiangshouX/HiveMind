@@ -1,7 +1,7 @@
 package com.liangshou.tangdynasty.agentic.agents;
 
 import com.liangshou.tangdynasty.agentic.common.config.TdAgentProperties;
-import com.liangshou.tangdynasty.agentic.service.ConversationPersistenceService;
+import com.liangshou.tangdynasty.agentic.application.IConversationPersistenceService;
 import org.springframework.stereotype.Service;
 
 /**
@@ -27,7 +27,7 @@ import org.springframework.stereotype.Service;
 public class TdAgentPromptService {
 
     private final TdAgentProperties properties;
-    private final ConversationPersistenceService persistenceService;
+    private final IConversationPersistenceService persistenceService;
 
     /**
      * 构造 Agent System Prompt 构建服务实例。
@@ -37,7 +37,7 @@ public class TdAgentPromptService {
      */
     public TdAgentPromptService(
             TdAgentProperties properties,
-            ConversationPersistenceService persistenceService) {
+            IConversationPersistenceService persistenceService) {
         this.properties = properties;
         this.persistenceService = persistenceService;
     }
@@ -57,7 +57,7 @@ public class TdAgentPromptService {
      *     <li><b>压缩历史摘要</b>：长对话中保留的关键历史信息</li>
      * </ul>
      *
-     * <p>该方法通过 {@link ConversationPersistenceService} 获取两种摘要：</p>
+     * <p>该方法通过 {@link IConversationPersistenceService} 获取两种摘要：</p>
      * <ol>
      *     <li>{@code buildRecentPreview}：最近的对话预览，帮助 Agent 理解当前讨论主题</li>
      *     <li>{@code loadCompressedSummary}：经过压缩的历史摘要，在长对话中保持上下文一致性</li>

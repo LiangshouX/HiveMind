@@ -2,7 +2,7 @@ package com.liangshou.tangdynasty.agentic.agents.guard;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.liangshou.tangdynasty.agentic.common.config.TdAgentProperties;
-import com.liangshou.tangdynasty.agentic.common.enums.ToolRiskLevel;
+import com.liangshou.tangdynasty.agentic.domain.shared.enums.ToolRiskLevel;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -32,7 +32,7 @@ import static org.junit.jupiter.api.Assertions.*;
  *
  * @author LiangshouX
  * @see ToolGuardEngine
- * @see com.liangshou.tangdynasty.agentic.common.enums.ToolRiskLevel
+ * @see com.liangshou.tangdynasty.agentic.domain.shared.enums.ToolRiskLevel
  * @see com.liangshou.tangdynasty.agentic.agents.guard.ToolGuardDecision
  */
 class ToolGuardEngineTest {

@@ -1,6 +1,6 @@
 package com.liangshou.tangdynasty.agentic.agents.provider;
 
-import com.liangshou.tangdynasty.agentic.common.enums.TdAgentProviderType;
+import com.liangshou.tangdynasty.agentic.domain.shared.enums.TdAgentProviderType;
 import lombok.Builder;
 import lombok.Getter;
 

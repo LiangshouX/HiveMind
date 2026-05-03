@@ -1,11 +1,11 @@
 package com.liangshou.tangdynasty.agentic.adapter.controller;
 
 import com.liangshou.tangdynasty.agentic.agents.guard.approval.ToolApprovalService;
-import com.liangshou.tangdynasty.agentic.service.ITdAgentStreamingService;
-import com.liangshou.tangdynasty.agentic.infrastructure.mongo.domain.document.memory.ConversationViewDocument;
-import com.liangshou.tangdynasty.agentic.infrastructure.mongo.domain.document.tool.ToolApprovalDocument;
-import com.liangshou.tangdynasty.agentic.service.ITdAgentChatService;
-import com.liangshou.tangdynasty.agentic.service.dto.*;
+import com.liangshou.tangdynasty.agentic.application.ITdAgentStreamingService;
+import com.liangshou.tangdynasty.agentic.domain.memory.model.ConversationViewDocument;
+import com.liangshou.tangdynasty.agentic.domain.tool.model.ToolApprovalDocument;
+import com.liangshou.tangdynasty.agentic.application.ITdAgentChatService;
+import com.liangshou.tangdynasty.agentic.application.dto.*;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

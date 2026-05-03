@@ -1,6 +1,6 @@
 package com.liangshou.tangdynasty.agentic.adapter.controller;
 
-import com.liangshou.tangdynasty.agentic.service.dto.SkillUpsertRequest;
+import com.liangshou.tangdynasty.agentic.application.dto.SkillUpsertRequest;
 import com.liangshou.tangdynasty.agentic.agents.skill.TdAgentSkillInfo;
 import com.liangshou.tangdynasty.agentic.agents.skill.TdAgentSkillService;
 import jakarta.validation.Valid;

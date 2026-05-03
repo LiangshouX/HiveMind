@@ -1,6 +1,6 @@
 package com.liangshou.tangdynasty.agentic.agents;
 
-import com.liangshou.tangdynasty.agentic.service.ConversationPersistenceService;
+import com.liangshou.tangdynasty.agentic.application.IConversationPersistenceService;
 import io.agentscope.core.memory.InMemoryMemory;
 import io.agentscope.core.message.Msg;
 
@@ -17,7 +17,7 @@ import io.agentscope.core.message.Msg;
  *
  * <p>工作流程：</p>
  * <ol>
- *     <li>创建实例时，从 {@link ConversationPersistenceService} 加载历史消息和压缩摘要</li>
+ *     <li>创建实例时，从 {@link IConversationPersistenceService} 加载历史消息和压缩摘要</li>
  *     <li>Agent 添加新消息时，调用 {@link #addMessage} 并触发 {@link #flush} 持久化</li>
  *     <li>当需要压缩时，调用 {@link #applyCompaction} 清除旧消息、保留最近消息、更新摘要</li>
  *     <li>清理会话时，调用 {@link #clear} 清空内存和数据库中的所有消息</li>
@@ -30,7 +30,7 @@ import io.agentscope.core.message.Msg;
 public class MongoConversationMemory extends InMemoryMemory {
 
     private final ConversationSessionContext context;
-    private final ConversationPersistenceService persistenceService;
+    private final IConversationPersistenceService persistenceService;
     private final String systemPrompt;
     private String compressedSummary;
 
@@ -50,7 +50,7 @@ public class MongoConversationMemory extends InMemoryMemory {
      */
     public MongoConversationMemory(
             ConversationSessionContext context,
-            ConversationPersistenceService persistenceService,
+            IConversationPersistenceService persistenceService,
             String systemPrompt) {
         this.context = context;
         this.persistenceService = persistenceService;

@@ -3,7 +3,7 @@ package com.liangshou.tangdynasty.agentic.agents.provider;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.liangshou.tangdynasty.agentic.common.config.TdAgentProperties;
-import com.liangshou.tangdynasty.agentic.common.enums.TdAgentProviderType;
+import com.liangshou.tangdynasty.agentic.domain.shared.enums.TdAgentProviderType;
 import jakarta.annotation.PostConstruct;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;

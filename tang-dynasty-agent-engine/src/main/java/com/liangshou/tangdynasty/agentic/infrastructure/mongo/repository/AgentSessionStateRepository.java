@@ -1,6 +1,6 @@
 package com.liangshou.tangdynasty.agentic.infrastructure.mongo.repository;
 
-import com.liangshou.tangdynasty.agentic.infrastructure.mongo.domain.document.memory.AgentSessionStateDocument;
+import com.liangshou.tangdynasty.agentic.domain.session.model.AgentSessionStateDocument;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
 import java.util.Optional;

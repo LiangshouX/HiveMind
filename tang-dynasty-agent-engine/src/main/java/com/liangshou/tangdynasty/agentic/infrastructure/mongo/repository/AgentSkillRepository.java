@@ -1,6 +1,6 @@
 package com.liangshou.tangdynasty.agentic.infrastructure.mongo.repository;
 
-import com.liangshou.tangdynasty.agentic.infrastructure.mongo.domain.document.skill.AgentSkillDocument;
+import com.liangshou.tangdynasty.agentic.domain.skill.model.AgentSkillDocument;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
 import java.util.List;

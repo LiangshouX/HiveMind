@@ -6,7 +6,7 @@ import com.liangshou.tangdynasty.agentic.agents.guard.approval.ToolApprovalServi
 import com.liangshou.tangdynasty.agentic.agents.sandbox.TdAgentSandboxManager;
 import com.liangshou.tangdynasty.agentic.agents.tools.TdAgentBuiltinTools;
 import com.liangshou.tangdynasty.agentic.common.config.TdAgentProperties;
-import com.liangshou.tangdynasty.agentic.service.ConversationPersistenceService;
+import com.liangshou.tangdynasty.agentic.application.IConversationPersistenceService;
 import io.agentscope.core.tool.AgentTool;
 import io.agentscope.core.tool.Toolkit;
 import io.agentscope.runtime.engine.agents.agentscope.tools.ToolkitInit;
@@ -43,7 +43,7 @@ public class TdAgentToolkitFactory {
     private static final Logger log = LoggerFactory.getLogger(TdAgentToolkitFactory.class);
 
     private final TdAgentProperties properties;
-    private final ConversationPersistenceService persistenceService;
+    private final IConversationPersistenceService persistenceService;
     private final TdAgentSandboxManager sandboxManager;
     private final ToolGuardEngine toolGuardEngine;
     private final ToolApprovalService toolApprovalService;
@@ -59,7 +59,7 @@ public class TdAgentToolkitFactory {
      */
     public TdAgentToolkitFactory(
             TdAgentProperties properties,
-            ConversationPersistenceService persistenceService,
+            IConversationPersistenceService persistenceService,
             TdAgentSandboxManager sandboxManager,
             ToolGuardEngine toolGuardEngine,
             ToolApprovalService toolApprovalService) {

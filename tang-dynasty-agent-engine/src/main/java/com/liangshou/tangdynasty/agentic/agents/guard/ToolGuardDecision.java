@@ -1,6 +1,6 @@
 package com.liangshou.tangdynasty.agentic.agents.guard;
 
-import com.liangshou.tangdynasty.agentic.common.enums.ToolRiskLevel;
+import com.liangshou.tangdynasty.agentic.domain.shared.enums.ToolRiskLevel;
 import lombok.Builder;
 import lombok.Getter;
 
