@@ -7,6 +7,9 @@ spring:
     uri: ${MONGODB_URI:mongodb://localhost:27017/tang_dynasty}
 
 tdagent:
+  observability:
+    enabled: true
+    url: http://localhost:5174
   system-prompt:
     product-name: TDAgent
     owner-name: TangWorkSpace

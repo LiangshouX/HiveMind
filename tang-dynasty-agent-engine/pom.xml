@@ -18,7 +18,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <agentscope.core.version>1.0.11</agentscope.core.version>
+        <agentscope.core.version>1.0.12</agentscope.core.version>
         <agentscope.runtime.version>1.0.2</agentscope.runtime.version>
         <maven.compiler.release>17</maven.compiler.release>
     </properties>
@@ -70,6 +70,11 @@
         <dependency>
             <groupId>io.agentscope</groupId>
             <artifactId>agentscope-extensions-reme</artifactId>
+            <version>${agentscope.core.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.agentscope</groupId>
+            <artifactId>agentscope-extensions-studio</artifactId>
             <version>${agentscope.core.version}</version>
         </dependency>
 
