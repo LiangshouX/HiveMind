@@ -163,7 +163,10 @@ public class TdAgentFactory {
                     .studioUrl(properties.getObservability().getUrl() != null ?
                             properties.getObservability().getUrl() : "http://localhost:5173")
                     .project(properties.getSystemPrompt().getProductName())
-                    .runName("%s-%d".formatted(properties.getSystemPrompt().getProductName(), System.currentTimeMillis()))
+                    .runName("%s-%d".formatted(
+                            properties.getSystemPrompt().getProductName(),
+                            System.currentTimeMillis())
+                    )
                     .initialize()
                     .block();
 
