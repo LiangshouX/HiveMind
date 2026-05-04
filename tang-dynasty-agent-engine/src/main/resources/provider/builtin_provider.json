@@ -15,6 +15,13 @@
         "probeSource": null
       },
       {
+        "id": "qwen3-max",
+        "name": "Qwen Max",
+        "supportsMultimodal": true,
+        "supportsVideo": true,
+        "probeSource": null
+      },
+      {
         "id": "qwen3.5-plus",
         "name": "Qwen 3.5 Plus",
         "supportsMultimodal": true,

@@ -143,13 +143,21 @@ function mapStoredMessage(stored: StoredMessage, user: AuthUser): UiMessage {
       return createBlock("reasoning", "推理", item.text ?? "");
     }
     if (item.type === "tool_use") {
-      return createBlock("tool_use", "工具调用", item.inputRaw || item.input || "", {
+      // tool_use: 优先使用 input（格式化过的 JSON），否则使用 inputRaw
+      // 将内容包装为 Markdown 代码块格式
+      const toolInput = item.input || item.inputRaw || "";
+      const formattedContent = toolInput ? `\`\`\`json\n${toolInput}\n\`\`\`` : "";
+      return createBlock("tool_use", "工具调用", formattedContent, {
         toolName: item.name,
-        rawInput: item.input,
+        rawInput: item.inputRaw,
       });
     }
     if (item.type === "tool_result") {
-      return createBlock("tool_result", "工具结果", item.text ?? "", {
+      // tool_result: text 字段是工具的输出结果，用代码块格式展示
+      // inputRaw 如果有值也用代码块展示
+      const toolOutput = item.text ?? "";
+      const formattedContent = toolOutput ? `\`\`\`\n${toolOutput}\n\`\`\`` : "";
+      return createBlock("tool_result", "工具结果", formattedContent, {
         toolName: item.name,
         rawInput: item.inputRaw,
       });
@@ -224,7 +232,8 @@ function toEventBlock(event: TdAgentStreamEvent): UiMessageBlock | null {
     case "REASONING":
       return createBlock("reasoning", "推理", event.content);
     case "TOOL_RESULT":
-      return createBlock("tool_result", "工具结果", event.content);
+      // 工具结果用代码块格式展示
+      return createBlock("tool_result", "工具结果", event.content ? `\`\`\`\n${event.content}\n\`\`\`` : "");
     case "RESULT":
       return createBlock("result", "最终结果", event.content);
     case "ERROR":

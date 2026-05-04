@@ -156,11 +156,14 @@ export function ConversationWorkspace({
                                 </div>
                             ) : null}
 
-                            {block.rawInput ? <pre className="message-raw" style={{
-                                background: isDarkMode ? '#07111f' : '#f1f3f5',
-                                border: `1px solid ${isDarkMode ? '#1e3a5f' : '#dee2e6'}`,
-                                color: isDarkMode ? '#f3f7ff' : '#2c3e50'
-                            }}>{block.rawInput}</pre> : null}
+                            {/* 工具类型消息不需要展示 rawInput，因为 content 已经是代码块格式 */}
+                            {block.rawInput && block.type !== "tool_use" && block.type !== "tool_result" ? (
+                                <pre className="message-raw" style={{
+                                    background: isDarkMode ? '#07111f' : '#f1f3f5',
+                                    border: `1px solid ${isDarkMode ? '#1e3a5f' : '#dee2e6'}`,
+                                    color: isDarkMode ? '#f3f7ff' : '#2c3e50'
+                                }}>{block.rawInput}</pre>
+                            ) : null}
 
                             <div className="markdown-body" style={{color: isDarkMode ? '#f3f7ff' : '#2c3e50'}}>
                                 <ReactMarkdown remarkPlugins={[remarkGfm]}>

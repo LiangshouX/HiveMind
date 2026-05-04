@@ -77,6 +77,11 @@
             <artifactId>agentscope-extensions-studio</artifactId>
             <version>${agentscope.core.version}</version>
         </dependency>
+        <dependency>
+            <groupId>io.agentscope</groupId>
+            <artifactId>agentscope-extensions-autocontext-memory</artifactId>
+            <version>${agentscope.core.version}</version>
+        </dependency>
 
         <!-- Lombok -->
         <dependency>

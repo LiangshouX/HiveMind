@@ -8,7 +8,7 @@ spring:
 
 tdagent:
   observability:
-    enabled: true
+    enabled: false
     url: http://localhost:5174
   system-prompt:
     product-name: TDAgent
@@ -18,13 +18,13 @@ tdagent:
     provider-config-location: classpath:provider/builtin_provider.json
     reload-on-change: true
     provider-id: ${TDAGENT_MODEL_PROVIDER:dashscope}
-    model-id: ${TDAGENT_MODEL_ID:qwen-max}
+    model-id: ${TDAGENT_MODEL_ID:qwen3-max}
     api-key: ${AI_DASHSCOPE_API_KEY:}
     base-url: ${TDAGENT_MODEL_BASE_URL:https://dashscope.aliyuncs.com}
     endpoint-path: ${TDAGENT_MODEL_ENDPOINT_PATH:}
     model-name: ${TDAGENT_MODEL_NAME:qwen-max}
     stream: true
-    enable-thinking: false
+    enable-thinking: true
     max-iters: 200
   sandbox:
     enabled: true
