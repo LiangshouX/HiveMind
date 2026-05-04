@@ -1,7 +1,7 @@
 package com.liangshou.tangdynasty.agentic.agents.hooks;
 
 import com.liangshou.tangdynasty.agentic.agents.ConversationSessionContext;
-import com.liangshou.tangdynasty.agentic.agents.MongoConversationMemory;
+import com.liangshou.tangdynasty.agentic.agents.memory.MongoConversationMemory;
 import com.liangshou.tangdynasty.agentic.agents.memory.TdAgentMemoryManager;
 import io.agentscope.core.hook.Hook;
 import io.agentscope.core.hook.HookEvent;

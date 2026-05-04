@@ -4,6 +4,7 @@ import com.liangshou.tangdynasty.agentic.agents.guard.ToolGuardEngine;
 import com.liangshou.tangdynasty.agentic.agents.guard.approval.ToolApprovalService;
 import com.liangshou.tangdynasty.agentic.agents.hooks.TdAgentMemoryCompactionHook;
 import com.liangshou.tangdynasty.agentic.agents.hooks.TdAgentToolGuardHook;
+import com.liangshou.tangdynasty.agentic.agents.memory.MongoConversationMemory;
 import com.liangshou.tangdynasty.agentic.agents.memory.TdAgentMemoryManager;
 import com.liangshou.tangdynasty.agentic.agents.memory.reme.TdAgentReMeService;
 import com.liangshou.tangdynasty.agentic.agents.skill.TdAgentSkillService;

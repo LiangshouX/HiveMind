@@ -1,5 +1,6 @@
-package com.liangshou.tangdynasty.agentic.agents;
+package com.liangshou.tangdynasty.agentic.agents.memory;
 
+import com.liangshou.tangdynasty.agentic.agents.ConversationSessionContext;
 import com.liangshou.tangdynasty.agentic.application.IConversationPersistenceService;
 import io.agentscope.core.memory.InMemoryMemory;
 import io.agentscope.core.message.Msg;

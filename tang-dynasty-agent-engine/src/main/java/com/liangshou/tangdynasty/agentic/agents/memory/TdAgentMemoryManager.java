@@ -1,7 +1,6 @@
 package com.liangshou.tangdynasty.agentic.agents.memory;
 
 import com.liangshou.tangdynasty.agentic.agents.ConversationSessionContext;
-import com.liangshou.tangdynasty.agentic.agents.MongoConversationMemory;
 import com.liangshou.tangdynasty.agentic.agents.memory.reme.TdAgentReMeService;
 import com.liangshou.tangdynasty.agentic.common.config.TdAgentProperties;
 import io.agentscope.core.message.Msg;
