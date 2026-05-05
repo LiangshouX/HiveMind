@@ -2,6 +2,39 @@
 import axios from 'axios';
 import { clearAuthSession, getAuthToken } from './services/authStorage';
 
+// ── 工具配置类型定义（必须在 api 对象之前） ──
+
+export interface ToolExample {
+  title: string;
+  input: string;
+}
+
+export interface ToolConfig {
+  toolName: string;
+  description: string;
+  category: 'builtin' | 'sandbox' | 'browser' | 'custom';
+  runEnvironment: 'system' | 'sandbox';
+  riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  enabled: boolean;
+  approvalRequired: boolean;
+  denyPatterns: string[];
+  examples: ToolExample[];
+  customized: boolean;
+  updatedAt: string | null;
+}
+
+export interface ToolConfigUpdateRequest {
+  riskLevel?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  enabled?: boolean;
+  approvalRequired?: boolean;
+  denyPatterns?: string[];
+}
+
+export interface ToolSyncResponse {
+  synced: number;
+  message: string;
+}
+
 // 统一 baseURL
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
@@ -102,8 +135,16 @@ export const api = {
     request.get('/api/agent/token-usage/by-model', { params: { startDate, endDate } }),
   tokenUsageByProvider: (startDate: string, endDate: string): Promise<TokenUsageByProvider[]> => 
     request.get('/api/agent/token-usage/by-provider', { params: { startDate, endDate } }),
-  tokenUsageByDate: (startDate: string, endDate: string): Promise<TokenUsageByDate[]> => 
+  tokenUsageByDate: (startDate: string, endDate: string): Promise<TokenUsageByDate[]> =>
     request.get('/api/agent/token-usage/by-date', { params: { startDate, endDate } }),
+
+  // 工具配置
+  listToolConfigs: (): Promise<ToolConfig[]> =>
+    request.get('/api/agent/tool-config'),
+  updateToolConfig: (toolName: string, data: ToolConfigUpdateRequest): Promise<ToolConfig> =>
+    request.put(`/api/agent/tool-config/${encodeURIComponent(toolName)}`, data),
+  syncSystemTools: (): Promise<ToolSyncResponse> =>
+    request.post('/api/agent/tool-config/sync'),
 };
 
 // Types can be imported or re-declared here (using any for now to speed up implementation, but better to keep types from original api.ts)

@@ -68,7 +68,8 @@ public class GuardedAgentTool implements AgentTool {
 
     @Override
     public Mono<ToolResultBlock> callAsync(ToolCallParam param) {
-        ToolGuardDecision decision = toolGuardEngine.evaluate(getName(), param.getInput());
+        String userId = context.getUserId();
+        ToolGuardDecision decision = toolGuardEngine.evaluate(getName(), param.getInput(), userId);
         if (!decision.isAllowed()) {
             return Mono.just(ToolResultBlock.error(decision.getReason()));
         }

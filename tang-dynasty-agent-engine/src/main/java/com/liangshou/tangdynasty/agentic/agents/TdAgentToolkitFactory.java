@@ -4,9 +4,13 @@ import com.liangshou.tangdynasty.agentic.agents.guard.GuardedAgentTool;
 import com.liangshou.tangdynasty.agentic.agents.guard.ToolGuardEngine;
 import com.liangshou.tangdynasty.agentic.agents.guard.approval.ToolApprovalService;
 import com.liangshou.tangdynasty.agentic.agents.sandbox.TdAgentSandboxManager;
+import com.liangshou.tangdynasty.agentic.agents.tools.SystemToolRegistry;
 import com.liangshou.tangdynasty.agentic.agents.tools.TdAgentBuiltinTools;
+import com.liangshou.tangdynasty.agentic.application.IToolConfigService;
+import com.liangshou.tangdynasty.agentic.application.dto.ToolConfigDTO;
 import com.liangshou.tangdynasty.agentic.common.config.TdAgentProperties;
 import com.liangshou.tangdynasty.agentic.application.IConversationPersistenceService;
+import com.liangshou.tangdynasty.agentic.common.util.ToolConfigProvider;
 import io.agentscope.core.tool.AgentTool;
 import io.agentscope.core.tool.Toolkit;
 import io.agentscope.runtime.engine.agents.agentscope.tools.ToolkitInit;
@@ -47,6 +51,7 @@ public class TdAgentToolkitFactory {
     private final TdAgentSandboxManager sandboxManager;
     private final ToolGuardEngine toolGuardEngine;
     private final ToolApprovalService toolApprovalService;
+    private final ToolConfigProvider toolConfigProvider;
 
     /**
      * 构造 Agent Toolkit 工厂实例。
@@ -56,18 +61,21 @@ public class TdAgentToolkitFactory {
      * @param sandboxManager      沙箱管理器，负责创建和管理代码执行沙箱环境
      * @param toolGuardEngine     Tool Guard 引擎，提供工具调用的安全防护和风险评估
      * @param toolApprovalService 工具审批服务，处理需要用户确认的高风险工具调用
+     * @param toolConfigProvider  工具配置提供者，用于获取用户的工具启用状态
      */
     public TdAgentToolkitFactory(
             TdAgentProperties properties,
             IConversationPersistenceService persistenceService,
             TdAgentSandboxManager sandboxManager,
             ToolGuardEngine toolGuardEngine,
-            ToolApprovalService toolApprovalService) {
+            ToolApprovalService toolApprovalService,
+            ToolConfigProvider toolConfigProvider) {
         this.properties = properties;
         this.persistenceService = persistenceService;
         this.sandboxManager = sandboxManager;
         this.toolGuardEngine = toolGuardEngine;
         this.toolApprovalService = toolApprovalService;
+        this.toolConfigProvider = toolConfigProvider;
     }
 
     /**
@@ -140,8 +148,9 @@ public class TdAgentToolkitFactory {
     /**
      * 注册单个工具到 Toolkit，根据配置决定是否应用 Tool Guard 包装。
      *
-     * <p>该方法根据 {@link TdAgentProperties#getToolGuard()#isEnabled()} 的配置决定工具的注册方式：</p>
+     * <p>该方法根据用户的工具配置决定是否注册工具：</p>
      * <ul>
+     *     <li><b>工具已禁用</b>：跳过注册，工具对 Agent 不可见</li>
      *     <li><b>启用 Tool Guard</b>：将工具包装为 {@link GuardedAgentTool}，在执行前进行风险评估和审批检查</li>
      *     <li><b>未启用 Tool Guard</b>：直接注册原始工具，无额外的安全检查</li>
      * </ul>
@@ -157,10 +166,24 @@ public class TdAgentToolkitFactory {
      * @param tool    要注册的原始工具实例
      */
     private void registerTool(Toolkit toolkit, ConversationSessionContext context, AgentTool tool) {
+        String toolName = tool.getName();
+        String userId = context.getUserId();
+
+        // 获取用户工具配置
+        ToolConfigDTO config = toolConfigProvider.getConfig(toolName, userId);
+
+        // 如果禁用，跳过注册
+        if (config != null && !config.getEnabled()) {
+            log.debug("[Toolkit] 跳过已禁用工具: {}, userId: {}", toolName, userId);
+            return;
+        }
+
+        // 如果启用 Tool Guard，包装
         if (properties.getToolGuard().isEnabled()) {
             toolkit.registerTool(new GuardedAgentTool(tool, context, toolGuardEngine, toolApprovalService));
             return;
         }
+
         toolkit.registerTool(tool);
     }
 }
