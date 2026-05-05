@@ -2,10 +2,13 @@ package com.liangshou.tangdynasty.agentic.application.impl;
 
 import com.liangshou.tangdynasty.agentic.agents.ConversationSessionContext;
 import com.liangshou.tangdynasty.agentic.agents.TdAgentFactory;
+import com.liangshou.tangdynasty.agentic.agents.TdAgentModelFactory;
 import com.liangshou.tangdynasty.agentic.agents.guard.approval.ToolApprovalService;
+import com.liangshou.tangdynasty.agentic.agents.provider.TdAgentResolvedModelConfig;
 import com.liangshou.tangdynasty.agentic.agents.session.AgentSessionStateService;
 import com.liangshou.tangdynasty.agentic.agents.streaming.TdAgentActiveSessionRegistry;
 import com.liangshou.tangdynasty.agentic.agents.streaming.TdAgentStreamEvent;
+import com.liangshou.tangdynasty.agentic.application.ITokenUsageRecordService;
 import com.liangshou.tangdynasty.agentic.common.config.TdAgentProperties;
 import com.liangshou.tangdynasty.agentic.common.enums.TdAgentStreamEventType;
 import com.liangshou.tangdynasty.agentic.domain.tool.model.ToolApprovalDocument;
@@ -66,6 +69,8 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
     private final ToolApprovalService toolApprovalService;
     private final TdAgentActiveSessionRegistry activeSessionRegistry;
     private final TdAgentProperties properties;
+    private final TdAgentModelFactory modelFactory;
+    private final ITokenUsageRecordService tokenUsageRecordService;
 
     /**
      * 构造器
@@ -77,6 +82,8 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
      * @param toolApprovalService      工具审批服务
      * @param activeSessionRegistry    活动会话注册表
      * @param properties               外部化配置
+     * @param modelFactory             模型工厂
+     * @param tokenUsageRecordService  Token 使用量记录服务
      */
     public TdAgentStreamingServiceImpl(
             TdAgentFactory agentFactory,
@@ -85,7 +92,9 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
             AgentSessionStateService agentSessionStateService,
             ToolApprovalService toolApprovalService,
             TdAgentActiveSessionRegistry activeSessionRegistry,
-            TdAgentProperties properties) {
+            TdAgentProperties properties,
+            TdAgentModelFactory modelFactory,
+            ITokenUsageRecordService tokenUsageRecordService) {
         this.agentFactory = agentFactory;
         this.chatService = chatService;
         this.IChatCommandService = IChatCommandService;
@@ -93,6 +102,8 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
         this.toolApprovalService = toolApprovalService;
         this.activeSessionRegistry = activeSessionRegistry;
         this.properties = properties;
+        this.modelFactory = modelFactory;
+        this.tokenUsageRecordService = tokenUsageRecordService;
     }
 
     /**
@@ -269,6 +280,9 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
                         finalMessage.set(event.getMessage());
                         log.info("[流式执行-事件] 收到最终结果 - content length: {}",
                                 event.getMessage().getTextContent().length());
+
+                        // 记录 Token 使用量
+                        recordTokenUsage(context, event.getMessage());
                     }
 
                     TdAgentStreamEventType streamEventType = event.getType() == EventType.AGENT_RESULT
@@ -483,5 +497,38 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
 
     private String key(String userId, String sessionId) {
         return userId + ":" + sessionId;
+    }
+
+    /**
+     * 记录 Token 使用量。
+     *
+     * @param context 会话上下文
+     * @param message 最终结果消息
+     */
+    private void recordTokenUsage(ConversationSessionContext context, Msg message) {
+        try {
+            // 获取当前模型配置
+            TdAgentResolvedModelConfig modelConfig = modelFactory.currentConfig();
+
+            // 构建模型配置 JSON（用于 Service 解析）
+            String modelConfigJson = String.format(
+                    "{\"provider\":\"%s\",\"modelName\":\"%s\"}",
+                    modelConfig.getProviderId(),
+                    modelConfig.getModelId()
+            );
+
+            // 调用记录服务
+            tokenUsageRecordService.record(
+                    context.getUserId(),
+                    context.getSessionId(),
+                    message.getId(),
+                    modelConfigJson,
+                    message.getMetadata()
+            );
+        } catch (Exception e) {
+            // 记录失败不影响主流程
+            log.warn("[流式执行-Token记录] Token 使用量记录失败 - userId: {}, sessionId: {}, error: {}",
+                    context.getUserId(), context.getSessionId(), e.getMessage());
+        }
     }
 }

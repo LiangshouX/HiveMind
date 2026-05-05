@@ -94,6 +94,16 @@ export const api = {
   addRemoteSkill: (agentId: string, skillName: string, sourceUrl: string, description: string): Promise<any> => request.post('/api/add-remote-skill', { agentId, skillName, sourceUrl, description }),
   updateRemoteSkill: (agentId: string, skillName: string): Promise<any> => request.post('/api/update-remote-skill', { agentId, skillName }),
   removeRemoteSkill: (agentId: string, skillName: string): Promise<any> => request.post('/api/remove-remote-skill', { agentId, skillName }),
+
+  // Token Usage
+  tokenUsageSummary: (startDate: string, endDate: string): Promise<TokenUsageSummary> => 
+    request.get('/api/agent/token-usage/summary', { params: { startDate, endDate } }),
+  tokenUsageByModel: (startDate: string, endDate: string): Promise<TokenUsageByModel[]> => 
+    request.get('/api/agent/token-usage/by-model', { params: { startDate, endDate } }),
+  tokenUsageByProvider: (startDate: string, endDate: string): Promise<TokenUsageByProvider[]> => 
+    request.get('/api/agent/token-usage/by-provider', { params: { startDate, endDate } }),
+  tokenUsageByDate: (startDate: string, endDate: string): Promise<TokenUsageByDate[]> => 
+    request.get('/api/agent/token-usage/by-date', { params: { startDate, endDate } }),
 };
 
 // Types can be imported or re-declared here (using any for now to speed up implementation, but better to keep types from original api.ts)
@@ -198,6 +208,44 @@ export interface RemoteSkillItem {
   status?: string;
   lastUpdated?: string;
   addedAt?: string;
+}
+
+// Token Usage 相关类型
+export interface TokenUsageSummary {
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  totalTokens: number;
+  totalCalls: number;
+  estimatedCost: number;
+  startDate: string;
+  endDate: string;
+}
+
+export interface TokenUsageByModel {
+  modelName: string;
+  modelProvider: string;
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  callCount: number;
+  estimatedCost: number;
+}
+
+export interface TokenUsageByProvider {
+  modelProvider: string;
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  callCount: number;
+  modelCount: number;
+}
+
+export interface TokenUsageByDate {
+  usageDate: string;
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  callCount: number;
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
