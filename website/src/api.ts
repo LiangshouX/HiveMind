@@ -35,6 +35,53 @@ export interface ToolSyncResponse {
   message: string;
 }
 
+// ── 旨意模板相关类型 ──
+
+export interface EdictTemplateParam {
+  key: string;
+  label: string;
+  type: 'text' | 'textarea' | 'select' | 'input';
+  required?: boolean;
+  defaultValue?: string;
+  options?: string[];
+}
+
+export interface EdictTemplate {
+  templateId: string;
+  name: string;
+  description: string;
+  category: string;
+  icon: string;
+  command: string;
+  params: EdictTemplateParam[];
+  depts: string[];
+  est: string;
+  cost: string;
+  type: 'SYSTEM' | 'USER';
+  userId: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+export interface EdictCreateRequest {
+  name: string;
+  description?: string;
+  category: string;
+  icon?: string;
+  command: string;
+  params: EdictTemplateParam[];
+  depts?: string[];
+  est?: string;
+  cost?: string;
+}
+
+export interface EdictExecuteResponse {
+  ok: boolean;
+  sessionId: string;
+  title: string;
+  message: string;
+}
+
 // 统一 baseURL
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
@@ -145,6 +192,20 @@ export const api = {
     request.put(`/api/agent/tool-config/${encodeURIComponent(toolName)}`, data),
   syncSystemTools: (): Promise<ToolSyncResponse> =>
     request.post('/api/agent/tool-config/sync'),
+
+  // 旨意模板
+  listEdictTemplates: (): Promise<EdictTemplate[]> =>
+    request.get('/api/agent/edict-template'),
+  getEdictTemplate: (templateId: string): Promise<EdictTemplate> =>
+    request.get(`/api/agent/edict-template/${encodeURIComponent(templateId)}`),
+  createEdictTemplate: (data: EdictCreateRequest): Promise<EdictTemplate> =>
+    request.post('/api/agent/edict-template', data),
+  updateEdictTemplate: (templateId: string, data: Partial<EdictCreateRequest>): Promise<EdictTemplate> =>
+    request.put(`/api/agent/edict-template/${encodeURIComponent(templateId)}`, data),
+  deleteEdictTemplate: (templateId: string): Promise<void> =>
+    request.delete(`/api/agent/edict-template/${encodeURIComponent(templateId)}`),
+  executeEdictTemplate: (templateId: string, params: Record<string, string>): Promise<EdictExecuteResponse> =>
+    request.post(`/api/agent/edict-template/${encodeURIComponent(templateId)}/execute`, { params }),
 };
 
 // Types can be imported or re-declared here (using any for now to speed up implementation, but better to keep types from original api.ts)
