@@ -1,8 +1,15 @@
 package com.liangshou.tangdynasty.agentic.agents;
 
+import com.liangshou.tangdynasty.agentic.application.ITdAgentProfileService;
+import com.liangshou.tangdynasty.agentic.common.util.ProfilePromptBuilder;
 import com.liangshou.tangdynasty.agentic.common.config.TdAgentProperties;
 import com.liangshou.tangdynasty.agentic.application.IConversationPersistenceService;
+import com.liangshou.tangdynasty.agentic.domain.profile.model.AgentProfileDocument;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 /**
  * Agent System Prompt 构建服务，负责生成动态的系统提示词。
@@ -10,6 +17,7 @@ import org.springframework.stereotype.Service;
  * 主要功能包括：
  * <ul>
  *   <li>根据配置和会话上下文构建个性化的 system prompt</li>
+ *   <li>加载用户 Profile 配置（SOUL.md, AGENTS.md, PROFILE.md）并注入到 prompt</li>
  *   <li>注入最近会话摘要，帮助 Agent 理解当前对话背景</li>
  *   <li>注入压缩历史摘要，在长对话中保持上下文一致性</li>
  *   <li>定义 Agent 的行为准则和工具使用规范</li>
@@ -26,20 +34,26 @@ import org.springframework.stereotype.Service;
 @Service
 public class TdAgentPromptService {
 
+    private static final Logger log = LoggerFactory.getLogger(TdAgentPromptService.class);
+
     private final TdAgentProperties properties;
     private final IConversationPersistenceService persistenceService;
+    private final ITdAgentProfileService profileService;
 
     /**
      * 构造 Agent System Prompt 构建服务实例。
      *
      * @param properties         Agent 外部化配置，包含系统提示词模板、产品名称等信息
      * @param persistenceService 对话持久化服务，用于加载会话历史和摘要信息
+     * @param profileService     Profile 服务，用于加载用户的 Profile 配置
      */
     public TdAgentPromptService(
             TdAgentProperties properties,
-            IConversationPersistenceService persistenceService) {
+            IConversationPersistenceService persistenceService,
+            ITdAgentProfileService profileService) {
         this.properties = properties;
         this.persistenceService = persistenceService;
+        this.profileService = profileService;
     }
 
     /**
@@ -47,6 +61,7 @@ public class TdAgentPromptService {
      *
      * <p>该方法生成一个完整的系统提示词，指导 Agent 的行为和响应风格。生成的 prompt 包含：</p>
      * <ul>
+     *     <li><b>Profile 配置</b>：从用户 Profile 加载（SOUL.md, AGENTS.md, PROFILE.md）</li>
      *     <li><b>角色定义</b>：明确 Agent 的身份（基于 AgentScope-Java 的企业级 Java AI Agent）</li>
      *     <li><b>核心职责</b>：作为软件工程专家，提供可执行、可验证、可维护的解决方案</li>
      *     <li><b>工具使用规范</b>：合理使用沙箱工具（Python、Shell、Browser、FileSystem）</li>
@@ -69,6 +84,34 @@ public class TdAgentPromptService {
      * @return 完整的系统提示词字符串，已填充所有占位符并格式化
      */
     public String buildPrompt(ConversationSessionContext context) {
+        // 1. 加载用户 Profile
+        List<AgentProfileDocument> profiles = profileService.loadUserProfiles(context.getUserId());
+        String profilePrompt = ProfilePromptBuilder.build(profiles);
+
+        // 2. 构建原有的 base prompt
+        String basePrompt = buildBasePrompt(context);
+
+        // 3. 组合：Profile Prompt + Base Prompt
+        if (profilePrompt != null && !profilePrompt.isBlank()) {
+            log.debug("[Prompt 构建] Profile Prompt 已加载 - userId: {}, length: {}",
+                    context.getUserId(), profilePrompt.length());
+            return profilePrompt + "\n\n" + basePrompt;
+        }
+
+        log.debug("[Prompt 构建] Profile Prompt 为空，使用默认 base prompt - userId: {}",
+                context.getUserId());
+        return basePrompt;
+    }
+
+    /**
+     * 构建基础的 System Prompt（不包含 Profile 配置）。
+     *
+     * <p>该方法生成原有的系统提示词，包含角色定义、职责、工具使用规范等。</p>
+     *
+     * @param context 会话上下文
+     * @return 基础 system prompt
+     */
+    private String buildBasePrompt(ConversationSessionContext context) {
         String preview =
                 persistenceService.buildRecentPreview(
                         context, properties.getSystemPrompt().getMaxHistoryPreview());

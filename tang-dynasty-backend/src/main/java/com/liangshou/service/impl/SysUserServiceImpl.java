@@ -7,7 +7,10 @@ import com.liangshou.infrastructure.datasource.support.ISysUserSupport;
 import com.liangshou.service.ISysUserService;
 import com.liangshou.service.dto.SysUserDTO;
 import com.liangshou.service.vo.SysUserVO;
+import com.liangshou.tangdynasty.agentic.application.ITdAgentProfileService;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,8 +21,11 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SysUserServiceImpl implements ISysUserService {
 
+    private static final Logger log = LoggerFactory.getLogger(SysUserServiceImpl.class);
+
     private final ISysUserSupport support;
     private final PasswordEncoder passwordEncoder;
+    private final ITdAgentProfileService profileService;
 
     @Override
     public SysUserVO getById(Long id) {
@@ -52,6 +58,17 @@ public class SysUserServiceImpl implements ISysUserService {
         po.setNickname(normalizeNickname(dto.getNickname(), userId));
         po.setRole(normalizeRole(dto.getRole()));
         support.save(po);
+
+        // 初始化用户 Profile 配置（不阻塞注册流程）
+        try {
+            profileService.initializeUser(userId);
+            log.info("用户注册成功，Profile 初始化完成 - userId: {}", userId);
+        } catch (Exception e) {
+            log.error("用户注册成功，但 Profile 初始化失败 - userId: {}, error: {}", userId, e.getMessage(), e);
+            // 不抛出异常，Profile 初始化失败不影响注册成功
+            // 可以通过定时任务或手动触发补偿初始化
+        }
+
         return toVO(po);
     }
 

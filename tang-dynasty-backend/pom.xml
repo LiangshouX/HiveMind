@@ -139,6 +139,13 @@
             <artifactId>flyway-mysql</artifactId>
         </dependency>
 
+        <!-- Agent Engine -->
+        <dependency>
+            <groupId>com.liangshou</groupId>
+            <artifactId>tang-dynasty-agent-engine</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
         <!-- Testcontainers -->
         <dependency>
             <groupId>org.testcontainers</groupId>

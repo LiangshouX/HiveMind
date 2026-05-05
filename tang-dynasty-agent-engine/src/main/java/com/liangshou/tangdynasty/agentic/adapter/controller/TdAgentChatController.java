@@ -21,7 +21,7 @@ import java.util.List;
  * <p>
  * 提供的 API 端点包括：
  * <ul>
- *   <li>POST /api/v1/tdagent/chat - 同步聊天请求</li>
+ *   <li>POST //v1/tdagent/chat - 同步聊天请求</li>
  *   <li>POST /api/v1/tdagent/chat/stream - 流式聊天请求（SSE）</li>
  *   <li>POST /api/v1/tdagent/approvals/approve - 批准工具调用并继续执行（SSE）</li>
  *   <li>POST /api/v1/tdagent/approvals/reject - 拒绝工具调用并继续执行（SSE）</li>

@@ -51,7 +51,7 @@ public class SoulPromptLoader {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SoulPromptLoader.class);
 
-    private static final String SOUL_PATH_PREFIX = "souls/";
+    private static final String SOUL_PATH_PREFIX = "profiles/";
 
     private static final ConcurrentHashMap<String, String> soulCache = new ConcurrentHashMap<>();
 

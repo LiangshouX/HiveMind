@@ -67,3 +67,20 @@ export async function putJson<T>(path: string, payload: unknown): Promise<T> {
   });
   return parseApiResult<T>(response);
 }
+
+export async function getJson<T>(path: string): Promise<T> {
+  const response = await fetch(buildApiUrl(path), {
+    method: "GET",
+    headers: createHeaders(),
+  });
+  return parseApiResult<T>(response);
+}
+
+export async function postFormData<T>(path: string, formData: FormData): Promise<T> {
+  const response = await fetch(buildApiUrl(path), {
+    method: "POST",
+    headers: createHeaders(), // 注意：不要设置 Content-Type，让浏览器自动设置 boundary
+    body: formData,
+  });
+  return parseApiResult<T>(response);
+}
