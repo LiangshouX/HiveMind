@@ -1,10 +1,17 @@
 package com.liangshou.tangdynasty.agentic.adapter.controller;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.liangshou.tangdynasty.agentic.application.dto.SkillUpsertRequest;
 import com.liangshou.tangdynasty.agentic.agents.skill.TdAgentSkillInfo;
 import com.liangshou.tangdynasty.agentic.agents.skill.TdAgentSkillService;
+import com.liangshou.tangdynasty.agentic.application.service.SkillApplicationService;
+import com.liangshou.tangdynasty.agentic.infrastructure.mysql.po.SkillMetaManagePO;
+import com.liangshou.tangdynasty.agentic.infrastructure.mysql.support.dto.*;
 import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Map;
@@ -32,13 +39,17 @@ import java.util.Map;
 public class TdAgentSkillController {
 
     private final TdAgentSkillService skillService;
+    private final SkillApplicationService skillAppService;
 
     /**
      * 构造器
      * @param skillService skill 服务
+     * @param skillAppService skill 应用服务（云端存储，可选）
      */
-    public TdAgentSkillController(TdAgentSkillService skillService) {
+    public TdAgentSkillController(TdAgentSkillService skillService,
+                                  @Autowired(required = false) SkillApplicationService skillAppService) {
         this.skillService = skillService;
+        this.skillAppService = skillAppService;
     }
 
     /**
@@ -121,5 +132,198 @@ public class TdAgentSkillController {
     public Map<String, Object> reloadCatalog() {
         skillService.reloadBuiltinSkills();
         return Map.of("success", true);
+    }
+
+    // ==================== 云端 Skill 管理 API（基于 OSS 存储） ====================
+
+    /**
+     * 检查云端服务是否可用
+     */
+    private void checkCloudServiceAvailable() {
+        if (skillAppService == null) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, 
+                    "云端 Skill 存储服务未启用，请在配置中启用 tdagent.skill.storage.oss.enabled=true");
+        }
+    }
+
+    /**
+     * 创建 Skill（云端存储模式）
+     * @param userId 用户 ID
+     * @param request 创建请求
+     * @return Skill 响应信息
+     */
+    @PostMapping("/cloud/users/{userId}")
+    public SkillResponse createCloudSkill(
+            @PathVariable String userId,
+            @Valid @RequestBody SkillCreateRequest request) {
+        checkCloudServiceAvailable();
+        return skillAppService.createSkill(userId, request);
+    }
+
+    /**
+     * 更新 Skill 并创建新版本（云端存储模式）
+     * @param userId  用户 ID
+     * @param skillId Skill ID
+     * @param request 版本请求
+     * @return Skill 响应信息
+     */
+    @PutMapping("/cloud/users/{userId}/{skillId}/versions")
+    public SkillResponse updateCloudSkill(
+            @PathVariable String userId,
+            @PathVariable String skillId,
+            @Valid @RequestBody SkillVersionRequest request) {
+        checkCloudServiceAvailable();
+        return skillAppService.updateSkill(userId, skillId, request);
+    }
+
+    /**
+     * 发布 Skill
+     * @param userId  用户 ID
+     * @param skillId Skill ID
+     * @return Skill 响应信息
+     */
+    @PostMapping("/cloud/users/{userId}/{skillId}/publish")
+    public SkillResponse publishCloudSkill(
+            @PathVariable String userId,
+            @PathVariable String skillId) {
+        checkCloudServiceAvailable();
+        return skillAppService.publishSkill(userId, skillId);
+    }
+
+    /**
+     * 归档/下架 Skill
+     * @param userId  用户 ID
+     * @param skillId Skill ID
+     * @return 成功响应
+     */
+    @PostMapping("/cloud/users/{userId}/{skillId}/archive")
+    public Map<String, Object> archiveCloudSkill(
+            @PathVariable String userId,
+            @PathVariable String skillId) {
+        checkCloudServiceAvailable();
+        skillAppService.archiveSkill(userId, skillId);
+        return Map.of("success", true, "skillId", skillId);
+    }
+
+    /**
+     * 删除 Skill（软删除）
+     * @param userId  用户 ID
+     * @param skillId Skill ID
+     * @return 成功响应
+     */
+    @DeleteMapping("/cloud/users/{userId}/{skillId}")
+    public Map<String, Object> deleteCloudSkill(
+            @PathVariable String userId,
+            @PathVariable String skillId) {
+        checkCloudServiceAvailable();
+        skillAppService.deleteSkill(userId, skillId);
+        return Map.of("success", true, "skillId", skillId);
+    }
+
+    /**
+     * 获取 Skill 详情
+     * @param userId  用户 ID
+     * @param skillId Skill ID
+     * @return Skill 响应信息
+     */
+    @GetMapping("/cloud/users/{userId}/{skillId}")
+    public SkillResponse getCloudSkill(
+            @PathVariable String userId,
+            @PathVariable String skillId) {
+        checkCloudServiceAvailable();
+        return skillAppService.getSkill(userId, skillId);
+    }
+
+    /**
+     * 获取 Skill 下载 URL
+     * @param userId  用户 ID
+     * @param skillId Skill ID
+     * @return 下载 URL
+     */
+    @GetMapping("/cloud/users/{userId}/{skillId}/download")
+    public Map<String, String> getCloudSkillDownloadUrl(
+            @PathVariable String userId,
+            @PathVariable String skillId) {
+        checkCloudServiceAvailable();
+        String url = skillAppService.getDownloadUrl(userId, skillId);
+        return Map.of("downloadUrl", url);
+    }
+
+    /**
+     * 分页查询 Skills（仅云端技能）
+     * @param query 查询条件
+     * @return 分页结果
+     */
+    @GetMapping("/cloud/page")
+    public IPage<SkillMetaManagePO> pageCloudSkills(@Valid SkillPageQuery query) {
+        checkCloudServiceAvailable();
+        return skillAppService.pageSkills(query);
+    }
+
+    /**
+     * 获取合并后的技能列表（系统内置 BUILTIN + 云端技能）
+     * 系统内置技能优先展示，标记 source = BUILTIN
+     * @param userId 用户 ID
+     * @return 合并后的技能列表
+     */
+    @GetMapping("/cloud/all")
+    public List<Map<String, Object>> listAllSkills(@RequestParam String userId) {
+        // 1. 获取系统内置技能（BUILTIN）
+        List<TdAgentSkillInfo> builtinSkills = skillService.listSkills(userId);
+        List<Map<String, Object>> result = new java.util.ArrayList<>();
+
+        for (TdAgentSkillInfo skill : builtinSkills) {
+            Map<String, Object> map = new java.util.LinkedHashMap<>();
+            map.put("skillId", "builtin_" + skill.getName());
+            map.put("userId", userId);
+            map.put("name", skill.getName());
+            map.put("description", skill.getDescription());
+            map.put("currentVersion", "1.0.0");
+            map.put("status", "published");
+            map.put("tags", new java.util.ArrayList<String>());
+            map.put("source", "BUILTIN");
+            map.put("enabled", skill.isEnabled());
+            map.put("createdAt", null);
+            map.put("updatedAt", skill.getUpdatedAt());
+            map.put("downloadUrl", null);
+            map.put("fileManifest", null);
+            result.add(map);
+        }
+
+        // 2. 获取云端技能（CUSTOMIZED）
+        if (skillAppService != null) {
+            SkillPageQuery query = new SkillPageQuery();
+            query.setUserId(userId);
+            query.setPageNum(1);
+            query.setPageSize(100);
+            var cloudPage = skillAppService.pageSkills(query);
+            for (SkillMetaManagePO po : cloudPage.getRecords()) {
+                Map<String, Object> map = new java.util.LinkedHashMap<>();
+                map.put("skillId", po.getSkillId());
+                map.put("userId", po.getUserId());
+                map.put("name", po.getName());
+                map.put("description", po.getDescription());
+                map.put("currentVersion", po.getCurrentVersion());
+                map.put("status", po.getStatus());
+                map.put("tags", po.getTags());
+                map.put("source", "CUSTOMIZED");
+                map.put("enabled", true);
+                map.put("createdAt", po.getCreatedAt());
+                map.put("updatedAt", po.getUpdatedAt());
+                map.put("fileManifest", po.getFileManifest());
+
+                // 生成下载 URL
+                try {
+                    String url = skillAppService.getDownloadUrl(userId, po.getSkillId());
+                    map.put("downloadUrl", url);
+                } catch (Exception e) {
+                    map.put("downloadUrl", null);
+                }
+
+                result.add(map);
+            }
+        }
+
+        return result;
     }
 }

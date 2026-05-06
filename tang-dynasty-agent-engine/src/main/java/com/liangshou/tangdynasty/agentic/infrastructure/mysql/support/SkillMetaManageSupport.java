@@ -27,4 +27,16 @@ public interface SkillMetaManageSupport extends IService<SkillMetaManagePO> {
 
     /** 更新文件清单（原子替换 manifest） */
     boolean updateFileManifest(String skillId, Map<String, Object> manifest);
+
+    /** 创建技能元数据记录 */
+    SkillMetaManagePO createSkill(String userId, String name, String description, String version);
+
+    /** 更新当前版本号 */
+    boolean updateCurrentVersion(String skillId, String version);
+
+    /** 根据用户ID和名称查询技能 */
+    SkillMetaManagePO findByUserIdAndName(String userId, String name);
+
+    /** 根据用户ID查询技能列表 */
+    List<SkillMetaManagePO> findByUserId(String userId);
 }

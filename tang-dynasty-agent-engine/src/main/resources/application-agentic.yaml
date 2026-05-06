@@ -54,3 +54,8 @@ tdagent:
     builtin-location: classpath:skills
     builtin-enabled-by-default: true
     custom-enabled-by-default: true
+    storage:
+      oss:
+        enabled: false
+        accessKeyId: ""
+        accessKeySecret: ""

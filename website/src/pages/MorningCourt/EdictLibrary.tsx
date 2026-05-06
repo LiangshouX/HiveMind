@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Tag, Button, Modal, Form, Input, Select, Typography, Space, Row, Col, message, Divider, Popconfirm } from 'antd';
-import { SyncOutlined, SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
+import { Card, Tag, Button, Modal, Form, Input, Select, Typography, Space, Row, Col, message, Popconfirm } from 'antd';
+import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { api } from '../../api';
 import { useStore, TPL_CATS } from '../../store';
 import { useNavigate } from 'react-router-dom';

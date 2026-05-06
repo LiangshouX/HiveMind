@@ -106,6 +106,43 @@ public class SkillMetaManageSupportImpl extends ServiceImpl<SkillMetaManageMappe
                 new LambdaQueryWrapper<SkillMetaManagePO>().eq(SkillMetaManagePO::getSkillId, skillId));
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public SkillMetaManagePO createSkill(String userId, String name, String description, String version) {
+        SkillMetaManagePO skill = new SkillMetaManagePO();
+        skill.setUserId(userId);
+        skill.setName(name);
+        skill.setDescription(description);
+        skill.setCurrentVersion(version != null ? version : "1.0.0");
+        skill.setStatus("draft");
+        this.save(skill);
+        log.info("创建 Skill 成功: userId={}, name={}, skillId={}", userId, name, skill.getSkillId());
+        return skill;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean updateCurrentVersion(String skillId, String version) {
+        Objects.requireNonNull(version, "Version cannot be null");
+        return this.update(new SkillMetaManagePO().setCurrentVersion(version),
+                new LambdaQueryWrapper<SkillMetaManagePO>().eq(SkillMetaManagePO::getSkillId, skillId));
+    }
+
+    @Override
+    public SkillMetaManagePO findByUserIdAndName(String userId, String name) {
+        return this.getOne(new LambdaQueryWrapper<SkillMetaManagePO>()
+                .eq(SkillMetaManagePO::getUserId, userId)
+                .eq(SkillMetaManagePO::getName, name)
+                .last("LIMIT 1"));
+    }
+
+    @Override
+    public List<SkillMetaManagePO> findByUserId(String userId) {
+        return this.list(new LambdaQueryWrapper<SkillMetaManagePO>()
+                .eq(SkillMetaManagePO::getUserId, userId)
+                .orderByDesc(SkillMetaManagePO::getUpdatedAt));
+    }
+
     /**
      * 构建通用查询条件（复用核心过滤逻辑）
      */
