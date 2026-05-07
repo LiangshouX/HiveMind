@@ -1,9 +1,9 @@
-package com.liangshou.tangdynasty.backend.edict.infrastructure.init;
+package com.liangshou.infrastructure.init;
 
-import com.liangshou.tangdynasty.backend.edict.domain.model.EdictTemplateDocument;
-import com.liangshou.tangdynasty.backend.edict.domain.model.EdictTemplateDocument.TemplateParam;
-import com.liangshou.tangdynasty.backend.edict.domain.model.EdictTemplateDocument.TemplateType;
-import com.liangshou.tangdynasty.backend.edict.infrastructure.mongo.repository.EdictTemplateRepository;
+import com.liangshou.infrastructure.mongo.domain.EdictTemplateDocument;
+import com.liangshou.infrastructure.mongo.domain.EdictTemplateDocument.TemplateParam;
+import com.liangshou.infrastructure.mongo.domain.EdictTemplateDocument.TemplateType;
+import com.liangshou.infrastructure.mongo.repository.EdictTemplateRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;

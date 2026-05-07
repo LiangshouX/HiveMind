@@ -1,11 +1,11 @@
-package com.liangshou.tangdynasty.backend.edict.adapter.controller;
+﻿package com.liangshou.adapter.controller;
 
 import com.liangshou.tangdynasty.agentic.common.util.SecurityUtils;
-import com.liangshou.tangdynasty.backend.edict.application.IEdictTemplateService;
-import com.liangshou.tangdynasty.backend.edict.application.dto.EdictExecuteCommand;
-import com.liangshou.tangdynasty.backend.edict.application.dto.EdictTemplateCreateCommand;
-import com.liangshou.tangdynasty.backend.edict.application.dto.EdictTemplateDTO;
-import com.liangshou.tangdynasty.backend.edict.application.dto.EdictTemplateUpdateCommand;
+import com.liangshou.service.IEdictTemplateService;
+import com.liangshou.service.dto.EdictExecuteCommand;
+import com.liangshou.service.dto.EdictTemplateCreateCommand;
+import com.liangshou.service.dto.EdictTemplateDTO;
+import com.liangshou.service.dto.EdictTemplateUpdateCommand;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

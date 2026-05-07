@@ -1,4 +1,4 @@
-package com.liangshou.tangdynasty.backend.edict.application.dto;
+﻿package com.liangshou.service.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

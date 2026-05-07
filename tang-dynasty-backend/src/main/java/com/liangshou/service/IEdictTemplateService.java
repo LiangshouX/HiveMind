@@ -1,9 +1,9 @@
-package com.liangshou.tangdynasty.backend.edict.application;
+﻿package com.liangshou.service;
 
-import com.liangshou.tangdynasty.backend.edict.application.dto.EdictExecuteCommand;
-import com.liangshou.tangdynasty.backend.edict.application.dto.EdictTemplateCreateCommand;
-import com.liangshou.tangdynasty.backend.edict.application.dto.EdictTemplateDTO;
-import com.liangshou.tangdynasty.backend.edict.application.dto.EdictTemplateUpdateCommand;
+import com.liangshou.service.dto.EdictExecuteCommand;
+import com.liangshou.service.dto.EdictTemplateCreateCommand;
+import com.liangshou.service.dto.EdictTemplateDTO;
+import com.liangshou.service.dto.EdictTemplateUpdateCommand;
 
 import java.util.List;
 

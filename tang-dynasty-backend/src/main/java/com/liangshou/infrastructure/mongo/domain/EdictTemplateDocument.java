@@ -1,4 +1,4 @@
-package com.liangshou.tangdynasty.backend.edict.domain.model;
+package com.liangshou.infrastructure.mongo.domain;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

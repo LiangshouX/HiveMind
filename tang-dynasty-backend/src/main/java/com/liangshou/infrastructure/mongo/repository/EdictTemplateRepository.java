@@ -1,7 +1,7 @@
-package com.liangshou.tangdynasty.backend.edict.infrastructure.mongo.repository;
+package com.liangshou.infrastructure.mongo.repository;
 
-import com.liangshou.tangdynasty.backend.edict.domain.model.EdictTemplateDocument;
-import com.liangshou.tangdynasty.backend.edict.domain.model.EdictTemplateDocument.TemplateType;
+import com.liangshou.infrastructure.mongo.domain.EdictTemplateDocument;
+import com.liangshou.infrastructure.mongo.domain.EdictTemplateDocument.TemplateType;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 

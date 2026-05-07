@@ -1,6 +1,6 @@
-package com.liangshou.tangdynasty.backend.edict.application.dto;
+﻿package com.liangshou.service.dto;
 
-import com.liangshou.tangdynasty.backend.edict.domain.model.EdictTemplateDocument.TemplateParam;
+import com.liangshou.infrastructure.mongo.domain.EdictTemplateDocument.TemplateParam;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
