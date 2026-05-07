@@ -1,4 +1,4 @@
-﻿package com.liangshou.adapter.controller;
+package com.liangshou.adapter.controller;
 
 import com.liangshou.tangdynasty.agentic.common.util.SecurityUtils;
 import com.liangshou.service.IEdictTemplateService;

@@ -1,4 +1,4 @@
-﻿package com.liangshou.service;
+package com.liangshou.service;
 
 import com.liangshou.service.dto.EdictExecuteCommand;
 import com.liangshou.service.dto.EdictTemplateCreateCommand;

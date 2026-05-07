@@ -1,4 +1,4 @@
-﻿package com.liangshou.service.dto;
+package com.liangshou.service.dto;
 
 import com.liangshou.infrastructure.mongo.domain.EdictTemplateDocument.TemplateParam;
 import lombok.AllArgsConstructor;
