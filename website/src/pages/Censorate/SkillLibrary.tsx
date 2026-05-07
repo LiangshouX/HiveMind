@@ -2,13 +2,16 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Typography, Card, Button, Row, Col, Tag, Switch, Drawer, Form, Input,
   Space, message, Badge, Select, Spin, Empty, Popconfirm, Tooltip,
-  Tabs, Divider, Alert
+  Tabs, Divider, Alert, Table
 } from 'antd';
 import {
   PlusOutlined, CloudOutlined, EditOutlined,
   DeleteOutlined, DownloadOutlined, CheckCircleOutlined,
-  FolderOutlined, InfoCircleOutlined, CrownOutlined
+  FolderOutlined, InfoCircleOutlined, CrownOutlined,
+  FileTextOutlined, FileZipOutlined, SwitcherOutlined
 } from '@ant-design/icons';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { useAuth } from '../../providers/AuthProvider';
 import {
   fetchAllSkills,
@@ -17,7 +20,9 @@ import {
   publishCloudSkill,
   archiveCloudSkill,
   deleteCloudSkill,
-  getSkillDownloadUrl
+  getSkillDownloadUrl,
+  enableSkill,
+  disableSkill
 } from '../../services/skillApi';
 import type { CloudSkill, SkillCreateRequest, SkillVersionRequest } from '../../types/skillApi';
 
@@ -31,6 +36,155 @@ const STATUS_COLORS: Record<string, { color: string; text: string }> = {
   deprecated: { color: 'warning', text: '已弃用' },
   archived: { color: 'error', text: '已归档' },
 };
+// 解析 SKILL.md 中的 front matter 和内容
+interface ParsedSkillMarkdown {
+  frontMatter: Record<string, any>;
+  content: string;
+  hasFrontMatter: boolean;
+}
+
+function parseSkillMarkdownWithFrontMatter(markdown: string): ParsedSkillMarkdown {
+  if (!markdown) {
+    return { frontMatter: {}, content: '', hasFrontMatter: false };
+  }
+
+  const frontMatterRegex = /^---\n([\s\S]*?)\n---\n?/;
+  const match = markdown.match(frontMatterRegex);
+
+  if (!match) {
+    return { frontMatter: {}, content: markdown, hasFrontMatter: false };
+  }
+
+  const frontMatterText = match[1];
+  const content = markdown.slice(match[0].length);
+  const frontMatter: Record<string, any> = {};
+
+  // 解析 YAML front matter
+  frontMatterText.split('\n').forEach(line => {
+    const colonIndex = line.indexOf(':');
+    if (colonIndex > 0) {
+      const key = line.substring(0, colonIndex).trim();
+      let value = line.substring(colonIndex + 1).trim();
+      // 移除引号
+      if ((value.startsWith('"') && value.endsWith('"')) ||
+          (value.startsWith("'") && value.endsWith("'"))) {
+        value = value.slice(1, -1);
+      }
+      frontMatter[key] = value;
+    }
+  });
+
+  return { frontMatter, content, hasFrontMatter: true };
+}
+
+// Front Matter 元数据卡片组件 - GitHub/Typora 风格
+const FrontMatterCard: React.FC<{ frontMatter: Record<string, any> }> = ({ frontMatter }) => {
+  if (Object.keys(frontMatter).length === 0) return null;
+
+  return (
+      <div style={{
+        marginBottom: 24,
+        padding: 16,
+        background: 'linear-gradient(135deg, #f6f8fa 0%, #eef1f4 100%)',
+        borderRadius: 8,
+        border: '1px solid #d0d7de',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
+      }}>
+        <div style={{
+          fontSize: 11,
+          fontWeight: 600,
+          color: '#57606a',
+          marginBottom: 12,
+          textTransform: 'uppercase',
+          letterSpacing: '0.8px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6
+        }}>
+        <span style={{
+          display: 'inline-block',
+          width: 3,
+          height: 12,
+          background: '#0969da',
+          borderRadius: 2
+        }}></span>
+          Metadata
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {Object.entries(frontMatter).map(([key, value]) => (
+              <div
+                  key={key}
+                  style={{
+                    padding: '10px 14px',
+                    background: '#ffffff',
+                    borderRadius: 6,
+                    border: '1px solid #d0d7de',
+                    minWidth: 140,
+                    flex: '1 1 auto',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                    transition: 'all 0.2s'
+                  }}
+              >
+                <div style={{
+                  fontSize: 10,
+                  color: '#656d76',
+                  marginBottom: 4,
+                  fontWeight: 600,
+                  textTransform: 'capitalize',
+                  letterSpacing: '0.3px'
+                }}>
+                  {key}
+                </div>
+                <div style={{
+                  fontSize: 13,
+                  color: '#24292f',
+                  fontWeight: 600,
+                  wordBreak: 'break-word',
+                  lineHeight: 1.4
+                }}>
+                  {String(value)}
+                </div>
+              </div>
+          ))}
+        </div>
+      </div>
+  );
+};
+// 解析 SKILL.md 中的 References 和 Scripts 区块
+interface SkillContentSections {
+  mainMarkdown: string;
+  references: Array<{ title: string; description: string }>;
+  scripts: Array<{ name: string; content: string; language: string }>;
+}
+
+function parseSkillMarkdown(markdown: string | null | undefined, resources?: Record<string, string> | null): SkillContentSections {
+  if (!markdown) {
+    return { mainMarkdown: '', references: [], scripts: [] };
+  }
+
+  const references: Array<{ title: string; description: string }> = [];
+  const scripts: Array<{ name: string; content: string; language: string }> = [];
+
+  // 从 resources 中提取 scripts
+  if (resources) {
+    Object.entries(resources).forEach(([path, content]) => {
+      if (path.startsWith('scripts/') || path.endsWith('.sh') || path.endsWith('.py') || path.endsWith('.js')) {
+        const name = path.split('/').pop() || path;
+        const language = path.endsWith('.py') ? 'python' : path.endsWith('.js') ? 'javascript' : 'bash';
+        scripts.push({ name, content, language });
+      } else if (path.startsWith('references/') || path.endsWith('.md') || path.endsWith('.txt')) {
+        const title = path.split('/').pop() || path;
+        references.push({ title, description: content.substring(0, 200) + (content.length > 200 ? '...' : '') });
+      }
+    });
+  }
+
+  return {
+    mainMarkdown: markdown,
+    references,
+    scripts,
+  };
+}
 
 const SkillLibrary: React.FC = () => {
   const { user } = useAuth();
@@ -46,6 +200,8 @@ const SkillLibrary: React.FC = () => {
   const [drawerMode, setDrawerMode] = useState<'create' | 'edit' | 'view'>('view');
   const [publishLoading, setPublishLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('content');
+  const [enableLoading, setEnableLoading] = useState(false);
+  const [resourceFiles, setResourceFiles] = useState<Array<{ path: string; content: string }>>([]);
 
   // 加载 Skills
   const loadSkills = useCallback(async () => {
@@ -77,6 +233,7 @@ const SkillLibrary: React.FC = () => {
       publish: false,
       tags: [],
     });
+    setResourceFiles([]);
     setDrawerVisible(true);
   };
 
@@ -84,10 +241,19 @@ const SkillLibrary: React.FC = () => {
   const handleEdit = (skill: CloudSkill) => {
     setDrawerMode('edit');
     setCurrentSkill(skill);
+    
+    // 如果是系统预置技能，提取 resources
+    const resources = skill.resources || {};
+    const resourceList = Object.entries(resources).map(([path, content]) => ({
+      path,
+      content: content as string,
+    }));
+    setResourceFiles(resourceList);
+    
     form.setFieldsValue({
       name: skill.name,
       description: skill.description,
-      skillMarkdown: '', // 需要从 OSS 下载
+      skillMarkdown: skill.skillMarkdown || '',
       version: incrementVersion(skill.currentVersion),
       tags: skill.tags || [],
     });
@@ -98,6 +264,7 @@ const SkillLibrary: React.FC = () => {
   const handleView = (skill: CloudSkill) => {
     setDrawerMode('view');
     setCurrentSkill(skill);
+    setActiveTab('content');
     setDrawerVisible(true);
   };
 
@@ -105,31 +272,39 @@ const SkillLibrary: React.FC = () => {
   const handleSave = async () => {
     try {
       const values = await form.validateFields();
-      
+
+      // 将 resourceFiles 转换为对象映射
+      const resourcesMap: Record<string, string> = {};
+      resourceFiles.forEach(file => {
+        if (file.path && file.content) {
+          resourcesMap[file.path] = file.content;
+        }
+      });
+
       if (drawerMode === 'create') {
         const request: SkillCreateRequest = {
           name: values.name,
           description: values.description,
           skillMarkdown: values.skillMarkdown,
-          resources: values.resources ? JSON.parse(values.resources) : undefined,
+          resources: Object.keys(resourcesMap).length > 0 ? resourcesMap : undefined,
           tags: values.tags,
           version: values.version || '1.0.0',
           publish: values.publish || false,
         };
-        
+
         await createCloudSkill(userId, request);
         message.success('技能创建成功');
       } else if (drawerMode === 'edit' && currentSkill) {
         const request: SkillVersionRequest = {
           skillMarkdown: values.skillMarkdown,
-          resources: values.resources ? JSON.parse(values.resources) : undefined,
+          resources: Object.keys(resourcesMap).length > 0 ? resourcesMap : undefined,
           version: values.version || incrementVersion(currentSkill.currentVersion),
         };
-        
+
         await updateCloudSkill(userId, currentSkill.skillId, request);
         message.success('技能更新成功');
       }
-      
+
       setDrawerVisible(false);
       loadSkills();
     } catch (error: any) {
@@ -190,6 +365,28 @@ const SkillLibrary: React.FC = () => {
     } catch (error: any) {
       message.error(error.message || '获取下载链接失败');
       console.error('下载失败:', error);
+    }
+  };
+
+  // 启用/禁用 Skill
+  const handleToggleEnable = async (skill: CloudSkill) => {
+    if (enableLoading) return;
+    
+    setEnableLoading(true);
+    try {
+      if (skill.enabled) {
+        await disableSkill(userId, skill.name);
+        message.success(`技能 "${skill.name}" 已禁用`);
+      } else {
+        await enableSkill(userId, skill.name);
+        message.success(`技能 "${skill.name}" 已启用`);
+      }
+      loadSkills();
+    } catch (error: any) {
+      message.error(error.message || '操作失败');
+      console.error('启用/禁用失败:', error);
+    } finally {
+      setEnableLoading(false);
     }
   };
 
@@ -261,7 +458,23 @@ const SkillLibrary: React.FC = () => {
                     style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
                     bodyStyle={{ flex: 1, display: 'flex', flexDirection: 'column', padding: 16 }}
                     onClick={() => handleView(skill)}
-                    actions={isBuiltin ? [] : [
+                    actions={isBuiltin ? [
+                      <Tooltip key="toggle" title={skill.enabled ? '禁用' : '启用'}>
+                        <Popconfirm
+                          title={`确定要${skill.enabled ? '禁用' : '启用'}此技能吗？`}
+                          onConfirm={(e) => { e?.stopPropagation(); handleToggleEnable(skill); }}
+                          okText="确定"
+                          cancelText="取消"
+                        >
+                          <Button
+                            type="text"
+                            icon={<SwitcherOutlined style={{ color: skill.enabled ? '#52c41a' : '#999', fontSize: 20 }} />}
+                            onClick={(e) => e.stopPropagation()}
+                            loading={enableLoading}
+                          />
+                        </Popconfirm>
+                      </Tooltip>,
+                    ] : [
                       <Tooltip key="edit" title="编辑">
                         <Button
                           type="text"
@@ -332,6 +545,9 @@ const SkillLibrary: React.FC = () => {
                         )}
                         {renderStatus(skill.status)}
                         {!isBuiltin && <Tag color="geekblue">v{skill.currentVersion}</Tag>}
+                        <Tag color={skill.enabled ? 'green' : 'default'} style={{ fontSize: 11 }}>
+                          {skill.enabled ? '已启用' : '已禁用'}
+                        </Tag>
                       </Space>
                     </div>
 
@@ -415,31 +631,49 @@ const SkillLibrary: React.FC = () => {
             )}
             {drawerMode === 'view' && currentSkill && (
               <>
-                <Button 
-                  icon={<DownloadOutlined />} 
-                  onClick={() => handleDownload(currentSkill)}
-                >
-                  下载
-                </Button>
-                {currentSkill.status !== 'published' && (
-                  <Button 
-                    type="primary" 
-                    icon={<CheckCircleOutlined />}
-                    onClick={() => handlePublish(currentSkill)}
-                    loading={publishLoading}
+                {currentSkill.source === 'BUILTIN' ? (
+                  <Popconfirm
+                    title={`确定要${currentSkill.enabled ? '禁用' : '启用'}此技能吗？`}
+                    onConfirm={() => handleToggleEnable(currentSkill)}
+                    okText="确定"
+                    cancelText="取消"
                   >
-                    发布
-                  </Button>
+                    <Button
+                      icon={<SwitcherOutlined />}
+                      loading={enableLoading}
+                    >
+                      {currentSkill.enabled ? '禁用' : '启用'}
+                    </Button>
+                  </Popconfirm>
+                ) : (
+                  <>
+                    <Button
+                      icon={<DownloadOutlined />}
+                      onClick={() => handleDownload(currentSkill)}
+                    >
+                      下载
+                    </Button>
+                    {currentSkill.status !== 'published' && (
+                      <Button
+                        type="primary"
+                        icon={<CheckCircleOutlined />}
+                        onClick={() => handlePublish(currentSkill)}
+                        loading={publishLoading}
+                      >
+                        发布
+                      </Button>
+                    )}
+                    <Button
+                      icon={<EditOutlined />}
+                      onClick={() => {
+                        setDrawerMode('edit');
+                        handleEdit(currentSkill);
+                      }}
+                    >
+                      编辑
+                    </Button>
+                  </>
                 )}
-                <Button 
-                  icon={<EditOutlined />}
-                  onClick={() => {
-                    setDrawerMode('edit');
-                    handleEdit(currentSkill);
-                  }}
-                >
-                  编辑
-                </Button>
               </>
             )}
           </Space>
@@ -449,7 +683,18 @@ const SkillLibrary: React.FC = () => {
           <div>
             <Alert
               message={`当前版本: v${currentSkill.currentVersion}`}
-              description={`状态: ${renderStatus(currentSkill.status)}`}
+              description={
+                <Space>
+                  <Text>状态:</Text>
+                  {renderStatus(currentSkill.status)}
+                  {currentSkill.source === 'BUILTIN' && (
+                    <Tag color="gold" icon={<CrownOutlined />}>系统内置</Tag>
+                  )}
+                  <Tag color={currentSkill.enabled ? 'green' : 'default'}>
+                    {currentSkill.enabled ? '已启用' : '已禁用'}
+                  </Tag>
+                </Space>
+              }
               type="info"
               showIcon
               style={{ marginBottom: 24 }}
@@ -461,19 +706,142 @@ const SkillLibrary: React.FC = () => {
               items={[
                 {
                   key: 'content',
-                  label: '内容',
+                  label: (
+                    <Space>
+                      <FileTextOutlined />
+                      SKILL.md
+                    </Space>
+                  ),
                   children: (
-                    <div style={{ padding: 16, background: '#f5f5f5', borderRadius: 8, minHeight: 400, whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: 13 }}>
-                      {currentSkill.fileManifest 
-                        ? JSON.stringify(currentSkill.fileManifest, null, 2)
-                        : '内容需要从 OSS 下载后查看'
-                      }
+                    <div style={{ padding: 16, minHeight: 400 }}>
+                      {currentSkill.skillMarkdown ? (() => {
+                        const parsed = parseSkillMarkdownWithFrontMatter(currentSkill.skillMarkdown);
+                        return (
+                            <div style={{
+                              padding: 16,
+                              background: '#ffffff',
+                              borderRadius: 8,
+                              border: '1px solid #d0d7de',
+                              lineHeight: 1.6
+                            }}>
+                              {/* Front Matter 元数据卡片 */}
+                              {parsed.hasFrontMatter && <FrontMatterCard frontMatter={parsed.frontMatter} />}
+
+                              {/* Markdown 内容 */}
+                              <div style={{
+                                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif',
+                                fontSize: 14,
+                                lineHeight: 1.8
+                              }}>
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                  {parsed.content}
+                                </ReactMarkdown>
+                              </div>
+                            </div>
+                        );
+                      })() : currentSkill.fileManifest ? (
+                        <div style={{ padding: 16, background: '#f5f5f5', borderRadius: 8, whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: 13 }}>
+                          {JSON.stringify(currentSkill.fileManifest, null, 2)}
+                        </div>
+                      ) : (
+                        <Empty description="内容需要从 OSS 下载后查看" />
+                      )}
+                    </div>
+                  ),
+                },
+                {
+                  key: 'references',
+                  label: (
+                    <Space>
+                      <FileZipOutlined />
+                      References
+                      {(() => {
+                        const sections = parseSkillMarkdown(currentSkill.skillMarkdown, currentSkill.resources);
+                        return sections.references.length > 0 ? ` (${sections.references.length})` : '';
+                      })()}
+                    </Space>
+                  ),
+                  children: (
+                    <div style={{ padding: 16, minHeight: 400 }}>
+                      {(() => {
+                        const sections = parseSkillMarkdown(currentSkill.skillMarkdown, currentSkill.resources);
+                        if (sections.references.length === 0) {
+                          return <Empty description="暂无参考文档" />;
+                        }
+                        return (
+                          <Space direction="vertical" style={{ width: '100%' }} size="middle">
+                            {sections.references.map((ref, idx) => (
+                              <Card key={idx} size="small" title={ref.title}>
+                                <Paragraph type="secondary">{ref.description}</Paragraph>
+                              </Card>
+                            ))}
+                          </Space>
+                        );
+                      })()}
+                    </div>
+                  ),
+                },
+                {
+                  key: 'scripts',
+                  label: (
+                    <Space>
+                      <FileZipOutlined />
+                      Scripts
+                      {(() => {
+                        const sections = parseSkillMarkdown(currentSkill.skillMarkdown, currentSkill.resources);
+                        return sections.scripts.length > 0 ? ` (${sections.scripts.length})` : '';
+                      })()}
+                    </Space>
+                  ),
+                  children: (
+                    <div style={{ padding: 16, minHeight: 400 }}>
+                      {(() => {
+                        const sections = parseSkillMarkdown(currentSkill.skillMarkdown, currentSkill.resources);
+                        if (sections.scripts.length === 0) {
+                          return <Empty description="暂无脚本文件" />;
+                        }
+                        return (
+                          <Tabs
+                            type="card"
+                            items={sections.scripts.map((script, idx) => ({
+                              key: String(idx),
+                              label: script.name,
+                              children: (
+                                <div style={{ 
+                                  padding: 12, 
+                                  background: '#1e1e1e', 
+                                  borderRadius: 6,
+                                  overflow: 'auto',
+                                  maxHeight: 500
+                                }}>
+                                  <pre style={{ 
+                                    margin: 0, 
+                                    color: '#d4d4d4',
+                                    fontFamily: 'Consolas, Monaco, "Courier New", monospace',
+                                    fontSize: 13,
+                                    lineHeight: 1.5,
+                                    whiteSpace: 'pre-wrap',
+                                    wordBreak: 'break-word'
+                                  }}>
+                                    <code>{script.content}</code>
+                                  </pre>
+                                </div>
+                              ),
+                            }))}
+                          />
+                        );
+                      })()}
                     </div>
                   ),
                 },
                 {
                   key: 'info',
-                  label: '信息',
+                  label: (
+                    <Space>
+                      <InfoCircleOutlined />
+                      信息
+                    </Space>
+                  ),
                   children: (
                     <div style={{ padding: 16 }}>
                       <div style={{ marginBottom: 16 }}>
@@ -516,9 +884,9 @@ const SkillLibrary: React.FC = () => {
 
         {(drawerMode === 'create' || drawerMode === 'edit') && (
           <Form form={form} layout="vertical">
-            <Form.Item 
-              name="name" 
-              label="技能名称" 
+            <Form.Item
+              name="name"
+              label="技能名称"
               rules={[{ required: true, message: '请输入技能名称' }]}
             >
               <Input placeholder="例如：数据分析助手" />
@@ -536,9 +904,9 @@ const SkillLibrary: React.FC = () => {
               />
             </Form.Item>
 
-            <Form.Item 
-              name="version" 
-              label="版本号" 
+            <Form.Item
+              name="version"
+              label="版本号"
               rules={[
                 { required: true, message: '请输入版本号' },
                 { pattern: /^\d+\.\d+\.\d+$/, message: '版本号格式必须为 X.Y.Z' }
@@ -555,39 +923,115 @@ const SkillLibrary: React.FC = () => {
               </Space>
             </div>
 
-            <Form.Item 
-              name="skillMarkdown" 
+            <Form.Item
+              name="skillMarkdown"
               rules={[{ required: true, message: '请输入 SKILL.md 内容' }]}
             >
               {preview ? (
-                <div style={{ 
-                  padding: 16, 
-                  background: '#fafafa', 
-                  borderRadius: 6, 
-                  minHeight: 300, 
-                  whiteSpace: 'pre-wrap', 
-                  fontFamily: 'monospace',
-                  fontSize: 13,
+                <div style={{
+                  padding: 16,
+                  background: '#fafafa',
+                  borderRadius: 6,
+                  minHeight: 300,
                   border: '1px solid #d9d9d9',
+                  maxHeight: 400,
+                  overflow: 'auto'
                 }}>
-                  {form.getFieldValue('skillMarkdown') || '内容预览将显示在这里...'}
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {form.getFieldValue('skillMarkdown') || '*内容预览将显示在这里...*'}
+                  </ReactMarkdown>
                 </div>
               ) : (
-                <TextArea 
-                  rows={15} 
+                <TextArea
+                  rows={15}
                   style={{ fontFamily: 'monospace', fontSize: 13 }}
                   placeholder="在此输入 SKILL.md 内容..."
                 />
               )}
             </Form.Item>
 
-            <Form.Item name="resources" label="资源文件 (JSON 格式)">
-              <TextArea 
-                rows={5} 
-                placeholder='例如：{"scripts/analyze.py": "#!/usr/bin/env python3..."}'
-                style={{ fontFamily: 'monospace' }}
-              />
-            </Form.Item>
+            <Divider>资源文件</Divider>
+
+            <div style={{ marginBottom: 16 }}>
+              <Space style={{ marginBottom: 8 }} wrap>
+                <Button
+                  size="small"
+                  onClick={() => {
+                    setResourceFiles([...resourceFiles, { path: 'scripts/new_script.py', content: '# 新脚本\n' }]);
+                  }}
+                >
+                  + 添加脚本
+                </Button>
+                <Button
+                  size="small"
+                  onClick={() => {
+                    setResourceFiles([...resourceFiles, { path: 'references/new_ref.md', content: '# 参考文档\n' }]);
+                  }}
+                >
+                  + 添加参考文档
+                </Button>
+              </Space>
+
+              {resourceFiles.length > 0 && (
+                <Table
+                  size="small"
+                  dataSource={resourceFiles}
+                  rowKey="path"
+                  pagination={false}
+                  columns={[
+                    {
+                      title: '文件路径',
+                      dataIndex: 'path',
+                      key: 'path',
+                      width: '35%',
+                      render: (text: string, _record: any, index: number) => (
+                        <Input
+                          size="small"
+                          value={text}
+                          onChange={(e) => {
+                            const newFiles = [...resourceFiles];
+                            newFiles[index].path = e.target.value;
+                            setResourceFiles(newFiles);
+                          }}
+                        />
+                      ),
+                    },
+                    {
+                      title: '操作',
+                      key: 'action',
+                      width: '15%',
+                      render: (_text: any, _record: any, index: number) => (
+                        <Button
+                          size="small"
+                          danger
+                          onClick={() => {
+                            const newFiles = resourceFiles.filter((__, idx) => idx !== index);
+                            setResourceFiles(newFiles);
+                          }}
+                        >
+                          删除
+                        </Button>
+                      ),
+                    },
+                  ]}
+                  expandable={{
+                    expandedRowRender: (record: any, index: number) => (
+                      <TextArea
+                        rows={8}
+                        value={record.content}
+                        style={{ fontFamily: 'monospace', fontSize: 12 }}
+                        onChange={(e) => {
+                          const newFiles = [...resourceFiles];
+                          newFiles[index].content = e.target.value;
+                          setResourceFiles(newFiles);
+                        }}
+                      />
+                    ),
+                    rowExpandable: () => true,
+                  }}
+                />
+              )}
+            </div>
 
             {drawerMode === 'create' && (
               <Form.Item name="publish" valuePropName="checked">

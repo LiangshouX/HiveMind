@@ -120,3 +120,30 @@ export async function getSkillDownloadUrl(
 export async function fetchAllSkills(userId: string): Promise<CloudSkill[]> {
   return getJson<CloudSkill[]>(`${SKILL_CLOUD_BASE}/all?userId=${encodeURIComponent(userId)}`);
 }
+
+/**
+ * 启用 Skill
+ */
+export async function enableSkill(
+  userId: string,
+  skillName: string
+): Promise<CloudSkill> {
+  return postJson<CloudSkill>(
+    `/tdagent/skills/users/${userId}/${skillName}/enable`,
+    {}
+  );
+}
+
+/**
+ * 禁用 Skill
+ */
+export async function disableSkill(
+  userId: string,
+  skillName: string
+): Promise<CloudSkill> {
+  return postJson<CloudSkill>(
+    `/tdagent/skills/users/${userId}/${skillName}/disable`,
+    {}
+  );
+}
+

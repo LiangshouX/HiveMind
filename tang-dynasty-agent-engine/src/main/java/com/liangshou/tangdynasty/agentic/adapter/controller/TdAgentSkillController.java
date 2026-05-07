@@ -268,7 +268,7 @@ public class TdAgentSkillController {
      */
     @GetMapping("/cloud/all")
     public List<Map<String, Object>> listAllSkills(@RequestParam String userId) {
-        // 1. 获取系统内置技能（BUILTIN）
+        // 1. 获取系统内置技能（BUILTIN）- 包含完整的 SKILL.md 内容
         List<TdAgentSkillInfo> builtinSkills = skillService.listSkills(userId);
         List<Map<String, Object>> result = new java.util.ArrayList<>();
 
@@ -284,8 +284,11 @@ public class TdAgentSkillController {
             map.put("source", "BUILTIN");
             map.put("enabled", skill.isEnabled());
             map.put("createdAt", null);
-            map.put("updatedAt", skill.getUpdatedAt());
+            map.put("updatedAt", skill.getUpdatedAt() != null ? skill.getUpdatedAt().toString() : null);
             map.put("downloadUrl", null);
+            // 系统预置SKILL直接返回 SKILL.md 内容和资源文件
+            map.put("skillMarkdown", skill.getSkillMarkdown());
+            map.put("resources", skill.getResources());
             map.put("fileManifest", null);
             result.add(map);
         }
@@ -311,6 +314,9 @@ public class TdAgentSkillController {
                 map.put("createdAt", po.getCreatedAt());
                 map.put("updatedAt", po.getUpdatedAt());
                 map.put("fileManifest", po.getFileManifest());
+                // 云端技能需要从 OSS 下载内容
+                map.put("skillMarkdown", null);
+                map.put("resources", null);
 
                 // 生成下载 URL
                 try {

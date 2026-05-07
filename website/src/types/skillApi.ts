@@ -21,6 +21,10 @@ export interface CloudSkill {
   /** 技能来源：BUILTIN(系统内置) 或 CUSTOMIZED(用户自定义) */
   source?: 'BUILTIN' | 'CUSTOMIZED';
   enabled?: boolean;
+  /** SKILL.md 内容（系统预置技能直接返回，云端技能为 null） */
+  skillMarkdown?: string | null;
+  /** 资源文件映射（系统预置技能直接返回，云端技能为 null） */
+  resources?: Record<string, string> | null;
   createdAt?: string | null;
   updatedAt?: string | null;
 }
