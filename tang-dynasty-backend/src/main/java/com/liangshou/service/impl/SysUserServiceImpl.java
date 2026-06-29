@@ -7,7 +7,7 @@ import com.liangshou.infrastructure.datasource.support.ISysUserSupport;
 import com.liangshou.service.ISysUserService;
 import com.liangshou.service.dto.SysUserDTO;
 import com.liangshou.service.vo.SysUserVO;
-import com.liangshou.tangdynasty.agentic.application.ITdAgentProfileService;
+import com.liangshou.agentic.application.ITdAgentProfileService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

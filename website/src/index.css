@@ -31,8 +31,8 @@ body {
   background: var(--td-scrollbar-thumb-hover);
 }
 
-/* Typography Utility for Imperial Headings */
-.imperial-heading {
+/* Typography Utility for Chat Headings */
+.chat-heading {
   font-family: 'Noto Serif SC', STZhongsong, SimSun, serif;
   letter-spacing: 2px;
 }
@@ -62,7 +62,7 @@ body {
 }
 
 /* ==========================================================================
-   TangDynasty Agent Console - 迁移自console项目的样式
+   AI Assistant Console - 迁移自console项目的样式
    ========================================================================== */
 
 /* 路由加载 shells */

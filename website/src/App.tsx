@@ -3,24 +3,24 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ConfigProvider, App as AntApp } from 'antd';
 import { getTangTheme } from './theme';
 import MainLayout from './layouts/MainLayout';
-import EdictLibrary from './pages/MorningCourt/EdictLibrary';
-import Channels from './pages/ImperialStudy/Channels';
-import EdictBoard from './pages/ImperialStudy/EdictBoard';
-import Memorials from './pages/ImperialStudy/Memorials';
-import ScheduledTasks from './pages/ImperialStudy/ScheduledTasks';
-import CourtRules from './pages/Censorate/CourtRules';
-import SkillLibrary from './pages/Censorate/SkillLibrary';
-import ToolLibrary from './pages/Censorate/ToolLibrary';
-import MCP from './pages/Censorate/MCP';
-import OfficialManagement from './pages/Censorate/OfficialManagement';
-import Models from './pages/Dalisi/Models';
-import EnvVars from './pages/Dalisi/EnvVars';
-import Security from './pages/Dalisi/Security';
-import TokenUsage from './pages/Dalisi/TokenUsage';
+import TaskTemplateLibrary from './pages/Workspace/TaskTemplateLibrary';
+import Channels from './pages/TaskCenter/Channels';
+import TaskBoard from './pages/TaskCenter/TaskBoard';
+import Reports from './pages/TaskCenter/Reports';
+import ScheduledTasks from './pages/TaskCenter/ScheduledTasks';
+import CourtRules from './pages/Admin/CourtRules';
+import SkillLibrary from './pages/Admin/SkillLibrary';
+import ToolLibrary from './pages/Admin/ToolLibrary';
+import MCP from './pages/Admin/MCP';
+import OfficialManagement from './pages/Admin/AgentManagement';
+import Models from './pages/Services/Models';
+import EnvVars from './pages/Services/EnvVars';
+import Security from './pages/Services/Security';
+import TokenUsage from './pages/Services/TokenUsage';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { ProfilePage } from './pages/ProfilePage';
-import { ChatPage } from './pages/MorningCourt/ChatPage.tsx';
+import { ChatPage } from './pages/Workspace/ChatPage.tsx';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
 import { AuthProvider } from './providers/AuthProvider';
 import { ThemeProvider } from './providers/ThemeProvider';
@@ -91,16 +91,16 @@ const App: React.FC = () => {
               />
               
               {/* 需要登录的页面 - 全部受 ProtectedRoute 保护 */}
-              <Route path="edict-library" element={<ProtectedRoute><EdictLibrary /></ProtectedRoute>} />
+              <Route path="task-templates" element={<ProtectedRoute><TaskTemplateLibrary /></ProtectedRoute>} />
               <Route path="channels" element={<ProtectedRoute><Channels /></ProtectedRoute>} />
-              <Route path="edict-board" element={<ProtectedRoute><EdictBoard /></ProtectedRoute>} />
-              <Route path="memorials" element={<ProtectedRoute><Memorials /></ProtectedRoute>} />
+              <Route path="task-board" element={<ProtectedRoute><TaskBoard /></ProtectedRoute>} />
+              <Route path="reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
               <Route path="scheduled-tasks" element={<ProtectedRoute><ScheduledTasks /></ProtectedRoute>} />
-              <Route path="court-rules" element={<ProtectedRoute><CourtRules /></ProtectedRoute>} />
+              <Route path="workspace-settings" element={<ProtectedRoute><CourtRules /></ProtectedRoute>} />
               <Route path="skill-library" element={<ProtectedRoute><SkillLibrary /></ProtectedRoute>} />
               <Route path="tool-library" element={<ProtectedRoute><ToolLibrary /></ProtectedRoute>} />
               <Route path="mcp" element={<ProtectedRoute><MCP /></ProtectedRoute>} />
-              <Route path="official-management" element={<ProtectedRoute><OfficialManagement /></ProtectedRoute>} />
+              <Route path="agent-management" element={<ProtectedRoute><OfficialManagement /></ProtectedRoute>} />
               <Route path="models" element={<ProtectedRoute><Models /></ProtectedRoute>} />
               <Route path="env-vars" element={<ProtectedRoute><EnvVars /></ProtectedRoute>} />
               <Route path="security" element={<ProtectedRoute><Security /></ProtectedRoute>} />

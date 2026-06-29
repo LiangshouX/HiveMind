@@ -35,9 +35,9 @@ export interface ToolSyncResponse {
   message: string;
 }
 
-// ── 旨意模板相关类型 ──
+// ── 任务模板相关类型 ──
 
-export interface EdictTemplateParam {
+export interface TaskTemplateParam {
   key: string;
   label: string;
   type: 'text' | 'textarea' | 'select' | 'input';
@@ -46,14 +46,14 @@ export interface EdictTemplateParam {
   options?: string[];
 }
 
-export interface EdictTemplate {
+export interface TaskTemplate {
   templateId: string;
   name: string;
   description: string;
   category: string;
   icon: string;
   command: string;
-  params: EdictTemplateParam[];
+  params: TaskTemplateParam[];
   depts: string[];
   est: string;
   cost: string;
@@ -63,19 +63,19 @@ export interface EdictTemplate {
   updatedAt: string | null;
 }
 
-export interface EdictCreateRequest {
+export interface TaskCreateRequest {
   name: string;
   description?: string;
   category: string;
   icon?: string;
   command: string;
-  params: EdictTemplateParam[];
+  params: TaskTemplateParam[];
   depts?: string[];
   est?: string;
   cost?: string;
 }
 
-export interface EdictExecuteResponse {
+export interface TaskExecuteResponse {
   ok: boolean;
   sessionId: string;
   title: string;
@@ -193,18 +193,18 @@ export const api = {
   syncSystemTools: (): Promise<ToolSyncResponse> =>
     request.post('/api/agent/tool-config/sync'),
 
-  // 旨意模板
-  listEdictTemplates: (): Promise<EdictTemplate[]> =>
+  // 任务模板
+  listTaskTemplates: (): Promise<TaskTemplate[]> =>
     request.get('/api/agent/edict-template'),
-  getEdictTemplate: (templateId: string): Promise<EdictTemplate> =>
+  getTaskTemplate: (templateId: string): Promise<TaskTemplate> =>
     request.get(`/api/agent/edict-template/${encodeURIComponent(templateId)}`),
-  createEdictTemplate: (data: EdictCreateRequest): Promise<EdictTemplate> =>
+  createTaskTemplate: (data: TaskCreateRequest): Promise<TaskTemplate> =>
     request.post('/api/agent/edict-template', data),
-  updateEdictTemplate: (templateId: string, data: Partial<EdictCreateRequest>): Promise<EdictTemplate> =>
+  updateTaskTemplate: (templateId: string, data: Partial<TaskCreateRequest>): Promise<TaskTemplate> =>
     request.put(`/api/agent/edict-template/${encodeURIComponent(templateId)}`, data),
-  deleteEdictTemplate: (templateId: string): Promise<void> =>
+  deleteTaskTemplate: (templateId: string): Promise<void> =>
     request.delete(`/api/agent/edict-template/${encodeURIComponent(templateId)}`),
-  executeEdictTemplate: (templateId: string, params: Record<string, string>): Promise<EdictExecuteResponse> =>
+  executeTaskTemplate: (templateId: string, params: Record<string, string>): Promise<TaskExecuteResponse> =>
     request.post(`/api/agent/edict-template/${encodeURIComponent(templateId)}/execute`, { params }),
 };
 

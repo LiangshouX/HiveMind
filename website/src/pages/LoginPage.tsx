@@ -28,7 +28,7 @@ export function LoginPage() {
       {contextHolder}
       <AuthLayout
         title="欢迎回来"
-        subtitle="使用 userId 与密码登录你的 Tang Dynasty Agent 控制台。"
+        subtitle="使用 userId 与密码登录你的 AI Assistant 控制台。"
         footer={
           <Text className="auth-footer-text">
             没有账号？<Link to="/register">立即注册</Link>

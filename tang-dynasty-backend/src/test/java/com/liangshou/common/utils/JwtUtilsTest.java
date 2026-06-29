@@ -8,7 +8,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class JwtUtilsTest {
     @Test
     void testTokenGenerationAndValidation() {
-        JwtUtils jwtUtils = new JwtUtils("TangDynastyJwtSecretKeyForConsoleLoginAndAgentAccess2026", 86400000L);
+        JwtUtils jwtUtils = new JwtUtils("AiAssistantJwtSecretKeyForConsoleLoginAndAgentAccess2026", 86400000L);
         String token = jwtUtils.generateToken("admin");
         assertNotNull(token);
 

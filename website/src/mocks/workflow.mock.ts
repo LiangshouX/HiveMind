@@ -78,17 +78,17 @@ function generateMockPlan(requirement: string): string {
 本方案旨在通过系统化的方法完成"${requirement}"任务，预计分为三个阶段实施。
 
 ## 二、执行步骤
-1. **需求分析阶段**（礼部负责）
+1. **需求分析阶段**（文档组负责）
    - 收集相关文档和资料
    - 整理核心需求点
    - 输出需求分析报告
 
-2. **方案设计阶段**（工部负责）
+2. **方案设计阶段**（工具组负责）
    - 设计整体架构
    - 制定技术规范
    - 评审设计方案
 
-3. **实施执行阶段**（六部协同）
+3. **实施执行阶段**（多Agent协同）
    - 按照分工执行具体任务
    - 定期检查进度和质量
    - 及时调整和优化
@@ -114,42 +114,42 @@ function generateMockTodos(): TodoItem[] {
     {
       id: '1',
       title: '需求分析与整理',
-      department: '礼部',
+      department: '文档组',
       estimatedTime: '2h',
       status: 'pending'
     },
     {
       id: '2',
       title: '技术方案设计',
-      department: '工部',
+      department: '工具组',
       estimatedTime: '3h',
       status: 'pending'
     },
     {
       id: '3',
       title: '资源调配与预算',
-      department: '户部',
+      department: '数据组',
       estimatedTime: '1h',
       status: 'pending'
     },
     {
       id: '4',
       title: '代码实现与开发',
-      department: '兵部',
+      department: '搜索组',
       estimatedTime: '8h',
       status: 'pending'
     },
     {
       id: '5',
       title: '质量测试与验证',
-      department: '刑部',
+      department: '分析组',
       estimatedTime: '2h',
       status: 'pending'
     },
     {
       id: '6',
       title: '人员安排与协调',
-      department: '吏部',
+      department: '管理组',
       estimatedTime: '1h',
       status: 'pending'
     }

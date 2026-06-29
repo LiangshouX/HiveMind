@@ -23,7 +23,7 @@ import remarkGfm from "remark-gfm";
 import {useEffect, useRef, useState} from "react";
 import type {AuthUser, SessionState} from "../../types";
 import {useTheme} from "../../providers/ThemeProvider";
-import {ImperialSendButton} from "./ImperialSendButton";
+import {ChatSendButton} from "./ChatSendButton";
 
 dayjs.extend(relativeTime);
 dayjs.locale("zh-cn");
@@ -269,7 +269,7 @@ export function ConversationWorkspace({
                                 <Welcome
                                     variant="borderless"
                                     icon={<RobotOutlined/>}
-                                    title="TD Agent 交互操作台"
+                                    title="AI Agent 交互操作台"
                                     description="侧栏管理会话，主区流式查看回答、推理、工具结果与审批状态。未发送首条消息前，不会在后端落库空会话。"
                                 />
                                 <Prompts
@@ -422,7 +422,7 @@ export function ConversationWorkspace({
                                 loading={busy}
                                 submitType="enter"
                                 autoSize={{minRows: 2, maxRows: 8}}
-                                placeholder="朕有旨意..."
+                                placeholder="输入任务..."
                                 style={{
                                     resize: 'none',
                                     color: 'var(--td-text-base)',
@@ -452,7 +452,7 @@ export function ConversationWorkspace({
                                         </Button>
                                     </Tooltip>
                                 ) : (
-                                    <ImperialSendButton
+                                    <ChatSendButton
                                         disabled={!input.trim()}
                                         loading={busy}
                                         onClick={() => void onSend()}

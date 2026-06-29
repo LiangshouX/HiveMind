@@ -44,28 +44,28 @@ function getItem(
 }
 
 const items: MenuItem[] = [
-    getItem('早朝', 'morning-court', <CommentOutlined/>, [
-        getItem('上朝', '/chat', <MessageOutlined/>),
-        getItem('旨意库', '/edict-library', <BookOutlined/>),
+    getItem('工作台', 'workspace', <CommentOutlined/>, [
+        getItem('对话', '/chat', <MessageOutlined/>),
+        getItem('任务模板', '/task-templates', <BookOutlined/>),
     ]),
-    getItem('御书房', 'imperial-study', <ReadOutlined/>, [
-        getItem('翰林学士', '/channels', <AppstoreOutlined/>),
-        getItem('旨意看板', '/edict-board', <ProfileOutlined/>),
-        getItem('奏折', '/memorials', <ReadOutlined/>),
-        getItem('司天台', '/scheduled-tasks', <FieldTimeOutlined/>),
+    getItem('任务中心', 'task-center', <ReadOutlined/>, [
+        getItem('渠道管理', '/channels', <AppstoreOutlined/>),
+        getItem('任务看板', '/task-board', <ProfileOutlined/>),
+        getItem('报告', '/reports', <ReadOutlined/>),
+        getItem('定时任务', '/scheduled-tasks', <FieldTimeOutlined/>),
     ]),
-    getItem('御史台', 'censorate', <UserOutlined/>, [
-        getItem('朝纲', '/court-rules', <ReadOutlined/>),
+    getItem('管理', 'admin', <UserOutlined/>, [
+        getItem('工作区设置', '/workspace-settings', <ReadOutlined/>),
         getItem('技能库', '/skill-library', <RobotOutlined/>),
         getItem('工具库', '/tool-library', <ToolOutlined/>),
         getItem('MCP', '/mcp', <ApiOutlined/>),
-        getItem('官员管理', '/official-management', <UserOutlined/>),
+        getItem('Agent管理', '/agent-management', <UserOutlined/>),
     ]),
-    getItem('九司', 'dalisi', <SafetyCertificateOutlined/>, [
+    getItem('服务', 'dalisi', <SafetyCertificateOutlined/>, [
         getItem('模型', '/models', <RobotOutlined/>),
         getItem('环境变量', '/env-vars', <SettingOutlined/>),
-        getItem('卫尉寺', '/security', <SafetyCertificateOutlined/>),
-        getItem('司农寺', '/token-usage', <DatabaseOutlined/>),
+        getItem('安全管理', '/security', <SafetyCertificateOutlined/>),
+        getItem('用量统计', '/token-usage', <DatabaseOutlined/>),
     ]),
 ];
 
@@ -119,7 +119,7 @@ const MainLayout: React.FC = () => {
                 }}>
                     <Title level={collapsed ? 3 : 2} className="imperial-heading"
                            style={{margin: 0, color: 'var(--td-primary)', textShadow: '0 2px 4px rgba(0,0,0,0.2)'}}>
-                        {collapsed ? '唐' : '大唐'}
+                        {collapsed ? 'AI' : 'AI Assistant'}
                     </Title>
                     {!collapsed && (
                         <Text style={{
@@ -128,7 +128,7 @@ const MainLayout: React.FC = () => {
                             letterSpacing: '4px',
                             marginTop: '4px'
                         }}>
-                            TANG DYNASTY
+                            AI ASSISTANT
                         </Text>
                     )}
                 </div>
@@ -225,8 +225,8 @@ const MainLayout: React.FC = () => {
                             </Button>
                         )}
                         <Space>
-                            <Text style={{color: 'var(--td-text-secondary)'}}>当前朝代：</Text>
-                            <Text strong style={{color: 'var(--td-highlight)'}}>贞观</Text>
+                            <Text style={{color: 'var(--td-text-secondary)'}}>当前模型：</Text>
+                            <Text strong style={{color: 'var(--td-highlight)'}}>Qwen-Max</Text>
                         </Space>
                     </Space>
                 </Header>
@@ -246,8 +246,8 @@ const MainLayout: React.FC = () => {
                     </div>
                 </Content>
                 <Footer style={{textAlign: 'center', background: 'transparent', borderTop: 'none'}}>
-                    <Text style={{color: 'var(--td-text-tertiary)'}}>Tang Dynasty AI Assistant
-                        ©{new Date().getFullYear()} · 三省六部制</Text>
+                    <Text style={{color: 'var(--td-text-tertiary)'}}>AI Assistant Platform
+                        ©{new Date().getFullYear()} · 多Agent协作</Text>
                 </Footer>
             </Layout>
         </Layout>

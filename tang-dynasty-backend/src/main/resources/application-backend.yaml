@@ -1,6 +1,6 @@
 spring:
   application:
-    name: tang-dynasty-backend
+    name: ai-assistant-backend
   jackson:
     date-format: yyyy-MM-dd HH:mm:ss
     time-zone: Asia/Shanghai
@@ -34,6 +34,6 @@ springdoc:
 
 security:
   jwt:
-    secret: ${JWT_SECRET:TangDynastyJwtSecretKeyForConsoleLoginAndAgentAccess2026}
+    secret: ${JWT_SECRET:AiAssistantJwtSecretKeyForConsoleLoginAndAgentAccess2026}
     expiration-ms: 86400000
 

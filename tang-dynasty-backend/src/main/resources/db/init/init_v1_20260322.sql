@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS `sys_user` (
   UNIQUE KEY `uk_userid` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统用户表';
 
--- ================================ 御书房场景 ================================
+-- ================================ 任务中心场景 ================================
 -- 1. AI Agent通讯渠
 CREATE TABLE IF NOT EXISTS `sys_channels` (
   `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',
@@ -45,14 +45,14 @@ CREATE TABLE IF NOT EXISTS `sys_channels` (
   KEY `idx_channel_name` (`channel_name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI Agent通讯渠道配置表';
 
--- 2. 任务/旨意表 (Tasks)
-CREATE TABLE IF NOT EXISTS `edict_tasks` (
+-- 2. 任务表 (Tasks)
+CREATE TABLE IF NOT EXISTS `agent_tasks` (
   `task_id` VARCHAR(64) NOT NULL COMMENT '任务ID, 如 JJC-20260228-E2E',
   `session_id` VARCHAR(64) DEFAULT NULL COMMENT '任务对应的session_id',
   `user_id` BIGINT UNSIGNED NOT NULL COMMENT '登录的用户ID',
   `title` VARCHAR(255) DEFAULT NULL COMMENT '任务标题',
-  `official_id` BIGINT UNSIGNED DEFAULT NULL COMMENT '当前负责官员ID',
-  `state` VARCHAR(32) NOT NULL DEFAULT 'PENDING' COMMENT '当前状态: PENDING/ZDXL/VSUU/MFXX/ASSIGNED/DOING/PREVIEW/DONE/FINISH',
+  `official_id` BIGINT UNSIGNED DEFAULT NULL COMMENT '当前负责Agent ID',
+  `state` VARCHAR(32) NOT NULL DEFAULT 'PENDING' COMMENT '当前状态: PENDING/AGENT_TRIAGE/AGENT_PLANNER/AGENT_REVIEWER/ASSIGNED/DOING/PREVIEW/DONE/FINISH',
   `priority` VARCHAR(16) DEFAULT 'normal' COMMENT '优先级: critical/high/normal/low',
   `block_reason` VARCHAR(512) DEFAULT NULL COMMENT '阻滞原因',
   `review_round` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '要求修改的轮数',
@@ -69,23 +69,23 @@ CREATE TABLE IF NOT EXISTS `edict_tasks` (
   KEY `idx_official_id` (`official_id`),
   KEY `idx_state` (`state`),
   KEY `idx_create_time` (`create_time`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='任务/旨意实例主表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='任务实例主表';
 
--- 3. 奏折/任务审批表
-CREATE TABLE IF NOT EXISTS `edict_memorial` (
+-- 3. 任务报告/审批表
+CREATE TABLE IF NOT EXISTS `task_reports` (
   `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `user_id` BIGINT UNSIGNED NOT NULL COMMENT '任务所属的用户ID',
-  `task_id` VARCHAR(64) NOT NULL COMMENT '任务ID, 对应 edict_tasks 的任务id',
+  `task_id` VARCHAR(64) NOT NULL COMMENT '任务ID, 对应 agent_tasks 的任务id',
   `task_title` VARCHAR(255) DEFAULT NULL COMMENT '任务标题',
   `task_content` TEXT NOT NULL COMMENT '任务指令内容',
   `task_result` TEXT COMMENT '任务输出结果',
   `approval_state` VARCHAR(32) NOT NULL DEFAULT 'WAITING' COMMENT '批阅状态: WAITING/APPROVAL/REFUSAL/REDO',
-  `delivery_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '奏折递交时间/创建时间',
+  `delivery_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '报告递交时间/创建时间',
   PRIMARY KEY (`id`),
   KEY `idx_user_id` (`user_id`),
   KEY `idx_task_id` (`task_id`),
   KEY `idx_approval_state` (`approval_state`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='奏折/任务审批表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='任务报告/审批表';
 
 -- 4. 定时任务管理表
 CREATE TABLE IF NOT EXISTS `scheduled_job` (
@@ -122,7 +122,7 @@ CREATE TABLE IF NOT EXISTS `scheduled_job_run_record` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='定时任务执行记录表';
 
 
--- ================================ 御史台场景 ================================
+-- ================================ 管理场景 ================================
 -- 1. 模型配置表
 CREATE TABLE IF NOT EXISTS `sys_models` (
   `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',
@@ -161,7 +161,7 @@ CREATE TABLE IF NOT EXISTS `sys_mcp` (
   KEY `idx_mcp_tool` (`mcp_tool`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='MCP配置表';
 
--- ================================ 九司场景 ================================
+-- ================================ 服务场景 ================================
 -- 1. Token消耗统计表
 -- ----------------------------
 DROP TABLE IF EXISTS `sys_token_usage`;
@@ -170,7 +170,7 @@ CREATE TABLE IF NOT EXISTS `sys_token_usage` (
   `user_id` BIGINT UNSIGNED NOT NULL COMMENT '任务所属的用户ID',
   `model_provider_id` VARCHAR(64) NOT NULL COMMENT '模型供应商',
   `model_id` VARCHAR(128) NOT NULL COMMENT '请求的模型ID',
-  `official_id` BIGINT UNSIGNED DEFAULT NULL COMMENT '调用的官员',
+  `official_id` BIGINT UNSIGNED DEFAULT NULL COMMENT '调用的Agent',
   `prompt_tokens` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '输入Token数',
   `completion_tokens` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '输出Token数',
   `total_tokens` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '总Token数',

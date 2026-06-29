@@ -26,11 +26,11 @@ logging:
   level:
     com.liangshou: info
     # Agent Engine 流式输出相关日志 - 调试时可改为 debug 或 trace
-    com.liangshou.tangdynasty.agentic.adapter.controller: info
-    com.liangshou.tangdynasty.agentic.service.impl.TdAgentStreamingServiceImpl: info
-    com.liangshou.tangdynasty.agentic.agents.TdAgentFactory: info
-    com.liangshou.tangdynasty.agentic.agents.streaming.TdAgentActiveSessionRegistry: info
-    com.liangshou.tangdynasty.agentic.agents.TdAgentModelFactory: info
+    com.liangshou.agentic.adapter.controller: info
+    com.liangshou.agentic.service.impl.TdAgentStreamingServiceImpl: info
+    com.liangshou.agentic.agents.TdAgentFactory: info
+    com.liangshou.agentic.agents.streaming.TdAgentActiveSessionRegistry: info
+    com.liangshou.agentic.agents.TdAgentModelFactory: info
     # 其他模块
     com.liangshou.movie.scripts: info
     org.springframework: info

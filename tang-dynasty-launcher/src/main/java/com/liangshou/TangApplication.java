@@ -7,7 +7,7 @@ import org.springframework.context.annotation.ComponentScan;
 
 @SpringBootApplication
 @ComponentScan("com.liangshou")
-@MapperScan({"com.liangshou.infrastructure.datasource.mapper", "com.liangshou.tangdynasty.agentic.infrastructure.mysql.mapper"})
+@MapperScan({"com.liangshou.infrastructure.datasource.mapper", "com.liangshou.agentic.infrastructure.mysql.mapper"})
 public class TangApplication {
     public static void main(String[] args) {
         SpringApplication.run(TangApplication.class, args);

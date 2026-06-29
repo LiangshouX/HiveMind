@@ -77,7 +77,7 @@ export function ConsoleSidebar({
             color: 'var(--td-text-inverse)'
           }}
         >
-          宣召入朝
+          新建对话
         </Button>
       </div>
 
@@ -92,7 +92,7 @@ export function ConsoleSidebar({
               fontWeight: 600,
               fontSize: '14px'
             }}>
-              近期朝会
+              近期对话
             </Text>
           </Space>
           <Tooltip title="刷新会话">
@@ -115,7 +115,7 @@ export function ConsoleSidebar({
               color: 'var(--td-text-tertiary)',
               fontSize: '13px'
             }}>
-              暂无朝会记录
+              暂无对话记录
             </div>
           ) : (
             groupedItems.map(({ group, items }) => (
