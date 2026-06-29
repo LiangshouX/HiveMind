@@ -49,3 +49,8 @@ example
 # ReMe Local data
 local_vector_store
 */local_vector_store
+
+# Vibe Coding
+.claude/
+.specify/
+.codegraph/

@@ -135,14 +135,14 @@ request.interceptors.response.use(
 // ── API 接口定义，保留原有方法签名 ──
 
 export const api = {
-  // 核心数据
-  liveStatus: (): Promise<LiveStatus> => request.get('/api/live-status').catch(() => ({ tasks: [], syncStatus: { ok: false } })) as any,
-  agentConfig: (): Promise<AgentConfig> => request.get('/api/agent-config').catch(() => ({ agents: [], knownModels: [] })) as any,
-  modelChangeLog: (): Promise<ChangeLogEntry[]> => request.get('/api/model-change-log').catch(() => []) as any,
-  officialsStats: (): Promise<OfficialsData> => request.get('/api/officials-stats').catch(() => ({ officials: [], totals: { tasks_done: 0, cost_cny: 0 }, top_official: '' })) as any,
-  morningBrief: (): Promise<MorningBrief> => request.get('/api/morning-brief').catch(() => ({ categories: {} })) as any,
-  morningConfig: (): Promise<SubConfig> => request.get('/api/morning-config').catch(() => ({ categories: [], keywords: [], custom_feeds: [], feishu_webhook: '' })) as any,
-  agentsStatus: (): Promise<AgentsStatusData> => request.get('/api/agents-status').catch(() => ({ ok: false, gateway: { alive: false, probe: false, status: '' }, agents: [], checkedAt: '' })) as any,
+  // 核心数据 — 后端无对应 Controller，直接返回兜底数据避免 NoResourceFoundException
+  liveStatus: (): Promise<LiveStatus> => Promise.resolve({ tasks: [], syncStatus: { ok: false } }) as any,
+  agentConfig: (): Promise<AgentConfig> => Promise.resolve({ agents: [], knownModels: [] }) as any,
+  modelChangeLog: (): Promise<ChangeLogEntry[]> => Promise.resolve([]) as any,
+  officialsStats: (): Promise<OfficialsData> => Promise.resolve({ officials: [], totals: { tasks_done: 0, cost_cny: 0 }, top_official: '' }) as any,
+  morningBrief: (): Promise<MorningBrief> => Promise.resolve({ categories: {} }) as any,
+  morningConfig: (): Promise<SubConfig> => Promise.resolve({ categories: [], keywords: [], custom_feeds: [], feishu_webhook: '' }) as any,
+  agentsStatus: (): Promise<AgentsStatusData> => Promise.resolve({ ok: false, gateway: { alive: false, probe: false, status: '' }, agents: [], checkedAt: '' }) as any,
 
   // 任务实时动态
   taskActivity: (id: string): Promise<any> => request.get(`/api/task-activity/${encodeURIComponent(id)}`),
@@ -170,7 +170,7 @@ export const api = {
   createTask: (data: any): Promise<any> => request.post('/api/create-task', data),
 
   // Remote Skills
-  remoteSkillsList: (): Promise<any> => request.get('/api/remote-skills').catch(() => ({ ok: false, error: '获取失败' })) as any,
+  remoteSkillsList: (): Promise<any> => Promise.resolve({ ok: false, error: '暂不支持' }) as any,
   addRemoteSkill: (agentId: string, skillName: string, sourceUrl: string, description: string): Promise<any> => request.post('/api/add-remote-skill', { agentId, skillName, sourceUrl, description }),
   updateRemoteSkill: (agentId: string, skillName: string): Promise<any> => request.post('/api/update-remote-skill', { agentId, skillName }),
   removeRemoteSkill: (agentId: string, skillName: string): Promise<any> => request.post('/api/remove-remote-skill', { agentId, skillName }),
@@ -195,17 +195,17 @@ export const api = {
 
   // 任务模板
   listTaskTemplates: (): Promise<TaskTemplate[]> =>
-    request.get('/api/agent/edict-template'),
+    request.get('/api/agent/task-template'),
   getTaskTemplate: (templateId: string): Promise<TaskTemplate> =>
-    request.get(`/api/agent/edict-template/${encodeURIComponent(templateId)}`),
+    request.get(`/api/agent/task-template/${encodeURIComponent(templateId)}`),
   createTaskTemplate: (data: TaskCreateRequest): Promise<TaskTemplate> =>
-    request.post('/api/agent/edict-template', data),
+    request.post('/api/agent/task-template', data),
   updateTaskTemplate: (templateId: string, data: Partial<TaskCreateRequest>): Promise<TaskTemplate> =>
-    request.put(`/api/agent/edict-template/${encodeURIComponent(templateId)}`, data),
+    request.put(`/api/agent/task-template/${encodeURIComponent(templateId)}`, data),
   deleteTaskTemplate: (templateId: string): Promise<void> =>
-    request.delete(`/api/agent/edict-template/${encodeURIComponent(templateId)}`),
+    request.delete(`/api/agent/task-template/${encodeURIComponent(templateId)}`),
   executeTaskTemplate: (templateId: string, params: Record<string, string>): Promise<TaskExecuteResponse> =>
-    request.post(`/api/agent/edict-template/${encodeURIComponent(templateId)}/execute`, { params }),
+    request.post(`/api/agent/task-template/${encodeURIComponent(templateId)}/execute`, { params }),
 };
 
 // Types can be imported or re-declared here (using any for now to speed up implementation, but better to keep types from original api.ts)

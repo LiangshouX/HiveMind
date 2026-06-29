@@ -1,7 +1,6 @@
 import React, {useState} from 'react';
 import {
     ApiOutlined,
-    AppstoreOutlined,
     BookOutlined,
     CommentOutlined,
     DatabaseOutlined,
@@ -49,7 +48,6 @@ const items: MenuItem[] = [
         getItem('任务模板', '/task-templates', <BookOutlined/>),
     ]),
     getItem('任务中心', 'task-center', <ReadOutlined/>, [
-        getItem('渠道管理', '/channels', <AppstoreOutlined/>),
         getItem('任务看板', '/task-board', <ProfileOutlined/>),
         getItem('报告', '/reports', <ReadOutlined/>),
         getItem('定时任务', '/scheduled-tasks', <FieldTimeOutlined/>),
@@ -247,7 +245,7 @@ const MainLayout: React.FC = () => {
                 </Content>
                 <Footer style={{textAlign: 'center', background: 'transparent', borderTop: 'none'}}>
                     <Text style={{color: 'var(--td-text-tertiary)'}}>AI Assistant Platform
-                        ©{new Date().getFullYear()} · 多Agent协作</Text>
+                        ©{new Date().getFullYear()}</Text>
                 </Footer>
             </Layout>
         </Layout>

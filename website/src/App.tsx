@@ -4,7 +4,6 @@ import { ConfigProvider, App as AntApp } from 'antd';
 import { getTangTheme } from './theme';
 import MainLayout from './layouts/MainLayout';
 import TaskTemplateLibrary from './pages/Workspace/TaskTemplateLibrary';
-import Channels from './pages/TaskCenter/Channels';
 import TaskBoard from './pages/TaskCenter/TaskBoard';
 import Reports from './pages/TaskCenter/Reports';
 import ScheduledTasks from './pages/TaskCenter/ScheduledTasks';
@@ -92,7 +91,6 @@ const App: React.FC = () => {
               
               {/* 需要登录的页面 - 全部受 ProtectedRoute 保护 */}
               <Route path="task-templates" element={<ProtectedRoute><TaskTemplateLibrary /></ProtectedRoute>} />
-              <Route path="channels" element={<ProtectedRoute><Channels /></ProtectedRoute>} />
               <Route path="task-board" element={<ProtectedRoute><TaskBoard /></ProtectedRoute>} />
               <Route path="reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
               <Route path="scheduled-tasks" element={<ProtectedRoute><ScheduledTasks /></ProtectedRoute>} />

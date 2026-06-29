@@ -171,9 +171,9 @@ const TaskBoard: React.FC = () => {
   const archivedTasks = allTasks.filter((t) => isArchived(t));
 
   let edicts: Task[];
-  if (taskFilter === 'active') tasks = activeTasks;
-  else if (taskFilter === 'archived') tasks = archivedTasks;
-  else tasks = allTasks;
+  if (taskFilter === 'active') edicts = activeTasks;
+  else if (taskFilter === 'archived') edicts = archivedTasks;
+  else edicts = allTasks;
 
   edicts.sort((a, b) => (STATE_ORDER[a.state] ?? 9) - (STATE_ORDER[b.state] ?? 9));
 
