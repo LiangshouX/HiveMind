@@ -4,17 +4,10 @@ import { ConfigProvider, App as AntApp } from 'antd';
 import { getTangTheme } from './theme';
 import MainLayout from './layouts/MainLayout';
 import TaskTemplateLibrary from './pages/Workspace/TaskTemplateLibrary';
-import TaskBoard from './pages/TaskCenter/TaskBoard';
-import Reports from './pages/TaskCenter/Reports';
 import ScheduledTasks from './pages/TaskCenter/ScheduledTasks';
 import CourtRules from './pages/Admin/CourtRules';
 import SkillLibrary from './pages/Admin/SkillLibrary';
 import ToolLibrary from './pages/Admin/ToolLibrary';
-import MCP from './pages/Admin/MCP';
-import OfficialManagement from './pages/Admin/AgentManagement';
-import Models from './pages/Services/Models';
-import EnvVars from './pages/Services/EnvVars';
-import Security from './pages/Services/Security';
 import TokenUsage from './pages/Services/TokenUsage';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
@@ -91,17 +84,10 @@ const App: React.FC = () => {
               
               {/* 需要登录的页面 - 全部受 ProtectedRoute 保护 */}
               <Route path="task-templates" element={<ProtectedRoute><TaskTemplateLibrary /></ProtectedRoute>} />
-              <Route path="task-board" element={<ProtectedRoute><TaskBoard /></ProtectedRoute>} />
-              <Route path="reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
               <Route path="scheduled-tasks" element={<ProtectedRoute><ScheduledTasks /></ProtectedRoute>} />
               <Route path="workspace-settings" element={<ProtectedRoute><CourtRules /></ProtectedRoute>} />
               <Route path="skill-library" element={<ProtectedRoute><SkillLibrary /></ProtectedRoute>} />
               <Route path="tool-library" element={<ProtectedRoute><ToolLibrary /></ProtectedRoute>} />
-              <Route path="mcp" element={<ProtectedRoute><MCP /></ProtectedRoute>} />
-              <Route path="agent-management" element={<ProtectedRoute><OfficialManagement /></ProtectedRoute>} />
-              <Route path="models" element={<ProtectedRoute><Models /></ProtectedRoute>} />
-              <Route path="env-vars" element={<ProtectedRoute><EnvVars /></ProtectedRoute>} />
-              <Route path="security" element={<ProtectedRoute><Security /></ProtectedRoute>} />
               <Route path="token-usage" element={<ProtectedRoute><TokenUsage /></ProtectedRoute>} />
             </Route>
           </Routes>

@@ -45,7 +45,7 @@ class SkillApplicationServiceIntegrationTest {
     }
 
     @Test
-    void testCreateSkill_Success() {
+    void testCreateSkill_Success() throws Exception {
         // Given
         String userId = "user-123";
         SkillCreateRequest request = new SkillCreateRequest();
@@ -233,7 +233,7 @@ class SkillApplicationServiceIntegrationTest {
     }
 
     @Test
-    void testGetDownloadUrl() {
+    void testGetDownloadUrl() throws Exception {
         // Given
         String userId = "user-123";
         String skillId = "skill-uuid";

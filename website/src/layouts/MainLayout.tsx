@@ -1,6 +1,5 @@
 import React, {useState} from 'react';
 import {
-    ApiOutlined,
     BookOutlined,
     CommentOutlined,
     DatabaseOutlined,
@@ -9,11 +8,8 @@ import {
     MenuFoldOutlined,
     MenuUnfoldOutlined,
     MessageOutlined,
-    ProfileOutlined,
     ReadOutlined,
     RobotOutlined,
-    SafetyCertificateOutlined,
-    SettingOutlined,
     ToolOutlined,
     UserOutlined
 } from '@ant-design/icons';
@@ -48,21 +44,14 @@ const items: MenuItem[] = [
         getItem('任务模板', '/task-templates', <BookOutlined/>),
     ]),
     getItem('任务中心', 'task-center', <ReadOutlined/>, [
-        getItem('任务看板', '/task-board', <ProfileOutlined/>),
-        getItem('报告', '/reports', <ReadOutlined/>),
         getItem('定时任务', '/scheduled-tasks', <FieldTimeOutlined/>),
     ]),
     getItem('管理', 'admin', <UserOutlined/>, [
         getItem('工作区设置', '/workspace-settings', <ReadOutlined/>),
         getItem('技能库', '/skill-library', <RobotOutlined/>),
         getItem('工具库', '/tool-library', <ToolOutlined/>),
-        getItem('MCP', '/mcp', <ApiOutlined/>),
-        getItem('Agent管理', '/agent-management', <UserOutlined/>),
     ]),
-    getItem('服务', 'dalisi', <SafetyCertificateOutlined/>, [
-        getItem('模型', '/models', <RobotOutlined/>),
-        getItem('环境变量', '/env-vars', <SettingOutlined/>),
-        getItem('安全管理', '/security', <SafetyCertificateOutlined/>),
+    getItem('服务', 'service', <DatabaseOutlined/>, [
         getItem('用量统计', '/token-usage', <DatabaseOutlined/>),
     ]),
 ];

@@ -73,6 +73,7 @@ public class SkillApplicationService {
             // 6. 如果需要立即发布
             if (request.isPublish()) {
                 skillMetaSupport.publishSkill(skill.getSkillId(), version);
+                skill.setStatus("published");
             }
 
             log.info("Skill 创建成功: userId={}, skillId={}, name={}", userId, skill.getSkillId(), skillName);
@@ -218,7 +219,7 @@ public class SkillApplicationService {
             throw new IllegalArgumentException("Skill 不存在或无权限");
         }
 
-        URL url = fileStorageService.generateDownloadUrl(userId, skillId, skill.getCurrentVersion());
+        URL url = fileStorageService.generateDownloadUrl(userId, skillId, "v" + skill.getCurrentVersion());
         return url.toString();
     }
 
@@ -276,7 +277,7 @@ public class SkillApplicationService {
         if (ossProperties.isEnabled()) {
             try {
                 builder.downloadUrl(fileStorageService.generateDownloadUrl(
-                        skill.getUserId(), skill.getSkillId(), skill.getCurrentVersion()).toString());
+                        skill.getUserId(), skill.getSkillId(), "v" + skill.getCurrentVersion()).toString());
             } catch (Exception e) {
                 log.warn("生成下载 URL 失败: {}", skill.getSkillId(), e);
             }

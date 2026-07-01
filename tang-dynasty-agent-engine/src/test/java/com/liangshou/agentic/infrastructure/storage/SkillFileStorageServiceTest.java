@@ -46,7 +46,6 @@ class SkillFileStorageServiceTest {
         Map<String, String> resources = new HashMap<>();
         resources.put("scripts/test.py", "#!/usr/bin/env python3\nprint('test')");
 
-        when(ossProperties.getDefaultExpireMinutes()).thenReturn(30);
         doNothing().when(storageService).upload(
                 anyString(), any(InputStream.class), anyLong(), anyString());
 
@@ -86,7 +85,7 @@ class SkillFileStorageServiceTest {
     }
 
     @Test
-    void testDownloadUrlGeneration() {
+    void testDownloadUrlGeneration() throws Exception {
         // Given
         String userId = "user-123";
         String skillId = "skill-456";

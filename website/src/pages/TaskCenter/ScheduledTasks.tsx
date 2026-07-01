@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Table, Button, Typography, Tag, Space, Modal, Form, Input, Select, Switch, message } from 'antd';
+import { Table, Button, Typography, Tag, Space, Modal, Form, Input, Select, Switch, message, Alert } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 
@@ -97,6 +97,14 @@ const ScheduledTasks: React.FC = () => {
           创建任务
         </Button>
       </div>
+
+      <Alert
+        message="功能开发中"
+        description="定时任务功能尚在开发中，当前为预览界面，数据不会持久化保存。完整功能将在后续版本中上线。"
+        type="info"
+        showIcon
+        style={{ marginBottom: 24 }}
+      />
 
       <Table columns={columns} dataSource={tasks} rowKey="id" pagination={{ pageSize: 10 }} />
 

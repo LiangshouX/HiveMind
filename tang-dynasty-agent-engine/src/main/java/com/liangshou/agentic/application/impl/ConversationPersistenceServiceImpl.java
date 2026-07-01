@@ -96,8 +96,14 @@ public class ConversationPersistenceServiceImpl implements IConversationPersiste
             String compressedSummary,
             boolean compactionUpdated) {
         Instant now = Instant.now();
+        // 过滤掉框架自动注入的长期记忆消息（name="long_term_memory"），
+        // 这些消息是 StaticLongTermMemoryHook 在 PreCallEvent 中注入的瞬态上下文，
+        // 不应作为用户消息持久化到 MongoDB
         List<StoredMessage> storedMessages =
-                messages.stream().map(messageMapper::toStoredMessage).toList();
+                messages.stream()
+                        .filter(msg -> !"long_term_memory".equals(msg.getName()))
+                        .map(messageMapper::toStoredMessage)
+                        .toList();
         ConversationMemoryDocument document =
                 loadMemoryDocument(context)
                         .orElseGet(() -> newMemoryDocument(context, now, systemPrompt));
@@ -367,6 +373,7 @@ public class ConversationPersistenceServiceImpl implements IConversationPersiste
     private long calculateRoundCount(List<Msg> messages) {
         return messages.stream()
                 .filter(message -> message.getRole() != null && "USER".equals(message.getRole().name()))
+                .filter(message -> !"long_term_memory".equals(message.getName()))
                 .count();
     }
 

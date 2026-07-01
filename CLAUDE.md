@@ -118,15 +118,13 @@ The system uses four agent roles for task orchestration:
 - **MCP**: Model Context Protocol for extensible tool capabilities
 - **AgentScope Studio**: Observability UI at `localhost:5174`
 
-## Naming Conventions
+## API & Response Conventions
 
-- Domain models: `*Document`, `*Model`
-- Repository interfaces: `*Repository`
-- Application services: `I*Service` (interface), `*ServiceImpl` (implementation)
-- DTOs: `*Request`, `*Response`
-- Factories: `*Factory`
-- Exceptions: `*Exception`
-- Persistent objects (MyBatis): `*PO`
+- All REST endpoints return `Result<T>` (code, message, data wrapper) — never return raw entities.
+- Agent engine controllers: `/api/v1/tdagent/` (chat, skills, profiles)
+- Backend controllers: `/api/` prefix (e.g., `/api/agent-tasks`, `/api/sys-models`, `/api/scheduled-jobs`), except auth at `/api/v1/auth`
+- Dependency injection: prefer constructor injection via Lombok `@RequiredArgsConstructor` over `@Autowired` field injection.
+- No linting tools (checkstyle, spotbugs, pmd) are configured — there is no `mvn lint` equivalent.
 
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,

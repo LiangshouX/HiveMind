@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS `skills_meta_manage` (
   `tags` JSON COMMENT '标签数组, 例: ["agent", "finance", "parser"]',
   `dependencies` JSON COMMENT '外部依赖配置, 例: {"tools": ["web_search"], "models": ["gpt-4o"]}',
   `execution_env` JSON COMMENT '运行环境声明, 例: {"runtime": "python", "version": "3.11", "memory_limit": "512m"}',
-  `file_manifest` JSON NOT NULL COMMENT '文件清单: 逻辑路径 -> S3 Key/ETag/Size 映射',
+  `file_manifest` JSON DEFAULT NULL COMMENT '文件清单: 逻辑路径 -> S3 Key/ETag/Size 映射',
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `deleted_at` DATETIME DEFAULT NULL COMMENT '软删除时间',

@@ -30,6 +30,7 @@ replay_pid*
 */.mvn
 */target
 example
+*/agentscope-java
 .env
 */.env
 

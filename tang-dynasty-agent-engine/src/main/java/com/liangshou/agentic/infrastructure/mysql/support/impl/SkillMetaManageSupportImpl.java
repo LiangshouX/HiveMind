@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -115,6 +116,8 @@ public class SkillMetaManageSupportImpl extends ServiceImpl<SkillMetaManageMappe
         skill.setDescription(description);
         skill.setCurrentVersion(version != null ? version : "1.0.0");
         skill.setStatus("draft");
+        skill.setFileManifest(new java.util.LinkedHashMap<>());
+        skill.setTags(Collections.emptyList());
         this.save(skill);
         log.info("创建 Skill 成功: userId={}, name={}, skillId={}", userId, name, skill.getSkillId());
         return skill;
