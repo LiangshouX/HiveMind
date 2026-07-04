@@ -42,9 +42,15 @@ tdagent:
     top-k: 5
   compaction:
     enabled: true
+    trigger-mode: TOKEN
+    context-window-size: 0
+    threshold-ratio: 0.85
+    output-reserve-tokens: 0
+    head-ratio: 0.10
+    min-messages-since-compaction: 3
     trigger-message-count: 20
     trigger-character-count: 24000
-    keep-recent-messages: 8
+    keep-recent-messages: 6
     max-summary-characters: 2400
   streaming:
     enabled: true

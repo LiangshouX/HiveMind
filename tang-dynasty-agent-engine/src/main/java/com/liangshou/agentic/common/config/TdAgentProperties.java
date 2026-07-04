@@ -174,11 +174,41 @@ public class TdAgentProperties {
 
         private boolean enabled = true;
 
+        /**
+         * 压缩触发模式：TOKEN（基于token计量）| LEGACY（字符数/消息数）
+         */
+        private String triggerMode = "TOKEN";
+
+        /**
+         * 模型上下文窗口大小（tokens），0 表示自动检测
+         */
+        private int contextWindowSize = 0;
+
+        /**
+         * 压缩触发阈值比例（上下文窗口的百分比），默认 0.85
+         */
+        private double thresholdRatio = 0.85;
+
+        /**
+         * 输出预留 token 数，0 表示自动计算
+         */
+        private int outputReserveTokens = 0;
+
+        /**
+         * 前区保留比例（消息列表前 N% 的消息不压缩），默认 0.10
+         */
+        private double headRatio = 0.10;
+
+        /**
+         * 最小压缩间隔（压缩后至少再积累 N 条新消息才允许再次压缩）
+         */
+        private int minMessagesSinceCompaction = 3;
+
         private int triggerMessageCount = 20;
 
         private int triggerCharacterCount = 24000;
 
-        private int keepRecentMessages = 8;
+        private int keepRecentMessages = 6;
 
         private int maxSummaryCharacters = 2400;
     }

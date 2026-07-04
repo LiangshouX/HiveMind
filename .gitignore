@@ -55,3 +55,4 @@ local_vector_store
 .claude/
 .specify/
 .codegraph/
+specs/
