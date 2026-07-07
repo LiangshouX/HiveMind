@@ -106,7 +106,7 @@ const MainLayout: React.FC = () => {
                 }}>
                     <Title level={collapsed ? 3 : 2} className="imperial-heading"
                            style={{margin: 0, color: 'var(--td-primary)', textShadow: '0 2px 4px rgba(0,0,0,0.2)'}}>
-                        {collapsed ? 'AI' : 'AI Assistant'}
+                        {collapsed ? 'AI' : 'HiveMind'}
                     </Title>
                     {!collapsed && (
                         <Text style={{
@@ -233,7 +233,7 @@ const MainLayout: React.FC = () => {
                     </div>
                 </Content>
                 <Footer style={{textAlign: 'center', background: 'transparent', borderTop: 'none'}}>
-                    <Text style={{color: 'var(--td-text-tertiary)'}}>AI Assistant Platform
+                    <Text style={{color: 'var(--td-text-tertiary)'}}>HiveMind Platform
                         ©{new Date().getFullYear()}</Text>
                 </Footer>
             </Layout>

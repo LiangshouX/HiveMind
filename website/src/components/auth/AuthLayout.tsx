@@ -14,7 +14,7 @@ export function AuthLayout({ title, subtitle, children, footer }: AuthLayoutProp
   return (
     <div className="auth-shell">
       <div className="auth-hero">
-        <div className="auth-hero-badge">AI Assistant</div>
+        <div className="auth-hero-badge">HiveMind</div>
         <Title className="auth-hero-title">
           让 AI Agent 的操作台具备稳定的身份、会话与权限边界
         </Title>
