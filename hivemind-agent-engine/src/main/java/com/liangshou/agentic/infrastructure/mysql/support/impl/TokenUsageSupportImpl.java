@@ -27,7 +27,7 @@ public class TokenUsageSupportImpl extends ServiceImpl<TokenUsageMapper, TokenUs
                 "COALESCE(SUM(output_tokens), 0) as total_output_tokens, " +
                 "COALESCE(SUM(total_tokens), 0) as total_tokens, " +
                 "COUNT(*) as total_calls " +
-                "FROM td_token_usage " +
+                "FROM sys_token_usage " +
                 "WHERE user_id = ? AND usage_time >= ? AND usage_time < ?";
         
         List<Map<String, Object>> result = this.getBaseMapper().selectMaps(

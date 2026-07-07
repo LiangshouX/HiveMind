@@ -167,18 +167,20 @@ CREATE TABLE IF NOT EXISTS `sys_mcp` (
 DROP TABLE IF EXISTS `sys_token_usage`;
 CREATE TABLE IF NOT EXISTS `sys_token_usage` (
   `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `user_id` BIGINT UNSIGNED NOT NULL COMMENT '任务所属的用户ID',
-  `model_provider_id` VARCHAR(64) NOT NULL COMMENT '模型供应商',
-  `model_id` VARCHAR(128) NOT NULL COMMENT '请求的模型ID',
-  `official_id` BIGINT UNSIGNED DEFAULT NULL COMMENT '调用的Agent',
-  `prompt_tokens` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '输入Token数',
-  `completion_tokens` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '输出Token数',
+  `user_id` VARCHAR(64) NOT NULL COMMENT '用户ID',
+  `session_id` VARCHAR(128) DEFAULT NULL COMMENT '会话ID',
+  `message_id` VARCHAR(128) DEFAULT NULL COMMENT '消息ID（AgentScope Msg ID）',
+  `model_provider` VARCHAR(64) NOT NULL COMMENT '模型供应商（dashscope/openai）',
+  `model_name` VARCHAR(128) NOT NULL COMMENT '模型名称（如 qwen-max、gpt-4o）',
+  `input_tokens` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '输入Token数',
+  `output_tokens` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '输出Token数',
   `total_tokens` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '总Token数',
-  `cached_prompt_tokens` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '命中缓存的Token数量',
-  `record_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '记录时间',
+  `cached_tokens` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '缓存命中Token数',
+  `usage_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '使用时间',
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   PRIMARY KEY (`id`),
   KEY `idx_user_id` (`user_id`),
-  KEY `idx_provider_id` (`model_provider_id`),
-  KEY `idx_model_id` (`model_id`),
-  KEY `idx_record_time` (`record_time`)
+  KEY `idx_provider` (`model_provider`),
+  KEY `idx_model_name` (`model_name`),
+  KEY `idx_usage_time` (`usage_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Token消耗统计表';

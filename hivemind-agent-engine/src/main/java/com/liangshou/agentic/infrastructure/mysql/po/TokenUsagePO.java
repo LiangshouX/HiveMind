@@ -18,7 +18,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("td_token_usage")
+@TableName("sys_token_usage")
 public class TokenUsagePO implements Serializable {
     
     private static final long serialVersionUID = 1L;
