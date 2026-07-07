@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is the frontend for **TangDynasty**, an AI multi-agent collaboration platform themed around the Chinese Tang Dynasty imperial court. The UI maps Tang Dynasty government roles onto AI agent departments. Built with React 19, TypeScript (strict mode), Ant Design v6, and Vite.
+This is the frontend for **HiveMind**, an AI multi-agent collaboration platform. Built with React 19, TypeScript (strict mode), Ant Design v6, and Vite.
 
 The frontend requires a Java/Spring backend running on port 8080 — the Vite dev server proxies `/api` requests there.
 
@@ -27,7 +27,7 @@ No test framework is configured.
 
 1. **Providers** (`src/providers/`) — `AuthProvider` (JWT auth) and `ThemeProvider` (light/dark) wrap the entire app.
 2. **Routing** (`src/App.tsx`) — All routes defined here. Public routes (`/login`, `/register`) sit outside the main layout. Protected routes use `ProtectedRoute` which redirects unauthenticated users.
-3. **Layout** (`src/layouts/MainLayout.tsx`) — App shell with collapsible sidebar (Tang Dynasty-themed nav sections), header, and content outlet.
+3. **Layout** (`src/layouts/MainLayout.tsx`) — App shell with collapsible sidebar, header, and content outlet.
 4. **Pages** (`src/pages/`) — Organized by domain: `Workspace/` (chat, templates), `TaskCenter/` (kanban, channels, reports), `Admin/` (skills, tools, MCP, agents), `Dàlǐsì/` (models, env vars, security, token usage).
 5. **Services** (`src/services/`) — Two HTTP clients coexist:
    - `http.ts` — Modern fetch-based helpers (`getJson`, `postJson`, `putJson`, `postFormData`) with JWT injection. **Use this for new code.**
@@ -42,7 +42,7 @@ No test framework is configured.
 
 ### Theming
 
-Tang Dynasty color scheme: crimson (primary) + gold (highlight). CSS custom properties in `src/styles/theme.css` (`--td-*` variables) drive light/dark mode. Ant Design tokens configured in `src/theme.ts`. Theme toggled via `data-theme` attribute on `<html>`.
+HiveMind color scheme: crimson (primary) + gold (highlight). CSS custom properties in `src/styles/theme.css` (`--td-*` variables) drive light/dark mode. Ant Design tokens configured in `src/theme.ts`. Theme toggled via `data-theme` attribute on `<html>`.
 
 ### Authentication
 
@@ -50,7 +50,7 @@ JWT stored in localStorage via `authStorage.ts`. All API calls inject the token.
 
 ### Backend API contract
 
-All endpoints use `/api/v1` prefix. Key areas: auth (`/auth/*`), agent chat streaming (`/agent/console/*`), tool approvals, skills, profiles, token usage. The backend is a separate Java/Spring project in the parent `TangDynasty` repository.
+All endpoints use `/api/v1` prefix. Key areas: auth (`/auth/*`), agent chat streaming (`/agent/console/*`), tool approvals, skills, profiles, token usage. The backend is a separate Java/Spring project in the parent `HiveMind` repository.
 
 ## Env Configuration
 

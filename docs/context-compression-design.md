@@ -22,7 +22,7 @@
 
 ### 1.1 Agent 系统整体架构
 
-TangDynasty 的 Agent 系统基于 **AgentScope-Java** 框架构建，采用 ReAct（Reasoning + Acting）模式运行。核心流程为：用户消息 → Hook 预处理 → LLM 推理 → 工具调用 → Hook 后处理 → 响应输出。
+HiveMind 的 Agent 系统基于 **AgentScope-Java** 框架构建，采用 ReAct（Reasoning + Acting）模式运行。核心流程为：用户消息 → Hook 预处理 → LLM 推理 → 工具调用 → Hook 后处理 → 响应输出。
 
 **关键组件调用链：**
 

@@ -18,7 +18,7 @@ import type {
   UiMessageBlockType,
 } from "../types";
 
-const STORAGE_KEY = "td-agent-console-ui";
+const STORAGE_KEY = "hm-agent-console-ui";
 
 interface PersistedState {
   activeSessionId?: string;
@@ -123,7 +123,7 @@ function createAssistantMessage(): UiMessage {
   return {
     id: createId("assistant"),
     role: "assistant",
-    name: "TDAgent",
+    name: "HiveMindAgent",
     createdAt: nowIso(),
     blocks: [],
     streaming: true,
@@ -179,7 +179,7 @@ function mapStoredMessage(stored: StoredMessage, user: AuthUser): UiMessage {
     name:
       role === "user"
         ? stored.name || user.nickname || user.userId
-        : stored.name || (role === "system" ? "System" : "TDAgent"),
+        : stored.name || (role === "system" ? "System" : "HiveMindAgent"),
     createdAt: stored.timestamp || nowIso(),
     blocks,
   };

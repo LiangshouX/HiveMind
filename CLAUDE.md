@@ -6,6 +6,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 HiveMind is a cloud-based AI assistant platform with a multi-agent collaboration architecture. Different AI agents assume distinct roles — message triage (AGENT_TRIAGE), task planning (AGENT_PLANNER), review (AGENT_REVIEWER), and execution dispatch (AGENT_EXECUTOR) — to collaboratively handle complex tasks through an institutionalized workflow.
 
+## Environment Requirements
+
+| Component | Minimum | Recommended |
+|-----------|---------|-------------|
+| JDK | 17 | 17+ |
+| Python | 3.10 | 3.10-3.13 |
+| Node.js | 18 | 20+ |
+| MySQL | 8.0 | 8.0.36+ |
+| MongoDB | 6.0 | 7.0+ |
+| Docker | 20.10 | 24.0+ |
+
 ## Build & Run Commands
 
 ```bash
@@ -13,7 +24,7 @@ HiveMind is a cloud-based AI assistant platform with a multi-agent collaboration
 mvn clean install
 
 # Run the application (port 8080)
-mvn spring-boot:run -pl tang-dynasty-launcher
+mvn spring-boot:run -pl hivemind-launcher
 
 # Run tests
 mvn test
@@ -22,10 +33,10 @@ mvn test
 mvn verify
 
 # Run a single test class
-mvn test -pl tang-dynasty-backend -Dtest=SomeClassName
+mvn test -pl hivemind-backend -Dtest=SomeClassName
 
 # Run a single test method
-mvn test -pl tang-dynasty-backend -Dtest=SomeClassName#methodName
+mvn test -pl hivemind-backend -Dtest=SomeClassName#methodName
 ```
 
 ## Module Structure
@@ -34,9 +45,10 @@ Three Maven modules with dependency flow: `launcher` → `backend` → `agent-en
 
 | Module | Role |
 |--------|------|
-| `tang-dynasty-launcher` | Spring Boot entry point (`TangApplication.java`), aggregates all modules |
-| `tang-dynasty-backend` | Business services: user auth, task management, channels, models, MCP config |
-| `tang-dynasty-agent-engine` | AI Agent runtime: chat, tools, memory, skills, sandbox, streaming |
+| `hivemind-launcher` | Spring Boot entry point (`HiveMindApplication.java`), aggregates all modules |
+| `hivemind-backend` | Business services: user auth, task management, channels, models, MCP config |
+| `hivemind-agent-engine` | AI Agent runtime: chat, tools, memory, skills, sandbox, streaming |
+| `website` | Frontend console: React 19 + TypeScript + Ant Design v6 + Vite |
 
 ## Architecture
 
@@ -50,11 +62,17 @@ adapter → application → domain ← infrastructure
 
 **Strict rules**: Domain layer must NOT depend on infrastructure layer. Application layer must NOT directly depend on infrastructure layer. No cross-layer calls (e.g., adapter directly calling infrastructure).
 
-Each module follows the same package layout:
+### Agent Engine Package Layout
 - `adapter/controller/` — REST controllers
 - `application/` — service interfaces (`I*Service`) and implementations (`*ServiceImpl`), DTOs (`*Request`, `*Response`)
 - `domain/` — business models (`*Document`, `*Model`), domain services, enums, constants
 - `infrastructure/` — data access (MongoDB repositories, MyBatis-Plus mappers/POs), external integrations
+- `common/` — shared exceptions, utilities, config
+
+### Backend Module Package Layout
+- `adapter/controller/` — REST controllers
+- `service/` — service interfaces (`I*Service`) and implementations in `impl/` subdirectory
+- `infrastructure/` — data access (MyBatis-Plus mappers/POs), external integrations
 - `common/` — shared exceptions, utilities, config
 
 ## Key Technology Stack
@@ -69,7 +87,7 @@ Each module follows the same package layout:
 
 ## Agent Engine Configuration
 
-All agent-related config lives in `tang-dynasty-agent-engine/src/main/resources/application-agentic.yaml` under the `tdagent` prefix. Key subsystems:
+All agent-related config lives in `hivemind-agent-engine/src/main/resources/application-agentic.yaml` under the `tdagent` prefix. Key subsystems:
 
 - **Model**: LLM provider selection (`provider-id`, `model-name`), provider definitions in `provider/builtin_provider.json`
 - **Tool Guard**: Three-layer safety (deny → guard/approve → allow), config under `tdagent.tool-guard`
@@ -98,18 +116,18 @@ The system uses four agent roles for task orchestration:
 
 | File | Purpose |
 |------|---------|
-| `tang-dynasty-launcher/src/main/resources/application.yaml` | Main config, port 8080, includes `backend` and `agentic` profiles |
-| `tang-dynasty-backend/src/main/resources/application-backend.yaml` | MySQL datasource, MyBatis-Plus, JWT, Swagger |
-| `tang-dynasty-agent-engine/src/main/resources/application-agentic.yaml` | Agent engine: model, sandbox, tool-guard, ReMe, compaction, streaming, skills |
-| `tang-dynasty-agent-engine/src/main/resources/provider/builtin_provider.json` | LLM provider definitions (DashScope/Qwen, DeepSeek) |
+| `hivemind-launcher/src/main/resources/application.yaml` | Main config, port 8080, includes `backend` and `agentic` profiles |
+| `hivemind-backend/src/main/resources/application-backend.yaml` | MySQL datasource, MyBatis-Plus, JWT, Swagger |
+| `hivemind-agent-engine/src/main/resources/application-agentic.yaml` | Agent engine: model, sandbox, tool-guard, ReMe, compaction, streaming, skills |
+| `hivemind-agent-engine/src/main/resources/provider/builtin_provider.json` | LLM provider definitions (DashScope/Qwen, DeepSeek) |
 
 ## Testing
 
 - JUnit 5 via Spring Boot Starter Test
 - Testcontainers for MySQL integration tests
 - Spring Security Test for auth-related tests
-- Backend tests: `tang-dynasty-backend/src/test/java/com/liangshou/`
-- Agent engine tests: `tang-dynasty-agent-engine/src/test/java/com/liangshou/agentic/`
+- Backend tests: `hivemind-backend/src/test/java/com/liangshou/`
+- Agent engine tests: `hivemind-agent-engine/src/test/java/com/liangshou/agentic/`
 
 ## External Services
 
@@ -126,7 +144,27 @@ The system uses four agent roles for task orchestration:
 - Dependency injection: prefer constructor injection via Lombok `@RequiredArgsConstructor` over `@Autowired` field injection.
 - No linting tools (checkstyle, spotbugs, pmd) are configured — there is no `mvn lint` equivalent.
 
-<!-- SPECKIT START -->
-For additional context about technologies to be used, project structure,
-shell commands, and other important information, read the current plan
-<!-- SPECKIT END -->
+## Frontend Development
+
+The `website/` module is a React 19 + TypeScript frontend with Ant Design v6.
+
+### Commands
+```bash
+cd website
+npm install        # Install dependencies
+npm run dev        # Start Vite dev server with HMR (requires backend on :8080)
+npm run build      # Type-check (tsc -b) then produce production build
+npm run lint       # Run ESLint
+npm run preview    # Preview production build locally
+```
+
+### Key Architecture
+- **Stack**: React 19, React Router v7, Ant Design v6, Zustand, Vite 5, TypeScript strict
+- **HTTP Clients**: Use `http.ts` (modern fetch-based) for new code; `api.ts` (legacy Axios) is read-only
+- **State Management**: Zustand store in `src/store.ts` for legacy dashboard; `useAgentConsole.ts` hook for chat
+- **Chat Streaming**: SSE-based via `agentConsoleApi.streamChat()`, processes events: MESSAGE, REASONING, TOOL_RESULT, RESULT, APPROVAL_REQUIRED, ERROR, DONE
+- **Theming**: HiveMind color scheme (crimson primary + gold highlight), CSS custom properties in `src/styles/theme.css`
+- **Auth**: JWT stored in localStorage, 401 responses trigger auto-logout and redirect to `/login`
+
+### Environment Configuration
+Copy `.env.example` to `.env`. Key variable: `VITE_BACKEND_API_ROOT` (defaults to `/api/v1`).

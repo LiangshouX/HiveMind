@@ -5,14 +5,14 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.liangshou</groupId>
-    <artifactId>tang-dynasty</artifactId>
+    <artifactId>hivemind</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <modules>
-        <module>tang-dynasty-launcher</module>
-        <module>tang-dynasty-agent-engine</module>
-        <module>tang-dynasty-backend</module>
+        <module>hivemind-launcher</module>
+        <module>hivemind-agent-engine</module>
+        <module>hivemind-backend</module>
     </modules>
 
 

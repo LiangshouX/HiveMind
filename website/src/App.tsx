@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ConfigProvider, App as AntApp } from 'antd';
-import { getTangTheme } from './theme';
+import { getHiveMindTheme } from './theme';
 import MainLayout from './layouts/MainLayout';
 import TaskTemplateLibrary from './pages/Workspace/TaskTemplateLibrary';
 import ScheduledTasks from './pages/TaskCenter/ScheduledTasks';
@@ -44,7 +44,7 @@ const App: React.FC = () => {
   }, []);
 
   return (
-    <ConfigProvider theme={getTangTheme(isDark)}>
+    <ConfigProvider theme={getHiveMindTheme(isDark)}>
       <AntApp>
         <BrowserRouter>
           <Routes>

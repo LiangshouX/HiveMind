@@ -134,7 +134,7 @@ cd hivemind
 # 启动 MySQL
 docker run -d --name mysql \
   -e MYSQL_ROOT_PASSWORD=root \
-  -e MYSQL_DATABASE=tang_dynasty \
+  -e MYSQL_DATABASE=hivemind \
   -p 3306:3306 \
   mysql:8.0
 
@@ -148,8 +148,8 @@ docker run -d --name mongodb \
 
 ```bash
 # 复制配置文件
-cp tang-dynasty-backend/src/main/resources/application-backend.yaml.example \
-   tang-dynasty-backend/src/main/resources/application-backend.yaml
+cp hivemind-backend/src/main/resources/application-backend.yaml.example \
+   hivemind-backend/src/main/resources/application-backend.yaml
 
 # 编辑配置文件，设置数据库连接和 API Key
 ```
@@ -176,7 +176,7 @@ docker-compose up -d
 mvn clean install
 
 # 启动应用
-mvn spring-boot:run -pl tang-dynasty-launcher
+mvn spring-boot:run -pl hivemind-launcher
 ```
 
 #### 6. 启动前端控制台
@@ -195,8 +195,8 @@ npm run dev
 
 ```
 hivemind/
-├── tang-dynasty-launcher/        # 🚀 启动模块（主入口）
-├── tang-dynasty-agent-engine/    # 🤖 Agent 引擎核心
+├── hivemind-launcher/        # 🚀 启动模块（主入口）
+├── hivemind-agent-engine/    # 🤖 Agent 引擎核心
 │   ├── agents/                   # Agent 核心组件
 │   │   ├── guard/                # Tool Guard 安全防护
 │   │   ├── memory/               # 记忆管理（MongoDB + ReMe）
@@ -208,7 +208,7 @@ hivemind/
 │   │   ├── AGENT_REVIEWER/SOUL.md# 审查 Agent 人格
 │   │   └── AGENT_EXECUTOR/SOUL.md# 执行 Agent 人格
 │   └── skills/                   # 内置技能定义
-├── tang-dynasty-backend/         # 🏢 业务后端服务
+├── hivemind-backend/         # 🏢 业务后端服务
 ├── website/                      # 💻 前端控制台
 ├── reme-server/                  # 🧠 Python 长期记忆服务
 ├── example/                      # 📝 示例代码
@@ -220,9 +220,9 @@ hivemind/
 
 | 模块 | 职责 | 技术栈 |
 |------|------|--------|
-| **tang-dynasty-launcher** | 应用启动入口，聚合所有子模块 | Spring Boot 4.0.3 |
-| **tang-dynasty-agent-engine** | AI Agent 核心运行时，提供对话、工具调用、记忆管理等能力 | AgentScope 1.0.12 + MongoDB |
-| **tang-dynasty-backend** | 用户管理、任务管理、配置管理等业务服务 | Spring Boot + MyBatis Plus 3.5.15 |
+| **hivemind-launcher** | 应用启动入口，聚合所有子模块 | Spring Boot 4.0.3 |
+| **hivemind-agent-engine** | AI Agent 核心运行时，提供对话、工具调用、记忆管理等能力 | AgentScope 1.0.12 + MongoDB |
+| **hivemind-backend** | 用户管理、任务管理、配置管理等业务服务 | Spring Boot + MyBatis Plus 3.5.15 |
 | **website** | Web 用户界面，提供与 AI 助理交互的所有功能 | React + TypeScript + Ant Design |
 | **reme-server** | 提供与 AgentScope-ReMe 兼容的长期记忆检索服务 | FastAPI + ReMe |
 
@@ -282,7 +282,7 @@ tdagent:
 
 #### 自定义 Skill
 
-在 `tang-dynasty-agent-engine/src/main/resources/skills/` 目录下创建自定义技能：
+在 `hivemind-agent-engine/src/main/resources/skills/` 目录下创建自定义技能：
 
 ```json
 {
@@ -410,11 +410,11 @@ npm test
 
 | 文件 | 路径 | 描述 |
 |------|------|------|
-| `application-agentic.yaml` | `tang-dynasty-agent-engine/src/main/resources/` | Agent 引擎配置 |
-| `application-backend.yaml` | `tang-dynasty-backend/src/main/resources/` | 后端业务配置 |
-| `builtin_provider.json` | `tang-dynasty-agent-engine/src/main/resources/provider/` | LLM 供应商配置 |
-| `profiles/` | `tang-dynasty-agent-engine/src/main/resources/profiles/` | SOUL 人格定义 |
-| `skills/` | `tang-dynasty-agent-engine/src/main/resources/skills/` | 内置技能定义 |
+| `application-agentic.yaml` | `hivemind-agent-engine/src/main/resources/` | Agent 引擎配置 |
+| `application-backend.yaml` | `hivemind-backend/src/main/resources/` | 后端业务配置 |
+| `builtin_provider.json` | `hivemind-agent-engine/src/main/resources/provider/` | LLM 供应商配置 |
+| `profiles/` | `hivemind-agent-engine/src/main/resources/profiles/` | SOUL 人格定义 |
+| `skills/` | `hivemind-agent-engine/src/main/resources/skills/` | 内置技能定义 |
 | `.env` | `reme-server/` | ReMe Server 环境变量 |
 
 ### Agent 引擎配置示例
@@ -425,8 +425,8 @@ tdagent:
     enabled: false
     url: http://localhost:5174  # AgentScope Studio 地址
   system-prompt:
-    product-name: TDAgent
-    owner-name: TangWorkSpace
+    product-name: HiveMindAgent
+    owner-name: HiveMind
     max-history-preview: 12
   model:
     provider-id: dashscope

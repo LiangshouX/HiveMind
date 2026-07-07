@@ -1,7 +1,7 @@
 import type { ThemeConfig } from 'antd';
 
 // Create a function that returns theme based on current mode
-export const getTangTheme = (isDark: boolean = true): ThemeConfig => ({
+export const getHiveMindTheme = (isDark: boolean = true): ThemeConfig => ({
   token: {
     colorPrimary: isDark ? '#b32934' : '#a3222e',
     colorInfo: isDark ? '#c7a434' : '#b8912d',
@@ -58,4 +58,4 @@ export const getTangTheme = (isDark: boolean = true): ThemeConfig => ({
 });
 
 // For backward compatibility during transition
-export const tangTheme = getTangTheme(true);
+export const hivemindTheme = getHiveMindTheme(true);

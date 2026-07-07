@@ -1,0 +1,37 @@
+# Server configuration
+server:
+  port: ${SERVER_PORT:8080}
+
+# Spring configuration
+spring:
+  application:
+    name: hivemind
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+    include:
+      - backend
+      - agentic
+    group:
+      dev:
+        - backend-dev
+      prod:
+        - backend-prod
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+  # Database Configuration
+
+# Logging configuration
+logging:
+  level:
+    com.liangshou: info
+    # Agent Engine 流式输出相关日志 - 调试时可改为 debug 或 trace
+    com.liangshou.agentic.adapter.controller: info
+    com.liangshou.agentic.service.impl.TdAgentStreamingServiceImpl: info
+    com.liangshou.agentic.agents.TdAgentFactory: info
+    com.liangshou.agentic.agents.streaming.TdAgentActiveSessionRegistry: info
+    com.liangshou.agentic.agents.TdAgentModelFactory: info
+    # 其他模块
+    com.liangshou.movie.scripts: info
+    org.springframework: info
+    org.springframework.ai: info
