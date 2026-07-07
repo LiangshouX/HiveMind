@@ -22,7 +22,6 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {useEffect, useRef, useState} from "react";
 import type {AuthUser, SessionState} from "../../types";
-import {useTheme} from "../../providers/ThemeProvider";
 import {ChatSendButton} from "./ChatSendButton";
 
 dayjs.extend(relativeTime);
@@ -114,7 +113,6 @@ export function ConversationWorkspace({
                                           onInterrupt,
                                           onSend,
                                       }: ConversationWorkspaceProps) {
-    const {isDarkMode} = useTheme();
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const [prevMessageCount, setPrevMessageCount] = useState(0);
     const prevSessionIdRef = useRef<string | undefined>(undefined);
@@ -131,9 +129,9 @@ export function ConversationWorkspace({
                     <div className="message-meta">
                         <Space size={8}>
                             <Text className="message-author"
-                                  style={{color: isDarkMode ? '#f3f7ff' : '#2c3e50'}}>{message.name}</Text>
+                                  style={{color: 'var(--td-text-base)'}}>{message.name}</Text>
                             <Text className="message-time"
-                                  style={{color: isDarkMode ? '#a0b3d6' : '#6c757d'}}>{formatTime(message.createdAt)}</Text>
+                                  style={{color: 'var(--td-text-secondary)'}}>{formatTime(message.createdAt)}</Text>
                         </Space>
                         {message.streaming ? (
                             <Tag color="processing" icon={<LoadingOutlined/>}>
@@ -147,7 +145,7 @@ export function ConversationWorkspace({
                     {message.blocks.map((block) => (
                         <div key={block.id} className={`message-block tone-${blockTone(block.type)}`}>
                             {block.title || block.toolName ? (
-                                <div className="message-block-title" style={{color: isDarkMode ? '#f3f7ff' : '#2c3e50'}}>
+                                <div className="message-block-title" style={{color: 'var(--td-text-base)'}}>
                                     <Space size={8}>
                                         {toneIcon(block.type)}
                                         {block.title ? <span>{block.title}</span> : null}
@@ -159,13 +157,13 @@ export function ConversationWorkspace({
                             {/* 工具类型消息不需要展示 rawInput，因为 content 已经是代码块格式 */}
                             {block.rawInput && block.type !== "tool_use" && block.type !== "tool_result" ? (
                                 <pre className="message-raw" style={{
-                                    background: isDarkMode ? '#07111f' : '#f1f3f5',
-                                    border: `1px solid ${isDarkMode ? '#1e3a5f' : '#dee2e6'}`,
-                                    color: isDarkMode ? '#f3f7ff' : '#2c3e50'
+                                    background: 'var(--td-code-bg)',
+                                    border: '1px solid var(--td-code-border)',
+                                    color: 'var(--td-code-text)'
                                 }}>{block.rawInput}</pre>
                             ) : null}
 
-                            <div className="markdown-body" style={{color: isDarkMode ? '#f3f7ff' : '#2c3e50'}}>
+                            <div className="markdown-body" style={{color: 'var(--td-text-base)'}}>
                                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                                     {block.content || " "}
                                 </ReactMarkdown>
@@ -175,8 +173,8 @@ export function ConversationWorkspace({
                                 <div className="approval-inline">
                                     {block.approvals.map((approval) => (
                                         <Card key={approval.id} size="small" className="approval-inline-card" style={{
-                                            background: isDarkMode ? '#0d1b33' : '#f8f9fa',
-                                            border: `1px solid ${isDarkMode ? '#1e3a5f' : '#e9ecef'}`
+                                            background: 'var(--td-bg-elevated)',
+                                            border: '1px solid var(--td-border-color)'
                                         }}>
                                             <Space direction="vertical" size={4} style={{width: "100%"}}>
                                                 <Space wrap>
@@ -184,12 +182,12 @@ export function ConversationWorkspace({
                                                     <Tag>{approval.toolName || "未知工具"}</Tag>
                                                 </Space>
                                                 <Text
-                                                    style={{color: isDarkMode ? '#f3f7ff' : '#2c3e50'}}>{approval.reason || "当前工具调用需要人工审批后继续执行。"}</Text>
+                                                    style={{color: 'var(--td-text-base)'}}>{approval.reason || "当前工具调用需要人工审批后继续执行。"}</Text>
                                                 {approval.toolInputJson ? (
                                                     <pre className="message-raw" style={{
-                                                        background: isDarkMode ? '#07111f' : '#f1f3f5',
-                                                        border: `1px solid ${isDarkMode ? '#1e3a5f' : '#dee2e6'}`,
-                                                        color: isDarkMode ? '#f3f7ff' : '#2c3e50'
+                                                        background: 'var(--td-code-bg)',
+                                                        border: '1px solid var(--td-code-border)',
+                                                        color: 'var(--td-code-text)'
                                                     }}>{approval.toolInputJson}</pre>
                                                 ) : null}
                                             </Space>
@@ -303,8 +301,8 @@ export function ConversationWorkspace({
                         ) : (
                             <>
                                 <div className="session-hero" style={{
-                                    background: isDarkMode ? '#0d1b33' : '#f8f9fa',
-                                    border: `1px solid ${isDarkMode ? '#1e3a5f' : '#e9ecef'}`,
+                                    background: 'var(--td-bg-elevated)',
+                                    border: '1px solid var(--td-border-light)',
                                     padding: '16px',
                                     borderRadius: '12px',
                                     marginBottom: '16px'

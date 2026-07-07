@@ -85,15 +85,15 @@ const FrontMatterCard: React.FC<{ frontMatter: Record<string, any> }> = ({ front
       <div style={{
         marginBottom: 24,
         padding: 16,
-        background: 'linear-gradient(135deg, #f6f8fa 0%, #eef1f4 100%)',
+        background: 'var(--td-metadata-bg)',
         borderRadius: 8,
-        border: '1px solid #d0d7de',
+        border: '1px solid var(--td-metadata-border)',
         boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
       }}>
         <div style={{
           fontSize: 11,
           fontWeight: 600,
-          color: '#57606a',
+          color: 'var(--td-metadata-heading)',
           marginBottom: 12,
           textTransform: 'uppercase',
           letterSpacing: '0.8px',
@@ -105,7 +105,7 @@ const FrontMatterCard: React.FC<{ frontMatter: Record<string, any> }> = ({ front
           display: 'inline-block',
           width: 3,
           height: 12,
-          background: '#0969da',
+          background: 'var(--td-metadata-accent)',
           borderRadius: 2
         }}></span>
           Metadata
@@ -116,9 +116,9 @@ const FrontMatterCard: React.FC<{ frontMatter: Record<string, any> }> = ({ front
                   key={key}
                   style={{
                     padding: '10px 14px',
-                    background: '#ffffff',
+                    background: 'var(--td-metadata-item-bg)',
                     borderRadius: 6,
-                    border: '1px solid #d0d7de',
+                    border: '1px solid var(--td-metadata-border)',
                     minWidth: 140,
                     flex: '1 1 auto',
                     boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
@@ -127,7 +127,7 @@ const FrontMatterCard: React.FC<{ frontMatter: Record<string, any> }> = ({ front
               >
                 <div style={{
                   fontSize: 10,
-                  color: '#656d76',
+                  color: 'var(--td-metadata-label)',
                   marginBottom: 4,
                   fontWeight: 600,
                   textTransform: 'capitalize',
@@ -137,7 +137,7 @@ const FrontMatterCard: React.FC<{ frontMatter: Record<string, any> }> = ({ front
                 </div>
                 <div style={{
                   fontSize: 13,
-                  color: '#24292f',
+                  color: 'var(--td-metadata-value)',
                   fontWeight: 600,
                   wordBreak: 'break-word',
                   lineHeight: 1.4
@@ -418,7 +418,7 @@ const SkillLibrary: React.FC = () => {
           <Text type="secondary">
             管理云端存储的智能体技能，支持版本管理和在线发布。
             <Tooltip title="技能文件存储在阿里云 OSS，支持版本控制和预签名下载">
-              <InfoCircleOutlined style={{ marginLeft: 8, color: '#999', cursor: 'help' }} />
+              <InfoCircleOutlined style={{ marginLeft: 8, color: 'var(--td-text-tertiary)', cursor: 'help' }} />
             </Tooltip>
           </Text>
         </div>
@@ -468,7 +468,7 @@ const SkillLibrary: React.FC = () => {
                         >
                           <Button
                             type="text"
-                            icon={<SwitcherOutlined style={{ color: skill.enabled ? '#52c41a' : '#999', fontSize: 20 }} />}
+                            icon={<SwitcherOutlined style={{ color: skill.enabled ? 'var(--td-success-color)' : 'var(--td-text-tertiary)', fontSize: 20 }} />}
                             onClick={(e) => e.stopPropagation()}
                             loading={enableLoading}
                           />
@@ -533,9 +533,9 @@ const SkillLibrary: React.FC = () => {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
                       <Space>
                         {isBuiltin ? (
-                          <CrownOutlined style={{ fontSize: 24, color: '#faad14' }} />
+                          <CrownOutlined style={{ fontSize: 24, color: 'var(--td-highlight)' }} />
                         ) : (
-                          <CloudOutlined style={{ fontSize: 24, color: '#1890ff' }} />
+                          <CloudOutlined style={{ fontSize: 24, color: 'var(--td-info-color)' }} />
                         )}
                         <Text strong style={{ fontSize: 16 }}>{skill.name}</Text>
                       </Space>
@@ -572,7 +572,7 @@ const SkillLibrary: React.FC = () => {
                         </Space>
                       </div>
 
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, color: '#999' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, color: 'var(--td-text-tertiary)' }}>
                         <Text type="secondary">
                           {skill.updatedAt ? `更新于 ${new Date(skill.updatedAt).toLocaleDateString()}` : '系统预置'}
                         </Text>
@@ -585,12 +585,12 @@ const SkillLibrary: React.FC = () => {
             
             {/* 创建按钮卡片 */}
             <Col xs={24} sm={12} md={8} lg={6}>
-              <Card 
-                hoverable 
-                style={{ 
-                  height: '100%', 
+              <Card
+                hoverable
+                style={{
+                  height: '100%',
                   minHeight: 280,
-                  border: '2px dashed #d9d9d9',
+                  border: '2px dashed var(--td-border-color)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -598,7 +598,7 @@ const SkillLibrary: React.FC = () => {
                 }}
                 onClick={handleCreate}
               >
-                <div style={{ textAlign: 'center', color: '#999' }}>
+                <div style={{ textAlign: 'center', color: 'var(--td-text-tertiary)' }}>
                   <PlusOutlined style={{ fontSize: 48, marginBottom: 16 }} />
                   <div>添加新技能</div>
                 </div>
@@ -719,9 +719,9 @@ const SkillLibrary: React.FC = () => {
                         return (
                             <div style={{
                               padding: 16,
-                              background: '#ffffff',
+                              background: 'var(--td-bg-container)',
                               borderRadius: 8,
-                              border: '1px solid #d0d7de',
+                              border: '1px solid var(--td-metadata-border)',
                               lineHeight: 1.6
                             }}>
                               {/* Front Matter 元数据卡片 */}
@@ -740,7 +740,7 @@ const SkillLibrary: React.FC = () => {
                             </div>
                         );
                       })() : currentSkill.fileManifest ? (
-                        <div style={{ padding: 16, background: '#f5f5f5', borderRadius: 8, whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: 13 }}>
+                        <div style={{ padding: 16, background: 'var(--td-code-bg)', borderRadius: 8, whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: 13, color: 'var(--td-code-text)' }}>
                           {JSON.stringify(currentSkill.fileManifest, null, 2)}
                         </div>
                       ) : (
@@ -807,16 +807,16 @@ const SkillLibrary: React.FC = () => {
                               key: String(idx),
                               label: script.name,
                               children: (
-                                <div style={{ 
-                                  padding: 12, 
-                                  background: '#1e1e1e', 
+                                <div style={{
+                                  padding: 12,
+                                  background: 'var(--td-code-block-bg)',
                                   borderRadius: 6,
                                   overflow: 'auto',
                                   maxHeight: 500
                                 }}>
-                                  <pre style={{ 
-                                    margin: 0, 
-                                    color: '#d4d4d4',
+                                  <pre style={{
+                                    margin: 0,
+                                    color: 'var(--td-code-block-text)',
                                     fontFamily: 'Consolas, Monaco, "Courier New", monospace',
                                     fontSize: 13,
                                     lineHeight: 1.5,
@@ -930,12 +930,13 @@ const SkillLibrary: React.FC = () => {
               {preview ? (
                 <div style={{
                   padding: 16,
-                  background: '#fafafa',
+                  background: 'var(--td-surface-nested)',
                   borderRadius: 6,
                   minHeight: 300,
-                  border: '1px solid #d9d9d9',
+                  border: '1px solid var(--td-border-color)',
                   maxHeight: 400,
-                  overflow: 'auto'
+                  overflow: 'auto',
+                  color: 'var(--td-text-base)'
                 }}>
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
                     {form.getFieldValue('skillMarkdown') || '*内容预览将显示在这里...*'}

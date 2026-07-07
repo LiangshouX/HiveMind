@@ -103,13 +103,13 @@ export function ProfilePage() {
                     style={{ marginBottom: '16px' }}
                   >
                     <Input
-                      prefix={<UserOutlined style={{ color: '#b32934' }} />}
+                      prefix={<UserOutlined style={{ color: 'var(--td-primary)' }} />}
                       value={user?.userId}
                       disabled
                       style={{
-                        background: isDarkMode ? '#07111f' : '#ffffff',
-                        border: `1px solid ${isDarkMode ? '#1e3a5f' : '#dee2e6'}`,
-                        color: '#b32934',
+                        background: 'var(--td-input-bg)',
+                        border: '1px solid var(--td-border-color)',
+                        color: 'var(--td-primary)',
                         borderRadius: '8px'
                       }}
                     />
@@ -120,12 +120,12 @@ export function ProfilePage() {
                     style={{ marginBottom: '16px' }}
                   >
                     <Input
-                      prefix={<UserOutlined style={{ color: '#b32934' }} />}
+                      prefix={<UserOutlined style={{ color: 'var(--td-primary)' }} />}
                       placeholder="默认显示昵称，留空则回退为 userId"
                       style={{
-                        background: isDarkMode ? '#07111f' : '#ffffff',
-                        border: `1px solid ${isDarkMode ? '#1e3a5f' : '#dee2e6'}`,
-                        color: isDarkMode ? '#f3f7ff' : '#2c3e50',
+                        background: 'var(--td-input-bg)',
+                        border: '1px solid var(--td-border-color)',
+                        color: 'var(--td-text-base)',
                         borderRadius: '8px'
                       }}
                     />
@@ -137,12 +137,12 @@ export function ProfilePage() {
                     style={{ marginBottom: '24px' }}
                   >
                     <Input.Password
-                      prefix={<LockOutlined style={{ color: '#b32934' }} />}
+                      prefix={<LockOutlined style={{ color: 'var(--td-primary)' }} />}
                       placeholder="不修改密码可留空"
                       style={{
-                        background: isDarkMode ? '#07111f' : '#ffffff',
-                        border: `1px solid ${isDarkMode ? '#1e3a5f' : '#dee2e6'}`,
-                        color: isDarkMode ? '#f3f7ff' : '#2c3e50',
+                        background: 'var(--td-input-bg)',
+                        border: '1px solid var(--td-border-color)',
+                        color: 'var(--td-text-base)',
                         borderRadius: '8px'
                       }}
                     />

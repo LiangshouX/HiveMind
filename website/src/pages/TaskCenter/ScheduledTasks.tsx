@@ -87,7 +87,7 @@ const ScheduledTasks: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: 24, background: '#fff', minHeight: '100%', borderRadius: 8 }}>
+    <div style={{ padding: 24, background: 'var(--td-bg-container)', minHeight: '100%', borderRadius: 8 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div>
           <Title level={4} style={{ margin: 0 }}>定时任务</Title>

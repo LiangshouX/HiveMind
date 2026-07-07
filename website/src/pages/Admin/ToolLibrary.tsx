@@ -238,13 +238,15 @@ const ToolLibrary: React.FC = () => {
                         {tool.examples.slice(0, 2).map((ex, idx) => (
                           <div key={idx} style={{ marginBottom: 8 }}>
                             <Text strong>{ex.title}</Text>
-                            <pre style={{ 
-                              background: '#f5f5f5', 
-                              padding: '4px 8px', 
-                              borderRadius: 4, 
+                            <pre style={{
+                              background: 'var(--td-code-bg)',
+                              padding: '4px 8px',
+                              borderRadius: 4,
                               fontSize: 12,
                               overflow: 'auto',
-                              maxHeight: 60
+                              maxHeight: 60,
+                              color: 'var(--td-code-text)',
+                              border: '1px solid var(--td-code-border)'
                             }}>
                               {ex.input}
                             </pre>
@@ -255,9 +257,9 @@ const ToolLibrary: React.FC = () => {
                   )}
 
                   {/* 控制区 */}
-                  <div style={{ 
-                    marginTop: 'auto', 
-                    borderTop: '1px solid #f0f0f0', 
+                  <div style={{
+                    marginTop: 'auto',
+                    borderTop: '1px solid var(--td-border-light)',
                     paddingTop: 12,
                     display: 'flex',
                     flexDirection: 'column',

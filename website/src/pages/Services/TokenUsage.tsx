@@ -91,7 +91,7 @@ const TokenUsage: React.FC = () => {
   ];
 
   return (
-    <div style={{ padding: 24, background: '#fff', minHeight: '100%', borderRadius: 8 }}>
+    <div style={{ padding: 24, background: 'var(--td-bg-container)', minHeight: '100%', borderRadius: 8 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div>
           <Title level={4} style={{ margin: 0 }}>用量统计</Title>
@@ -112,7 +112,7 @@ const TokenUsage: React.FC = () => {
           <>
             <Row gutter={16} style={{ marginBottom: 24 }}>
               <Col span={6}>
-                <Card bordered={false} style={{ background: '#f6ffed' }}>
+                <Card bordered={false} style={{ background: 'var(--td-stat-green-bg)' }}>
                   <Statistic
                     title="总估算费用"
                     value={summary.estimatedCost || 0}
@@ -123,7 +123,7 @@ const TokenUsage: React.FC = () => {
                 </Card>
               </Col>
               <Col span={6}>
-                <Card bordered={false} style={{ background: '#fffbe6' }}>
+                <Card bordered={false} style={{ background: 'var(--td-stat-yellow-bg)' }}>
                   <Statistic
                     title="总 Token 消耗"
                     value={summary.totalTokens || 0}
@@ -133,7 +133,7 @@ const TokenUsage: React.FC = () => {
                 </Card>
               </Col>
               <Col span={6}>
-                <Card bordered={false} style={{ background: '#e6f7ff' }}>
+                <Card bordered={false} style={{ background: 'var(--td-stat-blue-bg)' }}>
                   <Statistic
                     title="调用次数"
                     value={summary.totalCalls || 0}
@@ -143,7 +143,7 @@ const TokenUsage: React.FC = () => {
                 </Card>
               </Col>
               <Col span={6}>
-                <Card bordered={false} style={{ background: '#f9f0ff' }}>
+                <Card bordered={false} style={{ background: 'var(--td-stat-purple-bg)' }}>
                   <Statistic
                     title="活跃模型数"
                     value={byModelData.length}

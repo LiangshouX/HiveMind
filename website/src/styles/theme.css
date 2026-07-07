@@ -50,7 +50,36 @@
   --td-chat-panel-bg: rgba(255, 255, 255, 0.8);
   --td-header-bg: rgba(240, 242, 245, 0.85);
   --td-sider-bg: #ffffff;
-  
+
+  /* 代码预览 (Code Preview) */
+  --td-code-bg: #f5f5f5;
+  --td-code-border: #d9d9d9;
+  --td-code-text: #24292f;
+  --td-code-block-bg: #1e1e1e;
+  --td-code-block-text: #d4d4d4;
+
+  /* 统计卡片 (Stat Cards) - 低饱和度背景 */
+  --td-stat-green-bg: #f6ffed;
+  --td-stat-yellow-bg: #fffbe6;
+  --td-stat-blue-bg: #e6f7ff;
+  --td-stat-purple-bg: #f9f0ff;
+
+  /* 语义色 (Semantic Colors) */
+  --td-success-color: #52c41a;
+  --td-info-color: #1890ff;
+
+  /* 元数据卡片 (Metadata / FrontMatter) */
+  --td-metadata-bg: linear-gradient(135deg, #f6f8fa 0%, #eef1f4 100%);
+  --td-metadata-border: #d0d7de;
+  --td-metadata-item-bg: #ffffff;
+  --td-metadata-label: #656d76;
+  --td-metadata-value: #24292f;
+  --td-metadata-heading: #57606a;
+  --td-metadata-accent: #0969da;
+
+  /* 嵌套表面 (Nested Surface) */
+  --td-surface-nested: #fafafa;
+
   /* 字体 */
   --td-font-mono: "Fira Code", "JetBrains Mono", source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
 }
@@ -107,7 +136,36 @@
   --td-chat-panel-bg: rgba(30, 31, 36, 0.6);
   --td-header-bg: rgba(22, 23, 26, 0.8);
   --td-sider-bg: #16171a;
-  
+
+  /* 代码预览 (Code Preview) */
+  --td-code-bg: #282a30;
+  --td-code-border: #3a3d45;
+  --td-code-text: #e0e0e0;
+  --td-code-block-bg: #0d1117;
+  --td-code-block-text: #c9d1d9;
+
+  /* 统计卡片 (Stat Cards) - 低饱和度暗色背景 */
+  --td-stat-green-bg: rgba(82, 196, 26, 0.08);
+  --td-stat-yellow-bg: rgba(250, 173, 20, 0.08);
+  --td-stat-blue-bg: rgba(24, 144, 255, 0.08);
+  --td-stat-purple-bg: rgba(114, 46, 209, 0.08);
+
+  /* 语义色 (Semantic Colors) */
+  --td-success-color: #49aa19;
+  --td-info-color: #177ddc;
+
+  /* 元数据卡片 (Metadata / FrontMatter) */
+  --td-metadata-bg: linear-gradient(135deg, #1e1f24 0%, #282a30 100%);
+  --td-metadata-border: #3a3d45;
+  --td-metadata-item-bg: #282a30;
+  --td-metadata-label: #75777d;
+  --td-metadata-value: #ececec;
+  --td-metadata-heading: #a8aab0;
+  --td-metadata-accent: #58a6ff;
+
+  /* 嵌套表面 (Nested Surface) */
+  --td-surface-nested: #282a30;
+
   /* 字体 */
   --td-font-mono: "Fira Code", "JetBrains Mono", source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
 }
