@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-TangDynasty is a cloud-based AI assistant platform with a multi-agent collaboration architecture. Different AI agents assume distinct roles — message triage (AGENT_TRIAGE), task planning (AGENT_PLANNER), review (AGENT_REVIEWER), and execution dispatch (AGENT_EXECUTOR) — to collaboratively handle complex tasks through an institutionalized workflow.
+HiveMind is a cloud-based AI assistant platform with a multi-agent collaboration architecture. Different AI agents assume distinct roles — message triage (AGENT_TRIAGE), task planning (AGENT_PLANNER), review (AGENT_REVIEWER), and execution dispatch (AGENT_EXECUTOR) — to collaboratively handle complex tasks through an institutionalized workflow.
 
 ## Build & Run Commands
 
