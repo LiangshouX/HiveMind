@@ -58,6 +58,8 @@ export interface ChatRequestPayload {
   sessionId: string;
   title?: string;
   message: string;
+  modelId?: string;
+  providerId?: string;
 }
 
 export interface ToolApprovalActionPayload {

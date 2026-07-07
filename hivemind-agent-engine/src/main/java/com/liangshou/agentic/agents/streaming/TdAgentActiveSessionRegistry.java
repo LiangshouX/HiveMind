@@ -30,7 +30,16 @@ public class TdAgentActiveSessionRegistry {
 
     private static final Logger log = LoggerFactory.getLogger(TdAgentActiveSessionRegistry.class);
 
-    private static final Map<String, ReActAgent> activeAgents = new ConcurrentHashMap<>();
+    private static final Map<String, SessionInfo> activeSessions = new ConcurrentHashMap<>();
+
+    /**
+     * 活动会话信息，跟踪会话使用的 Agent 及其模型配置。
+     *
+     * @param agent      活动会话的 ReActAgent 实例
+     * @param providerId 该会话使用的供应商 ID
+     * @param modelId    该会话使用的模型 ID
+     */
+    private record SessionInfo(ReActAgent agent, String providerId, String modelId) {}
 
     /**
      * 执行 register 操作。
@@ -39,9 +48,22 @@ public class TdAgentActiveSessionRegistry {
      * @param agent 参数
      */
     public void register(String key, ReActAgent agent) {
-        log.info("[会话注册] 注册活动会话 - key: {}, agentName: {}", key, agent.getName());
-        activeAgents.put(key, agent);
-        log.debug("[会话注册] 会话已注册，当前活动会话数: {}", activeAgents.size());
+        register(key, agent, null, null);
+    }
+
+    /**
+     * 执行 register 操作（包含模型信息）。
+     *
+     * @param key        会话键
+     * @param agent      参数
+     * @param providerId 供应商 ID
+     * @param modelId    模型 ID
+     */
+    public void register(String key, ReActAgent agent, String providerId, String modelId) {
+        log.info("[会话注册] 注册活动会话 - key: {}, agentName: {}, providerId: {}, modelId: {}",
+                key, agent.getName(), providerId, modelId);
+        activeSessions.put(key, new SessionInfo(agent, providerId, modelId));
+        log.debug("[会话注册] 会话已注册，当前活动会话数: {}", activeSessions.size());
     }
 
     /**
@@ -51,9 +73,9 @@ public class TdAgentActiveSessionRegistry {
      */
     public void unregister(String key) {
         log.info("[会话注销] 注销活动会话 - key: {}", key);
-        ReActAgent removed = activeAgents.remove(key);
+        SessionInfo removed = activeSessions.remove(key);
         if (removed != null) {
-            log.debug("[会话注销] 会话已成功注销，当前活动会话数: {}", activeAgents.size());
+            log.debug("[会话注销] 会话已成功注销，当前活动会话数: {}", activeSessions.size());
         } else {
             log.warn("[会话注销] 尝试注销不存在的会话 - key: {}", key);
         }
@@ -67,14 +89,14 @@ public class TdAgentActiveSessionRegistry {
      */
     public boolean interrupt(String key) {
         log.info("[会话中断] 尝试中断会话 - key: {}", key);
-        ReActAgent agent = activeAgents.get(key);
-        if (agent == null) {
+        SessionInfo info = activeSessions.get(key);
+        if (info == null) {
             log.warn("[会话中断] 未找到活动会话，可能已被注销 - key: {}", key);
             return false;
         }
         try {
-            log.info("[会话中断] 找到活动会话，调用 interrupt() 方法 - agentName: {}", agent.getName());
-            agent.interrupt();
+            log.info("[会话中断] 找到活动会话，调用 interrupt() 方法 - agentName: {}", info.agent().getName());
+            info.agent().interrupt();
             log.info("[会话中断] 中断信号已发送 - key: {}", key);
             return true;
         } catch (Exception e) {
@@ -91,6 +113,6 @@ public class TdAgentActiveSessionRegistry {
      * @return 活动会话数量
      */
     public int getActiveSessionCount() {
-        return activeAgents.size();
+        return activeSessions.size();
     }
 }

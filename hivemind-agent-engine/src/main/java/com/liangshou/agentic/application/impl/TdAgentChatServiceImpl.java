@@ -165,6 +165,8 @@ public class TdAgentChatServiceImpl implements ITdAgentChatService {
                 .sessionId(request.getSessionId())
                 .userName(request.getUserName())
                 .sessionTitle(request.getTitle())
+                .modelId(request.getModelId())
+                .providerId(request.getProviderId())
                 .build();
     }
 

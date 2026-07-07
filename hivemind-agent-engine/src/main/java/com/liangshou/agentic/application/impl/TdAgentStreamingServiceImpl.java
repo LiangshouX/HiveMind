@@ -150,7 +150,9 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
                 context,
                 agent,
                 agent.stream(userMessage, streamOptions()),
-                true);
+                true,
+                request.getProviderId(),
+                request.getModelId());
     }
 
     /**
@@ -190,7 +192,7 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
                                         .toList())
                         .build();
         log.info("[Streaming Service-批准] 构建批准响应消息，继续执行");
-        return execute(context, agent, agent.stream(toolResponse, streamOptions()), false);
+        return execute(context, agent, agent.stream(toolResponse, streamOptions()), false, null, null);
     }
 
     /**
@@ -233,7 +235,7 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
                                         .toList())
                         .build();
         log.info("[Streaming Service-拒绝] 构建拒绝响应消息，继续执行");
-        return execute(context, agent, agent.stream(toolResponse, streamOptions()), false);
+        return execute(context, agent, agent.stream(toolResponse, streamOptions()), false, null, null);
     }
 
     /**
@@ -256,15 +258,18 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
             ConversationSessionContext context,
             ReActAgent agent,
             Flux<Event> eventFlux,
-            boolean registerActive) {
+            boolean registerActive,
+            String providerId,
+            String modelId) {
         String sessionKey = key(context);
-        log.info("[流式执行] 开始执行 - sessionKey: {}, registerActive: {}", sessionKey, registerActive);
+        log.info("[流式执行] 开始执行 - sessionKey: {}, registerActive: {}, providerId: {}, modelId: {}",
+                sessionKey, registerActive, providerId, modelId);
 
         SseEmitter emitter = new SseEmitter(0L);
         AtomicReference<Msg> finalMessage = new AtomicReference<>();
 
         if (registerActive) {
-            activeSessionRegistry.register(sessionKey, agent);
+            activeSessionRegistry.register(sessionKey, agent, providerId, modelId);
             log.info("[流式执行] 会话已注册到活动列表 - sessionKey: {}", sessionKey);
         }
 

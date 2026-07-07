@@ -54,7 +54,7 @@ public class SysModelsController {
      */
     @Operation(summary = "新增记录", description = "创建一条新的数据记录")
     @PostMapping
-    public Result<Boolean> save(@RequestBody SysModelsDTO dto) {
+    public Result<?> save(@RequestBody SysModelsDTO dto) {
         String userId = SecurityUtils.getCurrentUserId();
         return Result.success(service.save(userId, dto));
     }

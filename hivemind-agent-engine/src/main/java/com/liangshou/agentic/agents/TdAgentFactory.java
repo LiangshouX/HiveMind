@@ -152,7 +152,7 @@ public class TdAgentFactory {
                 ReActAgent.builder()
                         .name("HiveMindAgent")
                         .sysPrompt(systemPrompt)
-                        .model(modelFactory.create())
+                        .model(modelFactory.create(context.getProviderId(), context.getModelId()))
                         .toolkit(toolkit)
                         .memory(memory)
                         .hook(new TdAgentMemoryCompactionHook(context, memory, memoryManager))

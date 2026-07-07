@@ -286,6 +286,8 @@ export function useAgentConsole(
   const [busy, setBusy] = useState(false);
   const [approvalComment, setApprovalComment] = useState("");
   const [runningSessionId, setRunningSessionId] = useState<string>();
+  const [selectedModelId, setSelectedModelId] = useState<string | undefined>(undefined);
+  const [selectedProviderId, setSelectedProviderId] = useState<string | undefined>(undefined);
   const streamAbortRef = useRef<AbortController | null>(null);
   const hydratedRef = useRef(false);
   const sessionsRef = useRef<SessionState[]>([]);
@@ -742,6 +744,8 @@ export function useAgentConsole(
       sessionId,
       title: session.temp ? nextTitle : session.title,
       message: text,
+      modelId: selectedModelId,
+      providerId: selectedProviderId,
     };
 
     await runStream(sessionId, payload.title || session.title, (assistantMessageId, signal) =>
@@ -762,6 +766,8 @@ export function useAgentConsole(
     input,
     routeSessionId,
     runStream,
+    selectedModelId,
+    selectedProviderId,
     user,
   ]);
 
@@ -979,11 +985,18 @@ export function useAgentConsole(
     if (!activeSessionId) {
       return;
     }
-    const current = sessions.find((item) => item.sessionId === activeSessionId);
-    if (current && current.messages.length === 0 && !current.temp) {
+    const current = sessionsRef.current.find((item) => item.sessionId === activeSessionId);
+    if (current && current.messages.length === 0 && !current.temp && !current.loadingHistory) {
       void loadSessionHistory(activeSessionId);
     }
-  }, [activeSessionId, loadSessionHistory, sessions]);
+    // 使用 activeSessionId 作为触发条件，通过 sessionsRef 读取最新状态，
+    // 避免 sessions 作为依赖导致 loadSessionHistory → upsertSession → sessions 变化的死循环
+  }, [activeSessionId, loadSessionHistory]);
+
+  const selectModel = useCallback((providerId: string, modelId: string) => {
+    setSelectedProviderId(providerId);
+    setSelectedModelId(modelId);
+  }, []);
 
   return {
     contextHolder,
@@ -995,8 +1008,11 @@ export function useAgentConsole(
     approvalComment,
     groupedConversationItems,
     apiBase: agentConsoleApi.apiBase,
+    selectedModelId,
+    selectedProviderId,
     setInput,
     setApprovalComment,
+    selectModel,
     createNewSession,
     selectSession,
     deleteSession,

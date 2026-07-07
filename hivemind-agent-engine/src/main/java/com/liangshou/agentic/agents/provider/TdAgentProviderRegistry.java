@@ -116,6 +116,65 @@ public class TdAgentProviderRegistry {
     }
 
     /**
+     * 根据指定的供应商 ID 和模型 ID 解析模型配置。
+     *
+     * <p>与 {@link #resolveConfiguredModel()} 不同，此方法使用请求级别指定的供应商和模型，
+     * 而非全局配置。供应商的 API Key、Base URL 等凭证从供应商目录中获取。</p>
+     *
+     * <p>解析优先级：</p>
+     * <ol>
+     *     <li>使用指定的 providerId 从目录中查找供应商配置</li>
+     *     <li>使用指定的 modelId 查找该供应商下的模型（为 null 时使用供应商的第一个模型）</li>
+     *     <li>使用全局配置中的 stream、enableThinking 等行为参数</li>
+     * </ol>
+     *
+     * @param providerId 供应商 ID，为 null 时使用全局默认供应商
+     * @param modelId    模型 ID，为 null 时使用供应商的默认模型
+     * @return 已解析的模型配置
+     * @throws IllegalStateException 如果指定的供应商或模型不存在
+     */
+    public TdAgentResolvedModelConfig resolveConfiguredModel(String providerId, String modelId) {
+        ProviderCatalogSnapshot snapshot = currentSnapshot();
+        TdAgentProperties.Model modelProperties = properties.getModel();
+
+        // 使用指定的 providerId，或回退到全局默认
+        String resolvedProviderId = normalize(providerId, null);
+        if (resolvedProviderId == null) {
+            resolvedProviderId = normalize(modelProperties.getProviderId(), "dashscope");
+        }
+
+        TdAgentProviderDescriptor provider = snapshot.providersById().get(resolvedProviderId);
+        if (provider == null) {
+            throw new IllegalStateException("未找到内置模型供应商: " + resolvedProviderId);
+        }
+
+        // 使用指定的 modelId，或回退到全局配置
+        String resolvedModelId = firstNonBlank(modelId, modelProperties.getModelId(), modelProperties.getModelName());
+        TdAgentModelDescriptor model = resolveModel(provider, resolvedModelId);
+
+        // 使用供应商自身的凭证
+        String apiKey = firstNonBlank(provider.getApiKey());
+        if (apiKey == null || apiKey.isBlank()) {
+            throw new IllegalStateException("模型 API Key 未配置，当前供应商: " + provider.getId());
+        }
+
+        return TdAgentResolvedModelConfig.builder()
+                .providerId(provider.getId())
+                .providerName(provider.getName())
+                .providerType(TdAgentProviderType.fromValue(provider.getProviderType()))
+                .modelId(model.getId())
+                .modelName(model.getName())
+                .apiKey(apiKey)
+                .baseUrl(provider.getBaseUrl())
+                .endpointPath(provider.getEndpointPath())
+                .formatter(provider.getFormatter())
+                .stream(modelProperties.isStream())
+                .enableThinking(modelProperties.isEnableThinking())
+                .additionalBodyParams(copyAdditionalBodyParams(provider.getGenerateKwargs()))
+                .build();
+    }
+
+    /**
      * 返回当前目录快照中的供应商列表。
      *
      * @return 供应商列表

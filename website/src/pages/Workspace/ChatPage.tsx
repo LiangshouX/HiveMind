@@ -22,8 +22,10 @@ export function ChatPage() {
         input,
         approvalComment,
         groupedConversationItems,
+        selectedModelId,
         setInput,
         setApprovalComment,
+        selectModel,
         createNewSession,
         selectSession,
         deleteSession,
@@ -107,7 +109,9 @@ export function ChatPage() {
                         input={input}
                         activeSession={activeSession}
                         activeSessionId={activeSessionId}
+                        selectedModelId={selectedModelId}
                         onInputChange={setInput}
+                        onSelectModel={selectModel}
                         onRefreshSession={() => void refreshSessions(activeSessionId)}
                         onInterrupt={interruptCurrent}
                         onSend={sendMessage}

@@ -81,14 +81,47 @@ public class TdAgentModelFactory {
      */
     public Model create() {
         TdAgentResolvedModelConfig config = providerRegistry.resolveConfiguredModel();
-        log.info("[模型工厂] 开始创建模型实例 - provider: {}, modelId: {}, stream: {}", 
+        return createFromConfig(config);
+    }
+
+    /**
+     * 根据指定的供应商 ID 和模型 ID 创建聊天模型实例。
+     *
+     * <p>如果 providerId 和 modelId 均为 null，则回退到默认的 {@link #create()} 行为。</p>
+     *
+     * <p>该方法从 {@link TdAgentProviderRegistry} 查找指定供应商和模型的配置，
+     * 然后根据供应商类型创建对应的聊天模型实例。</p>
+     *
+     * @param providerId 供应商 ID，为 null 时使用全局默认供应商
+     * @param modelId    模型 ID，为 null 时使用供应商的默认模型
+     * @return 已配置的聊天模型实例
+     * @throws IllegalStateException 如果指定的供应商或模型不存在
+     */
+    public Model create(String providerId, String modelId) {
+        if ((providerId == null || providerId.isBlank())
+                && (modelId == null || modelId.isBlank())) {
+            return create();
+        }
+        TdAgentResolvedModelConfig config =
+                providerRegistry.resolveConfiguredModel(providerId, modelId);
+        return createFromConfig(config);
+    }
+
+    /**
+     * 根据已解析的模型配置创建聊天模型实例。
+     *
+     * @param config 已解析的模型配置
+     * @return 已配置的聊天模型实例
+     */
+    private Model createFromConfig(TdAgentResolvedModelConfig config) {
+        log.info("[模型工厂] 开始创建模型实例 - provider: {}, modelId: {}, stream: {}",
                 config.getProviderType(), config.getModelId(), config.isStream());
-        
+
         Model model = switch (config.getProviderType()) {
             case DASHSCOPE -> createDashScopeModel(config);
             case OPENAI -> createOpenAiCompatibleModel(config);
         };
-        
+
         log.info("[模型工厂] 模型实例创建完成 - type: {}", model.getClass().getSimpleName());
         return model;
     }

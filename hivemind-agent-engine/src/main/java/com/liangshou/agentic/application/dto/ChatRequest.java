@@ -34,4 +34,16 @@ public class ChatRequest {
 
     @NotBlank
     private String message;
+
+    /**
+     * 请求级别指定的模型 ID（可选）。
+     * <p>如果提供，则使用该模型而非全局默认模型。</p>
+     */
+    private String modelId;
+
+    /**
+     * 请求级别指定的供应商 ID（可选）。
+     * <p>如果提供，则使用该供应商的配置而非全局默认供应商。</p>
+     */
+    private String providerId;
 }

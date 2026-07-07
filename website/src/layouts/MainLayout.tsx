@@ -1,6 +1,7 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
     BookOutlined,
+    CloudServerOutlined,
     CommentOutlined,
     DatabaseOutlined,
     FieldTimeOutlined,
@@ -18,6 +19,7 @@ import {Avatar, Button, Layout, Menu, Space, theme, Typography} from 'antd';
 import {Outlet, useLocation, useNavigate} from 'react-router-dom';
 import ThemeToggle from '../components/ThemeToggle';
 import {useAuth} from '../providers/AuthProvider';
+import {useStore} from '../store';
 
 const {Header, Content, Footer, Sider} = Layout;
 const {Title, Text} = Typography;
@@ -48,6 +50,7 @@ const items: MenuItem[] = [
     ]),
     getItem('管理', 'admin', <UserOutlined/>, [
         getItem('工作区设置', '/workspace-settings', <ReadOutlined/>),
+        getItem('模型配置', '/model-config', <CloudServerOutlined/>),
         getItem('技能库', '/skill-library', <RobotOutlined/>),
         getItem('工具库', '/tool-library', <ToolOutlined/>),
     ]),
@@ -68,6 +71,13 @@ const MainLayout: React.FC = () => {
     const onClick: MenuProps['onClick'] = (e) => {
         navigate(e.key);
     };
+
+    // Dynamic default model from store
+    const defaultModel = useStore((s) => s.defaultModel);
+    const loadDefaultModel = useStore((s) => s.loadDefaultModel);
+    useEffect(() => {
+        loadDefaultModel();
+    }, [loadDefaultModel]);
 
     const selectedKeys = [location.pathname];
     const defaultOpenKeys = items
@@ -104,16 +114,35 @@ const MainLayout: React.FC = () => {
                     borderBottom: '1px solid var(--td-border-light)',
                     paddingBottom: '16px'
                 }}>
-                    <Title level={collapsed ? 3 : 2} className="imperial-heading"
-                           style={{margin: 0, color: 'var(--td-primary)', textShadow: '0 2px 4px rgba(0,0,0,0.2)'}}>
-                        {collapsed ? 'AI' : 'HiveMind'}
-                    </Title>
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: collapsed ? 0 : 10,
+                        marginBottom: collapsed ? 0 : 4
+                    }}>
+                        <img
+                            src="/logo.svg"
+                            alt="HiveMind"
+                            style={{
+                                width: collapsed ? 36 : 32,
+                                height: collapsed ? 36 : 32,
+                                transition: 'all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1)',
+                                filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.15))'
+                            }}
+                        />
+                        {!collapsed && (
+                            <Title level={3} className="imperial-heading"
+                                   style={{margin: 0, color: 'var(--td-primary)', textShadow: '0 2px 4px rgba(0,0,0,0.2)'}}>
+                                HiveMind
+                            </Title>
+                        )}
+                    </div>
                     {!collapsed && (
                         <Text style={{
                             color: 'var(--td-highlight)',
                             fontSize: '12px',
                             letterSpacing: '4px',
-                            marginTop: '4px'
+                            marginTop: '2px'
                         }}>
                             AI ASSISTANT
                         </Text>
@@ -213,7 +242,9 @@ const MainLayout: React.FC = () => {
                         )}
                         <Space>
                             <Text style={{color: 'var(--td-text-secondary)'}}>当前模型：</Text>
-                            <Text strong style={{color: 'var(--td-highlight)'}}>Qwen-Max</Text>
+                            <Text strong style={{color: 'var(--td-highlight)'}}>
+                                {defaultModel?.modelName || '未配置'}
+                            </Text>
                         </Space>
                     </Space>
                 </Header>

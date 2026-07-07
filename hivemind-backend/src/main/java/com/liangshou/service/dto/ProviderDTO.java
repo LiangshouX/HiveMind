@@ -1,14 +1,15 @@
-package com.liangshou.service.vo;
+package com.liangshou.service.dto;
 
 import lombok.Data;
 import java.io.Serializable;
-import java.time.LocalDateTime;
 
+/**
+ * Provider 数据传输对象
+ * <p>用于创建和更新 Provider 信息</p>
+ */
 @Data
-public class SysModelsVO implements Serializable {
+public class ProviderDTO implements Serializable {
     private static final long serialVersionUID = 1L;
-
-    private Long id;
 
     /** Provider 标识（如 dashscope, openai） */
     private String modelProviderId;
@@ -19,17 +20,11 @@ public class SysModelsVO implements Serializable {
     /** 供应商类型: SYSTEM/CUSTOM/LOCAL */
     private String modelProviderType;
 
-    /** 是否激活 */
-    private Boolean isProviderActivated;
-
-    /** 是否系统内置 */
-    private Boolean isSystemBuiltIn;
-
     /** API 端点 URL */
     private String baseUrl;
 
-    /** API Key 掩码（如 sk-****xxxx），不返回明文 */
-    private String apiKeyMask;
+    /** API Key（明文，保存时加密） */
+    private String apiKey;
 
     /** 当前选中的模型 ID */
     private String modelId;
@@ -40,9 +35,6 @@ public class SysModelsVO implements Serializable {
     /** 模型列表 JSON 数组 */
     private String modelsJson;
 
-    /** 创建时间 */
-    private LocalDateTime createTime;
-
-    /** 更新时间 */
-    private LocalDateTime updateTime;
+    /** 是否激活 */
+    private Boolean activated;
 }

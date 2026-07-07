@@ -36,6 +36,18 @@ public class ConversationSessionContext {
     private final String sessionTitle;
 
     /**
+     * 请求级别指定的模型 ID（可选）。
+     * <p>为 null 时使用全局默认模型。</p>
+     */
+    private final String modelId;
+
+    /**
+     * 请求级别指定的供应商 ID（可选）。
+     * <p>为 null 时使用全局默认供应商。</p>
+     */
+    private final String providerId;
+
+    /**
      * 执行 documentId 操作。
      *
      * @return 返回结果

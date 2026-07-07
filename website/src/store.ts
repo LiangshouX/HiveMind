@@ -15,6 +15,18 @@ import {
   type SubConfig,
   type ChangeLogEntry,
 } from './api';
+import {
+  listProviders,
+  getDefaultModel,
+  createProvider as apiCreateProvider,
+  updateProvider as apiUpdateProvider,
+  deleteProvider as apiDeleteProvider,
+  activateProvider as apiActivateProvider,
+  deactivateProvider as apiDeactivateProvider,
+  selectModel as apiSelectModel,
+  type ProviderVO,
+  type ProviderDTO,
+} from './services/providerApi';
 
 // ── Pipeline Definition (PIPE) ──
 
@@ -265,6 +277,12 @@ interface AppStore {
   morningBrief: MorningBrief | null;
   subConfig: SubConfig | null;
 
+  // Provider state
+  providerList: ProviderVO[];
+  selectedProvider: ProviderVO | null;
+  providersLoading: boolean;
+  defaultModel: ProviderVO | null;
+
   // UI State
   activeTab: TabKey;
   taskFilter: 'active' | 'archived' | 'all';
@@ -295,6 +313,16 @@ interface AppStore {
   loadMorning: () => Promise<void>;
   loadSubConfig: () => Promise<void>;
   loadAll: () => Promise<void>;
+
+  // Provider actions
+  loadProviders: () => Promise<void>;
+  createProvider: (dto: ProviderDTO) => Promise<void>;
+  updateProvider: (id: number, dto: ProviderDTO) => Promise<void>;
+  deleteProvider: (id: number) => Promise<void>;
+  activateProvider: (id: number) => Promise<void>;
+  deactivateProvider: (id: number) => Promise<void>;
+  selectModel: (id: number, modelId: string, modelName: string) => Promise<void>;
+  loadDefaultModel: () => Promise<void>;
 }
 
 let _toastId = 0;
@@ -322,6 +350,11 @@ export const useStore = create<AppStore>((set, get) => ({
   agentsStatusData: null,
   morningBrief: null,
   subConfig: null,
+
+  providerList: [],
+  selectedProvider: null,
+  providersLoading: false,
+  defaultModel: null,
 
   activeTab: 'tasks',
   taskFilter: 'active',
@@ -421,6 +454,62 @@ export const useStore = create<AppStore>((set, get) => ({
     await s.loadLive();
     const tab = s.activeTab;
     if (['models', 'skills'].includes(tab)) await s.loadAgentConfig();
+  },
+
+  // ── Provider actions ──
+
+  loadProviders: async () => {
+    set({ providersLoading: true });
+    try {
+      const result = await listProviders(1, 100);
+      set({ providerList: result.records || [] });
+    } catch {
+      set({ providerList: [] });
+    } finally {
+      set({ providersLoading: false });
+    }
+  },
+
+  createProvider: async (dto) => {
+    await apiCreateProvider(dto);
+    await get().loadProviders();
+  },
+
+  updateProvider: async (id, dto) => {
+    await apiUpdateProvider(id, dto);
+    await get().loadProviders();
+  },
+
+  deleteProvider: async (id) => {
+    await apiDeleteProvider(id);
+    await get().loadProviders();
+  },
+
+  activateProvider: async (id) => {
+    await apiActivateProvider(id);
+    await get().loadProviders();
+    await get().loadDefaultModel();
+  },
+
+  deactivateProvider: async (id) => {
+    await apiDeactivateProvider(id);
+    await get().loadProviders();
+    await get().loadDefaultModel();
+  },
+
+  selectModel: async (id, modelId, modelName) => {
+    await apiSelectModel(id, modelId, modelName);
+    await get().loadProviders();
+    await get().loadDefaultModel();
+  },
+
+  loadDefaultModel: async () => {
+    try {
+      const dm = await getDefaultModel();
+      set({ defaultModel: dm });
+    } catch {
+      set({ defaultModel: null });
+    }
   },
 }));
 

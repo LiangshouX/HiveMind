@@ -76,6 +76,28 @@ export async function getJson<T>(path: string): Promise<T> {
   return parseApiResult<T>(response);
 }
 
+export async function deleteJson<T>(path: string): Promise<T> {
+  const response = await fetch(buildApiUrl(path), {
+    method: "DELETE",
+    headers: createHeaders(),
+  });
+  return parseApiResult<T>(response);
+}
+
+export async function patchJson<T>(path: string, payload?: unknown): Promise<T> {
+  const init: RequestInit = {
+    method: "PATCH",
+    headers: createHeaders(
+      payload !== undefined ? { "Content-Type": "application/json" } : undefined,
+    ),
+  };
+  if (payload !== undefined) {
+    init.body = JSON.stringify(payload);
+  }
+  const response = await fetch(buildApiUrl(path), init);
+  return parseApiResult<T>(response);
+}
+
 export async function postFormData<T>(path: string, formData: FormData): Promise<T> {
   const response = await fetch(buildApiUrl(path), {
     method: "POST",

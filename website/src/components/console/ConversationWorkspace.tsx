@@ -23,6 +23,7 @@ import remarkGfm from "remark-gfm";
 import {useEffect, useRef, useState} from "react";
 import type {AuthUser, SessionState} from "../../types";
 import {ChatSendButton} from "./ChatSendButton";
+import {ModelSelector} from "../model/ModelSelector";
 
 dayjs.extend(relativeTime);
 dayjs.locale("zh-cn");
@@ -97,7 +98,9 @@ interface ConversationWorkspaceProps {
     input: string;
     activeSession?: SessionState;
     activeSessionId?: string;
+    selectedModelId?: string;
     onInputChange: (value: string) => void;
+    onSelectModel?: (providerId: string, modelId: string) => void;
     onRefreshSession: () => void;
     onInterrupt: () => void | Promise<void>;
     onSend: () => void | Promise<void>;
@@ -109,7 +112,9 @@ export function ConversationWorkspace({
                                           input,
                                           activeSession,
                                           activeSessionId,
+                                          selectedModelId,
                                           onInputChange,
+                                          onSelectModel,
                                           onInterrupt,
                                           onSend,
                                       }: ConversationWorkspaceProps) {
@@ -216,7 +221,8 @@ export function ConversationWorkspace({
         }
 
         setPrevMessageCount(currentCount);
-    }, [activeSession?.messages.length, prevMessageCount, activeSession]);
+    // 只依赖 messages.length，避免 activeSession 引用变化（如 preview/updatedAt 更新）触发不必要的 effect
+    }, [activeSession?.messages.length, prevMessageCount]);
 
     // 监听会话切换，打开新会话时自动滚动到底部
     useEffect(() => {
@@ -262,6 +268,12 @@ export function ConversationWorkspace({
                 <div className="conversation-surface">
                     <div className="conversation-surface-glow"/>
                     <div className="chat-scroll-area">
+                        <div style={{padding: '16px 16px 0'}}>
+                            <ModelSelector
+                                selectedModelId={selectedModelId}
+                                onSelect={onSelectModel}
+                            />
+                        </div>
                         {!activeSession ? (
                             <div className="empty-state-shell">
                                 <Welcome

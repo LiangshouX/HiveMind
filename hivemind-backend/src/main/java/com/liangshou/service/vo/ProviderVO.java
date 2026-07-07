@@ -4,10 +4,15 @@ import lombok.Data;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
+/**
+ * Provider 视图对象
+ * <p>返回给前端的 Provider 信息，API Key 仅返回掩码</p>
+ */
 @Data
-public class SysModelsVO implements Serializable {
+public class ProviderVO implements Serializable {
     private static final long serialVersionUID = 1L;
 
+    /** 主键 ID */
     private Long id;
 
     /** Provider 标识（如 dashscope, openai） */

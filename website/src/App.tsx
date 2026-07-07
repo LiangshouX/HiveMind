@@ -8,6 +8,7 @@ import ScheduledTasks from './pages/TaskCenter/ScheduledTasks';
 import CourtRules from './pages/Admin/CourtRules';
 import SkillLibrary from './pages/Admin/SkillLibrary';
 import ToolLibrary from './pages/Admin/ToolLibrary';
+import ModelConfigPage from './pages/Admin/ModelConfigPage';
 import TokenUsage from './pages/Services/TokenUsage';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
@@ -88,6 +89,7 @@ const App: React.FC = () => {
               <Route path="workspace-settings" element={<ProtectedRoute><CourtRules /></ProtectedRoute>} />
               <Route path="skill-library" element={<ProtectedRoute><SkillLibrary /></ProtectedRoute>} />
               <Route path="tool-library" element={<ProtectedRoute><ToolLibrary /></ProtectedRoute>} />
+              <Route path="model-config" element={<ProtectedRoute><ModelConfigPage /></ProtectedRoute>} />
               <Route path="token-usage" element={<ProtectedRoute><TokenUsage /></ProtectedRoute>} />
             </Route>
           </Routes>
