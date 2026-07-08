@@ -170,12 +170,6 @@ npm run preview    # Preview production build locally
 Copy `.env.example` to `.env`. Key variable: `VITE_BACKEND_API_ROOT` (defaults to `/api/v1`).
 
 <!-- SPECKIT START -->
-## Active Feature: Model Configuration Management
-
-**Plan**: `specs/001-model-config-management/plan.md`
-**Spec**: `specs/001-model-config-management/spec.md`
-**Research**: `specs/001-model-config-management/research.md`
-**Data Model**: `specs/001-model-config-management/data-model.md`
-**Contracts**: `specs/001-model-config-management/contracts/`
-**Quickstart**: `specs/001-model-config-management/quickstart.md`
+For additional context about technologies to be used, project structure,
+shell commands, and other important information, read the current plan
 <!-- SPECKIT END -->

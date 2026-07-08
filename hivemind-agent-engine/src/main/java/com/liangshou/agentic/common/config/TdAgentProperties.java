@@ -19,6 +19,7 @@ import org.springframework.stereotype.Component;
  *     <li><b>ReMe</b>：长期记忆服务配置（Base URL、超时时间、Top-K 检索数量）</li>
  *     <li><b>Compaction</b>：对话压缩配置（触发阈值、保留消息数、最大摘要长度）</li>
  *     <li><b>Streaming</b>：流式响应配置（是否启用、增量模式）</li>
+ *     <li><b>Observability</b>：可观测性配置（Studio URL、自动启动命令、启动超时）</li>
  * </ul>
  *
  * <p>配置示例（application.yaml）：</p>
@@ -71,6 +72,17 @@ public class TdAgentProperties {
         private boolean enabled = true;
 
         private String url;
+
+        /**
+         * Studio 服务不可用时，尝试通过此命令启动。
+         * 设为 null 或空字符串则跳过自动启动。
+         */
+        private String startupCommand = "agentscope studio";
+
+        /**
+         * 等待 Studio 服务启动的最大秒数。
+         */
+        private int startupTimeoutSeconds = 30;
     }
 
     /**

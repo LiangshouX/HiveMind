@@ -8,8 +8,10 @@ spring:
 
 tdagent:
   observability:
-    enabled: false
-    url: http://localhost:5174
+    enabled: true
+    url: http://localhost:3000
+    startup-command: "agentscope studio"
+    startup-timeout-seconds: 30
   system-prompt:
     product-name: HiveMindAgent
     owner-name: HiveMind

@@ -7,6 +7,7 @@ import com.liangshou.agentic.agents.hooks.TdAgentToolGuardHook;
 import com.liangshou.agentic.agents.memory.MongoConversationMemory;
 import com.liangshou.agentic.agents.memory.TdAgentMemoryManager;
 import com.liangshou.agentic.agents.memory.reme.TdAgentReMeService;
+import com.liangshou.agentic.agents.observability.ObservabilityService;
 import com.liangshou.agentic.agents.skill.TdAgentSkillService;
 import com.liangshou.agentic.common.config.TdAgentProperties;
 import com.liangshou.agentic.application.IConversationPersistenceService;
@@ -15,11 +16,11 @@ import io.agentscope.core.memory.LongTermMemoryMode;
 import io.agentscope.core.memory.reme.ReMeLongTermMemory;
 import io.agentscope.core.skill.SkillBox;
 import io.agentscope.core.studio.StudioClient;
-import io.agentscope.core.studio.StudioManager;
 import io.agentscope.core.studio.StudioMessageHook;
 import io.agentscope.core.tool.Toolkit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
@@ -58,6 +59,7 @@ public class TdAgentFactory {
     private final TdAgentMemoryManager memoryManager;
     private final TdAgentReMeService reMeService;
     private final TdAgentSkillService skillService;
+    private final ObservabilityService observabilityService;
 
     /**
      * 构造 ReAct Agent 工厂实例。
@@ -72,6 +74,7 @@ public class TdAgentFactory {
      * @param memoryManager       记忆管理器，负责对话记忆的压缩和管理
      * @param reMeService         ReMe 集成服务，提供长期记忆能力
      * @param skillService        Skill 服务，管理用户的自定义 Skills
+     * @param observabilityService 可观测性服务，管理 Studio 连接（可选，受 @ConditionalOnProperty 控制）
      */
     public TdAgentFactory(
             TdAgentProperties properties,
@@ -83,7 +86,8 @@ public class TdAgentFactory {
             ToolApprovalService toolApprovalService,
             TdAgentMemoryManager memoryManager,
             TdAgentReMeService reMeService,
-            TdAgentSkillService skillService) {
+            TdAgentSkillService skillService,
+            @Autowired(required = false) ObservabilityService observabilityService) {
         this.properties = properties;
         this.modelFactory = modelFactory;
         this.toolkitFactory = toolkitFactory;
@@ -94,6 +98,7 @@ public class TdAgentFactory {
         this.memoryManager = memoryManager;
         this.reMeService = reMeService;
         this.skillService = skillService;
+        this.observabilityService = observabilityService;
     }
 
     /**
@@ -158,22 +163,12 @@ public class TdAgentFactory {
                         .hook(new TdAgentMemoryCompactionHook(context, memory, memoryManager))
                         .maxIters(properties.getModel().getMaxIters());
 
-        if (properties.getObservability() != null && properties.getObservability().isEnabled()) {
-            // 初始化 Studio 连接
-            StudioManager.init()
-                    .studioUrl(properties.getObservability().getUrl() != null ?
-                            properties.getObservability().getUrl() : "http://localhost:5173")
-                    .project(properties.getSystemPrompt().getProductName())
-                    .runName("%s-%d".formatted(
-                            properties.getSystemPrompt().getProductName(),
-                            System.currentTimeMillis())
-                    )
-                    .initialize()
-                    .block();
-
-            StudioClient studioClient = StudioManager.getClient();
-            log.info("[TdAgent Factory] 启用 Observability - studioClient: {}", studioClient);
-            builder.hook(new StudioMessageHook(studioClient));
+        if (observabilityService != null && observabilityService.isAvailable()) {
+            StudioClient client = observabilityService.getClient();
+            builder.hook(new StudioMessageHook(client));
+            log.info("[TdAgent Factory] 启用 Observability - studioClient: {}", client);
+        } else {
+            log.debug("[TdAgent Factory] Observability 未启用或不可用");
         }
 
         if (skillBox != null) {
