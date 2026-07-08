@@ -157,7 +157,7 @@ class TdAgentModelFactoryTest {
         properties.getModel().setModelId(modelId);
         TdAgentProviderRegistry registry =
                 new TdAgentProviderRegistry(
-                        properties, new ObjectMapper(), new DefaultResourceLoader());
+                        properties, new ObjectMapper(), new DefaultResourceLoader(), null);
         registry.initialize();
         return new TdAgentModelFactory(registry);
     }

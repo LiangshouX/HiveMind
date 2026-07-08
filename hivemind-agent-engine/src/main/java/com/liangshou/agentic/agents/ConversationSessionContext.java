@@ -1,5 +1,6 @@
 package com.liangshou.agentic.agents;
 
+import com.liangshou.agentic.agents.provider.TdAgentResolvedModelConfig;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -46,6 +47,13 @@ public class ConversationSessionContext {
      * <p>为 null 时使用全局默认供应商。</p>
      */
     private final String providerId;
+
+    /**
+     * 会话绑定的模型配置快照。
+     * <p>在对话创建时从数据库解析并绑定，整个会话生命周期内不变。
+     * 确保对话进行中用户修改配置不影响当前对话。</p>
+     */
+    private final TdAgentResolvedModelConfig resolvedModelConfig;
 
     /**
      * 执行 documentId 操作。

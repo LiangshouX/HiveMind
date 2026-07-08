@@ -78,10 +78,12 @@ public class TdAgentModelFactory {
      *
      * @return 已配置的聊天模型实例，可直接用于 Agent 的消息生成
      * @throws IllegalStateException 如果配置中指定的供应商类型不受支持
+     * @deprecated 使用 {@link #createFromConfig(TdAgentResolvedModelConfig)} 并从数据库加载配置
      */
+    @Deprecated
     public Model create() {
         TdAgentResolvedModelConfig config = providerRegistry.resolveConfiguredModel();
-        return createFromConfig(config);
+        return createFromConfigInternal(config);
     }
 
     /**
@@ -96,7 +98,9 @@ public class TdAgentModelFactory {
      * @param modelId    模型 ID，为 null 时使用供应商的默认模型
      * @return 已配置的聊天模型实例
      * @throws IllegalStateException 如果指定的供应商或模型不存在
+     * @deprecated 使用 {@link #createFromConfig(TdAgentResolvedModelConfig)} 并从数据库加载配置
      */
+    @Deprecated
     public Model create(String providerId, String modelId) {
         if ((providerId == null || providerId.isBlank())
                 && (modelId == null || modelId.isBlank())) {
@@ -104,16 +108,29 @@ public class TdAgentModelFactory {
         }
         TdAgentResolvedModelConfig config =
                 providerRegistry.resolveConfiguredModel(providerId, modelId);
-        return createFromConfig(config);
+        return createFromConfigInternal(config);
     }
 
     /**
      * 根据已解析的模型配置创建聊天模型实例。
      *
+     * <p>该方法接受外部已解析的配置（如从数据库加载），直接创建模型实例，
+     * 不再内部调用 {@link TdAgentProviderRegistry} 解析配置。</p>
+     *
      * @param config 已解析的模型配置
      * @return 已配置的聊天模型实例
      */
-    private Model createFromConfig(TdAgentResolvedModelConfig config) {
+    public Model createFromConfig(TdAgentResolvedModelConfig config) {
+        return createFromConfigInternal(config);
+    }
+
+    /**
+     * 根据已解析的模型配置创建聊天模型实例（内部实现）。
+     *
+     * @param config 已解析的模型配置
+     * @return 已配置的聊天模型实例
+     */
+    private Model createFromConfigInternal(TdAgentResolvedModelConfig config) {
         log.info("[模型工厂] 开始创建模型实例 - provider: {}, modelId: {}, stream: {}",
                 config.getProviderType(), config.getModelId(), config.isStream());
 

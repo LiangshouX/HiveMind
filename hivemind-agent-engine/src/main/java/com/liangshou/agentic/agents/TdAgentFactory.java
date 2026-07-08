@@ -8,6 +8,8 @@ import com.liangshou.agentic.agents.memory.MongoConversationMemory;
 import com.liangshou.agentic.agents.memory.TdAgentMemoryManager;
 import com.liangshou.agentic.agents.memory.reme.TdAgentReMeService;
 import com.liangshou.agentic.agents.observability.ObservabilityService;
+import com.liangshou.agentic.agents.provider.TdAgentProviderRegistry;
+import com.liangshou.agentic.agents.provider.TdAgentResolvedModelConfig;
 import com.liangshou.agentic.agents.skill.TdAgentSkillService;
 import com.liangshou.agentic.common.config.TdAgentProperties;
 import com.liangshou.agentic.application.IConversationPersistenceService;
@@ -51,6 +53,7 @@ public class TdAgentFactory {
 
     private final TdAgentProperties properties;
     private final TdAgentModelFactory modelFactory;
+    private final TdAgentProviderRegistry providerRegistry;
     private final TdAgentToolkitFactory toolkitFactory;
     private final TdAgentPromptService promptService;
     private final IConversationPersistenceService persistenceService;
@@ -66,6 +69,7 @@ public class TdAgentFactory {
      *
      * @param properties          Agent 外部化配置，包含模型参数、沙箱设置、Tool Guard 开关等
      * @param modelFactory        模型工厂，负责创建 LLM 模型实例
+     * @param providerRegistry    供应商注册表，负责从 DB 解析模型配置
      * @param toolkitFactory      Toolkit 工厂，负责创建和配置工具集
      * @param promptService       Prompt 服务，负责构建系统提示词
      * @param persistenceService  对话持久化服务，用于会话历史的读写操作
@@ -79,6 +83,7 @@ public class TdAgentFactory {
     public TdAgentFactory(
             TdAgentProperties properties,
             TdAgentModelFactory modelFactory,
+            TdAgentProviderRegistry providerRegistry,
             TdAgentToolkitFactory toolkitFactory,
             TdAgentPromptService promptService,
             IConversationPersistenceService persistenceService,
@@ -90,6 +95,7 @@ public class TdAgentFactory {
             @Autowired(required = false) ObservabilityService observabilityService) {
         this.properties = properties;
         this.modelFactory = modelFactory;
+        this.providerRegistry = providerRegistry;
         this.toolkitFactory = toolkitFactory;
         this.promptService = promptService;
         this.persistenceService = persistenceService;
@@ -153,11 +159,21 @@ public class TdAgentFactory {
         log.debug("[TdAgent Factory] SkillBox 已创建 - isNull: {}", skillBox == null);
 
         log.info("[TdAgent Factory] 开始构建 ReActAgent 实例");
+
+        // 从 DB 解析模型配置（优先使用会话上下文中的快照）
+        TdAgentResolvedModelConfig resolvedConfig = context.getResolvedModelConfig();
+        if (resolvedConfig == null) {
+            log.info("[TdAgent Factory] 会话上下文无配置快照，从 DB 解析 - userId: {}, providerId: {}, modelId: {}",
+                    context.getUserId(), context.getProviderId(), context.getModelId());
+            resolvedConfig = providerRegistry.resolveForUser(
+                    context.getUserId(), context.getProviderId(), context.getModelId());
+        }
+
         var builder =
                 ReActAgent.builder()
                         .name("HiveMindAgent")
                         .sysPrompt(systemPrompt)
-                        .model(modelFactory.create(context.getProviderId(), context.getModelId()))
+                        .model(modelFactory.createFromConfig(resolvedConfig))
                         .toolkit(toolkit)
                         .memory(memory)
                         .hook(new TdAgentMemoryCompactionHook(context, memory, memoryManager))

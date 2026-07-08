@@ -54,5 +54,17 @@ public class AgentSessionStateDocument {
     @Field("paused")
     private boolean paused;
 
+    /**
+     * 首轮对话使用的供应商 ID，用于审批/拒绝恢复时保持供应商一致性。
+     */
+    @Field("provider_id")
+    private String providerId;
+
+    /**
+     * 首轮对话使用的模型 ID，用于审批/拒绝恢复时保持模型一致性。
+     */
+    @Field("model_id")
+    private String modelId;
+
     private Instant updatedAt;
 }

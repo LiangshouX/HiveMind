@@ -63,7 +63,7 @@ class TdAgentProviderRegistryTest {
 
             TdAgentProperties properties = createProperties(catalog, "dashscope", "qwen-max");
             TdAgentProviderRegistry registry = new TdAgentProviderRegistry(
-                    properties, objectMapper, resourceLoader);
+                    properties, objectMapper, resourceLoader, null);
 
             assertDoesNotThrow(registry::initialize);
         }
@@ -74,7 +74,7 @@ class TdAgentProviderRegistryTest {
             TdAgentProperties properties = new TdAgentProperties();
             properties.getModel().setProviderConfigLocation("classpath:non-existent.json");
             TdAgentProviderRegistry registry = new TdAgentProviderRegistry(
-                    properties, objectMapper, resourceLoader);
+                    properties, objectMapper, resourceLoader, null);
 
             assertThrows(IllegalStateException.class, registry::initialize);
         }
@@ -85,7 +85,7 @@ class TdAgentProviderRegistryTest {
             Path catalog = createProviderCatalog("[]");
             TdAgentProperties properties = createProperties(catalog, "dashscope", "qwen-max");
             TdAgentProviderRegistry registry = new TdAgentProviderRegistry(
-                    properties, objectMapper, resourceLoader);
+                    properties, objectMapper, resourceLoader, null);
 
             assertThrows(IllegalStateException.class, registry::initialize);
         }
@@ -105,7 +105,7 @@ class TdAgentProviderRegistryTest {
                     """);
             TdAgentProperties properties = createProperties(catalog, null, null);
             TdAgentProviderRegistry registry = new TdAgentProviderRegistry(
-                    properties, objectMapper, resourceLoader);
+                    properties, objectMapper, resourceLoader, null);
 
             assertThrows(IllegalStateException.class, registry::initialize);
         }
@@ -125,7 +125,7 @@ class TdAgentProviderRegistryTest {
                     """);
             TdAgentProperties properties = createProperties(catalog, "test-provider", null);
             TdAgentProviderRegistry registry = new TdAgentProviderRegistry(
-                    properties, objectMapper, resourceLoader);
+                    properties, objectMapper, resourceLoader, null);
 
             assertThrows(IllegalStateException.class, registry::initialize);
         }
@@ -153,7 +153,7 @@ class TdAgentProviderRegistryTest {
                     """);
             TdAgentProperties properties = createProperties(catalog, "duplicate", null);
             TdAgentProviderRegistry registry = new TdAgentProviderRegistry(
-                    properties, objectMapper, resourceLoader);
+                    properties, objectMapper, resourceLoader, null);
 
             assertThrows(IllegalStateException.class, registry::initialize);
         }
@@ -174,7 +174,7 @@ class TdAgentProviderRegistryTest {
                     """);
             TdAgentProperties properties = createProperties(catalog, "invalid-type", null);
             TdAgentProviderRegistry registry = new TdAgentProviderRegistry(
-                    properties, objectMapper, resourceLoader);
+                    properties, objectMapper, resourceLoader, null);
 
             assertThrows(IllegalArgumentException.class, registry::initialize);
         }
@@ -206,7 +206,7 @@ class TdAgentProviderRegistryTest {
                     """);
             TdAgentProperties properties = createProperties(catalog, "dashscope", "qwen-max");
             TdAgentProviderRegistry registry = new TdAgentProviderRegistry(
-                    properties, objectMapper, resourceLoader);
+                    properties, objectMapper, resourceLoader, null);
             registry.initialize();
 
             TdAgentResolvedModelConfig config = registry.resolveConfiguredModel();
@@ -241,7 +241,7 @@ class TdAgentProviderRegistryTest {
                     """);
             TdAgentProperties properties = createProperties(catalog, "nonexistent", "qwen-max");
             TdAgentProviderRegistry registry = new TdAgentProviderRegistry(
-                    properties, objectMapper, resourceLoader);
+                    properties, objectMapper, resourceLoader, null);
             registry.initialize();
 
             assertThrows(IllegalStateException.class, registry::resolveConfiguredModel);
@@ -269,7 +269,7 @@ class TdAgentProviderRegistryTest {
                     """);
             TdAgentProperties properties = createProperties(catalog, "dashscope", "nonexistent-model");
             TdAgentProviderRegistry registry = new TdAgentProviderRegistry(
-                    properties, objectMapper, resourceLoader);
+                    properties, objectMapper, resourceLoader, null);
             registry.initialize();
 
             assertThrows(IllegalStateException.class, registry::resolveConfiguredModel);
@@ -298,7 +298,7 @@ class TdAgentProviderRegistryTest {
             TdAgentProperties properties = createProperties(catalog, "dashscope", "qwen-max");
             properties.getModel().setApiKey(null);
             TdAgentProviderRegistry registry = new TdAgentProviderRegistry(
-                    properties, objectMapper, resourceLoader);
+                    properties, objectMapper, resourceLoader, null);
             registry.initialize();
 
             assertThrows(IllegalStateException.class, registry::resolveConfiguredModel);
@@ -321,7 +321,7 @@ class TdAgentProviderRegistryTest {
                     """);
             TdAgentProperties properties = createProperties(catalog, "empty-provider", null);
             TdAgentProviderRegistry registry = new TdAgentProviderRegistry(
-                    properties, objectMapper, resourceLoader);
+                    properties, objectMapper, resourceLoader, null);
             registry.initialize();
 
             assertThrows(IllegalStateException.class, registry::resolveConfiguredModel);
@@ -353,7 +353,7 @@ class TdAgentProviderRegistryTest {
                     """);
             TdAgentProperties properties = createProperties(catalog, "openai", null);
             TdAgentProviderRegistry registry = new TdAgentProviderRegistry(
-                    properties, objectMapper, resourceLoader);
+                    properties, objectMapper, resourceLoader, null);
             registry.initialize();
 
             TdAgentResolvedModelConfig config = registry.resolveConfiguredModel();
@@ -385,7 +385,7 @@ class TdAgentProviderRegistryTest {
             TdAgentProperties properties = createProperties(catalog, "dashscope", "qwen-max");
             properties.getModel().setApiKey("config-key");
             TdAgentProviderRegistry registry = new TdAgentProviderRegistry(
-                    properties, objectMapper, resourceLoader);
+                    properties, objectMapper, resourceLoader, null);
             registry.initialize();
 
             TdAgentResolvedModelConfig config = registry.resolveConfiguredModel();
@@ -416,7 +416,7 @@ class TdAgentProviderRegistryTest {
             TdAgentProperties properties = createProperties(catalog, "openai", "gpt-4");
             properties.getModel().setBaseUrl("https://custom-proxy.com/v1");
             TdAgentProviderRegistry registry = new TdAgentProviderRegistry(
-                    properties, objectMapper, resourceLoader);
+                    properties, objectMapper, resourceLoader, null);
             registry.initialize();
 
             TdAgentResolvedModelConfig config = registry.resolveConfiguredModel();
@@ -447,7 +447,7 @@ class TdAgentProviderRegistryTest {
                     """);
             TdAgentProperties properties = createProperties(catalog, "deepseek", "deepseek-chat");
             TdAgentProviderRegistry registry = new TdAgentProviderRegistry(
-                    properties, objectMapper, resourceLoader);
+                    properties, objectMapper, resourceLoader, null);
             registry.initialize();
 
             TdAgentResolvedModelConfig config = registry.resolveConfiguredModel();
@@ -482,7 +482,7 @@ class TdAgentProviderRegistryTest {
                     """);
             TdAgentProperties properties = createProperties(catalog, "custom-provider", "custom-model");
             TdAgentProviderRegistry registry = new TdAgentProviderRegistry(
-                    properties, objectMapper, resourceLoader);
+                    properties, objectMapper, resourceLoader, null);
             registry.initialize();
 
             TdAgentResolvedModelConfig config = registry.resolveConfiguredModel();
@@ -517,7 +517,7 @@ class TdAgentProviderRegistryTest {
             properties.getModel().setStream(true);
             properties.getModel().setEnableThinking(true);
             TdAgentProviderRegistry registry = new TdAgentProviderRegistry(
-                    properties, objectMapper, resourceLoader);
+                    properties, objectMapper, resourceLoader, null);
             registry.initialize();
 
             TdAgentResolvedModelConfig config = registry.resolveConfiguredModel();
@@ -552,7 +552,7 @@ class TdAgentProviderRegistryTest {
             properties.getModel().setModelId(null);
             properties.getModel().setModelName("qwen-plus");
             TdAgentProviderRegistry registry = new TdAgentProviderRegistry(
-                    properties, objectMapper, resourceLoader);
+                    properties, objectMapper, resourceLoader, null);
             registry.initialize();
 
             TdAgentResolvedModelConfig config = registry.resolveConfiguredModel();
@@ -583,7 +583,7 @@ class TdAgentProviderRegistryTest {
                     """);
             TdAgentProperties properties = createProperties(catalog, "custom", "model-1");
             TdAgentProviderRegistry registry = new TdAgentProviderRegistry(
-                    properties, objectMapper, resourceLoader);
+                    properties, objectMapper, resourceLoader, null);
             registry.initialize();
 
             TdAgentResolvedModelConfig config = registry.resolveConfiguredModel();
@@ -629,7 +629,7 @@ class TdAgentProviderRegistryTest {
                     """);
             TdAgentProperties properties = createProperties(catalog, "dashscope", "qwen-max");
             TdAgentProviderRegistry registry = new TdAgentProviderRegistry(
-                    properties, objectMapper, resourceLoader);
+                    properties, objectMapper, resourceLoader, null);
             registry.initialize();
 
             List<TdAgentProviderDescriptor> providers = registry.listProviders();
@@ -657,7 +657,7 @@ class TdAgentProviderRegistryTest {
                     """);
             TdAgentProperties properties = createProperties(catalog, "dashscope", "qwen-max");
             TdAgentProviderRegistry registry = new TdAgentProviderRegistry(
-                    properties, objectMapper, resourceLoader);
+                    properties, objectMapper, resourceLoader, null);
             registry.initialize();
 
             List<TdAgentProviderDescriptor> providers = registry.listProviders();
@@ -693,7 +693,7 @@ class TdAgentProviderRegistryTest {
             TdAgentProperties properties = createProperties(catalog, "deepseek", "deepseek-chat");
             properties.getModel().setReloadOnChange(true);
             TdAgentProviderRegistry registry = new TdAgentProviderRegistry(
-                    properties, objectMapper, resourceLoader);
+                    properties, objectMapper, resourceLoader, null);
             registry.initialize();
 
             assertThrows(IllegalStateException.class, registry::resolveConfiguredModel);
@@ -750,7 +750,7 @@ class TdAgentProviderRegistryTest {
             TdAgentProperties properties = createProperties(catalog, "dashscope", "qwen-max");
             properties.getModel().setReloadOnChange(false);
             TdAgentProviderRegistry registry = new TdAgentProviderRegistry(
-                    properties, objectMapper, resourceLoader);
+                    properties, objectMapper, resourceLoader, null);
             registry.initialize();
 
             TdAgentResolvedModelConfig config1 = registry.resolveConfiguredModel();
@@ -805,7 +805,7 @@ class TdAgentProviderRegistryTest {
             TdAgentProperties properties = createProperties(catalog, "dashscope", "qwen-max");
             properties.getModel().setReloadOnChange(false);
             TdAgentProviderRegistry registry = new TdAgentProviderRegistry(
-                    properties, objectMapper, resourceLoader);
+                    properties, objectMapper, resourceLoader, null);
             registry.initialize();
 
             Thread.sleep(20L);
@@ -867,7 +867,7 @@ class TdAgentProviderRegistryTest {
                         """);
                 TdAgentProperties properties = createProperties(catalog, "test-provider", "test-model");
                 TdAgentProviderRegistry registry = new TdAgentProviderRegistry(
-                        properties, objectMapper, resourceLoader);
+                        properties, objectMapper, resourceLoader, null);
                 registry.initialize();
 
                 TdAgentResolvedModelConfig config = registry.resolveConfiguredModel();
@@ -901,7 +901,7 @@ class TdAgentProviderRegistryTest {
                     """);
             TdAgentProperties properties = createProperties(catalog, "test-provider", "test-model");
             TdAgentProviderRegistry registry = new TdAgentProviderRegistry(
-                    properties, objectMapper, resourceLoader);
+                    properties, objectMapper, resourceLoader, null);
             registry.initialize();
 
             TdAgentResolvedModelConfig config = registry.resolveConfiguredModel();
@@ -937,7 +937,7 @@ class TdAgentProviderRegistryTest {
                     """);
             TdAgentProperties properties = createProperties(catalog, "dashscope", "qwen-max");
             TdAgentProviderRegistry registry = new TdAgentProviderRegistry(
-                    properties, objectMapper, resourceLoader);
+                    properties, objectMapper, resourceLoader, null);
             registry.initialize();
 
             TdAgentResolvedModelConfig config = registry.resolveConfiguredModel();
@@ -967,7 +967,7 @@ class TdAgentProviderRegistryTest {
                     """);
             TdAgentProperties properties = createProperties(catalog, "  ", "qwen-max");
             TdAgentProviderRegistry registry = new TdAgentProviderRegistry(
-                    properties, objectMapper, resourceLoader);
+                    properties, objectMapper, resourceLoader, null);
             registry.initialize();
 
             TdAgentResolvedModelConfig config = registry.resolveConfiguredModel();
@@ -1009,7 +1009,7 @@ class TdAgentProviderRegistryTest {
                     """);
             TdAgentProperties properties = createProperties(catalog, "advanced-provider", "advanced-model");
             TdAgentProviderRegistry registry = new TdAgentProviderRegistry(
-                    properties, objectMapper, resourceLoader);
+                    properties, objectMapper, resourceLoader, null);
             registry.initialize();
 
             TdAgentResolvedModelConfig config = registry.resolveConfiguredModel();
@@ -1047,7 +1047,7 @@ class TdAgentProviderRegistryTest {
                     """);
             TdAgentProperties properties = createProperties(catalog, "nested-provider", "nested-model");
             TdAgentProviderRegistry registry = new TdAgentProviderRegistry(
-                    properties, objectMapper, resourceLoader);
+                    properties, objectMapper, resourceLoader, null);
             registry.initialize();
 
             TdAgentResolvedModelConfig config = registry.resolveConfiguredModel();

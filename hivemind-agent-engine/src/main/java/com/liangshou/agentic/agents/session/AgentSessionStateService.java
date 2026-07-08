@@ -65,6 +65,8 @@ public class AgentSessionStateService {
                 .ifPresent(
                         document -> {
                             document.setPaused(paused);
+                            document.setProviderId(context.getProviderId());
+                            document.setModelId(context.getModelId());
                             document.setUpdatedAt(Instant.now());
                             agentSessionStateRepository.save(document);
                         });
@@ -96,6 +98,30 @@ public class AgentSessionStateService {
                 .findByUserIdAndSessionId(context.getUserId(), context.getSessionId())
                 .map(AgentSessionStateDocument::isPaused)
                 .orElse(false);
+    }
+
+    /**
+     * 获取会话状态中保存的供应商 ID。
+     * @param context 会话上下文
+     * @return 供应商 ID，无记录时返回 null
+     */
+    public String getStoredProviderId(ConversationSessionContext context) {
+        return agentSessionStateRepository
+                .findByUserIdAndSessionId(context.getUserId(), context.getSessionId())
+                .map(AgentSessionStateDocument::getProviderId)
+                .orElse(null);
+    }
+
+    /**
+     * 获取会话状态中保存的模型 ID。
+     * @param context 会话上下文
+     * @return 模型 ID，无记录时返回 null
+     */
+    public String getStoredModelId(ConversationSessionContext context) {
+        return agentSessionStateRepository
+                .findByUserIdAndSessionId(context.getUserId(), context.getSessionId())
+                .map(AgentSessionStateDocument::getModelId)
+                .orElse(null);
     }
 
     /**

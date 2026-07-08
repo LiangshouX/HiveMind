@@ -10,7 +10,7 @@ tdagent:
   observability:
     enabled: true
     url: http://localhost:3000
-    startup-command: "agentscope studio"
+    startup-command: "as_studio"
     startup-timeout-seconds: 30
   system-prompt:
     product-name: HiveMindAgent

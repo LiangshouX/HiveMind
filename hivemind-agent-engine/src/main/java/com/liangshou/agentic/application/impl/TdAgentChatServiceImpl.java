@@ -3,6 +3,8 @@ package com.liangshou.agentic.application.impl;
 import com.liangshou.agentic.agents.ConversationSessionContext;
 import com.liangshou.agentic.agents.TdAgentFactory;
 import com.liangshou.agentic.agents.guard.approval.ToolApprovalService;
+import com.liangshou.agentic.agents.provider.TdAgentProviderRegistry;
+import com.liangshou.agentic.agents.provider.TdAgentResolvedModelConfig;
 import com.liangshou.agentic.agents.session.AgentSessionStateService;
 import com.liangshou.agentic.domain.memory.model.ConversationMemoryDocument;
 import com.liangshou.agentic.domain.memory.model.ConversationViewDocument;
@@ -47,6 +49,7 @@ public class TdAgentChatServiceImpl implements ITdAgentChatService {
     private final IConversationPersistenceService persistenceService;
     private final AgentSessionStateService agentSessionStateService;
     private final ToolApprovalService toolApprovalService;
+    private final TdAgentProviderRegistry providerRegistry;
 
     /**
      * 构造器
@@ -56,18 +59,21 @@ public class TdAgentChatServiceImpl implements ITdAgentChatService {
      * @param persistenceService       持久化服务
      * @param agentSessionStateService 会话状态服务
      * @param toolApprovalService      工具审批服务
+     * @param providerRegistry         供应商注册表
      */
     public TdAgentChatServiceImpl(
             TdAgentFactory agentFactory,
             IChatCommandService chatCommandService,
             IConversationPersistenceService persistenceService,
             AgentSessionStateService agentSessionStateService,
-            ToolApprovalService toolApprovalService) {
+            ToolApprovalService toolApprovalService,
+            TdAgentProviderRegistry providerRegistry) {
         this.agentFactory = agentFactory;
         this.chatCommandService = chatCommandService;
         this.persistenceService = persistenceService;
         this.agentSessionStateService = agentSessionStateService;
         this.toolApprovalService = toolApprovalService;
+        this.providerRegistry = providerRegistry;
     }
 
     /**
@@ -160,6 +166,10 @@ public class TdAgentChatServiceImpl implements ITdAgentChatService {
 
     @Override
     public ConversationSessionContext buildContext(ChatRequest request) {
+        // 从 DB 解析模型配置并绑定到会话上下文（会话级快照）
+        TdAgentResolvedModelConfig resolvedConfig = providerRegistry.resolveForUser(
+                request.getUserId(), request.getProviderId(), request.getModelId());
+
         return ConversationSessionContext.builder()
                 .userId(request.getUserId())
                 .sessionId(request.getSessionId())
@@ -167,6 +177,7 @@ public class TdAgentChatServiceImpl implements ITdAgentChatService {
                 .sessionTitle(request.getTitle())
                 .modelId(request.getModelId())
                 .providerId(request.getProviderId())
+                .resolvedModelConfig(resolvedConfig)
                 .build();
     }
 
@@ -180,11 +191,46 @@ public class TdAgentChatServiceImpl implements ITdAgentChatService {
      */
     @Override
     public ConversationSessionContext buildContext(String userId, String sessionId, String title) {
-        return ConversationSessionContext.builder()
+        // 审批/拒绝恢复场景：从会话状态恢复原始供应商，保证会话级配置一致性
+        ConversationSessionContext base = ConversationSessionContext.builder()
                 .userId(userId)
                 .sessionId(sessionId)
                 .sessionTitle(title)
                 .build();
+
+        String storedProviderId = agentSessionStateService.getStoredProviderId(base);
+        String storedModelId = agentSessionStateService.getStoredModelId(base);
+
+        TdAgentResolvedModelConfig resolvedConfig;
+        if (storedProviderId != null) {
+            // 优先使用原始供应商（会话连续性），若已被删除则降级到激活供应商
+            resolvedConfig = tryResolveWithFallback(userId, storedProviderId, storedModelId);
+        } else {
+            // 旧会话无持久化供应商记录，使用激活供应商
+            resolvedConfig = providerRegistry.resolveForUser(userId, null, null);
+        }
+
+        return ConversationSessionContext.builder()
+                .userId(userId)
+                .sessionId(sessionId)
+                .sessionTitle(title)
+                .providerId(resolvedConfig.getProviderId())
+                .modelId(resolvedConfig.getModelId())
+                .resolvedModelConfig(resolvedConfig)
+                .build();
+    }
+
+    /**
+     * 尝试用指定供应商解析配置，若供应商已被删除则降级到激活供应商。
+     */
+    private TdAgentResolvedModelConfig tryResolveWithFallback(
+            String userId, String providerId, String modelId) {
+        try {
+            return providerRegistry.resolveForUser(userId, providerId, modelId);
+        } catch (IllegalStateException e) {
+            // 供应商已被删除，降级到激活供应商
+            return providerRegistry.resolveForUser(userId, null, null);
+        }
     }
 
 }

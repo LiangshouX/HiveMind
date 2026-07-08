@@ -4,7 +4,10 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.liangshou.agentic.common.config.TdAgentProperties;
 import com.liangshou.agentic.domain.shared.enums.TdAgentProviderType;
+import com.liangshou.agentic.infrastructure.provider.DbProviderConfigLoader;
 import jakarta.annotation.PostConstruct;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Component;
@@ -51,23 +54,31 @@ public class TdAgentProviderRegistry {
     private static final TypeReference<List<TdAgentProviderDescriptor>> PROVIDER_LIST_TYPE =
             new TypeReference<>() {};
 
+    private static final Logger log = LoggerFactory.getLogger(TdAgentProviderRegistry.class);
+
     private final TdAgentProperties properties;
     private final ObjectMapper objectMapper;
     private final ResourceLoader resourceLoader;
+    private final DbProviderConfigLoader dbConfigLoader;
     private final AtomicReference<ProviderCatalogSnapshot> snapshotRef = new AtomicReference<>();
 
     /**
      * 创建模型供应商目录注册表。
      *
-     * @param properties 外部化配置
-     * @param objectMapper Jackson 对象映射器
+     * @param properties     外部化配置
+     * @param objectMapper   Jackson 对象映射器
      * @param resourceLoader Spring 资源加载器
+     * @param dbConfigLoader 数据库配置加载器
      */
     public TdAgentProviderRegistry(
-            TdAgentProperties properties, ObjectMapper objectMapper, ResourceLoader resourceLoader) {
+            TdAgentProperties properties,
+            ObjectMapper objectMapper,
+            ResourceLoader resourceLoader,
+            DbProviderConfigLoader dbConfigLoader) {
         this.properties = properties;
         this.objectMapper = objectMapper;
         this.resourceLoader = resourceLoader;
+        this.dbConfigLoader = dbConfigLoader;
     }
 
     /**
@@ -82,8 +93,11 @@ public class TdAgentProviderRegistry {
      * 返回当前生效的模型配置，并在需要时自动重载目录文件。
      *
      * @return 已解析的模型配置
+     * @deprecated 使用 {@link #resolveForUser(String, String, String)} 从数据库读取配置
      */
+    @Deprecated
     public TdAgentResolvedModelConfig resolveConfiguredModel() {
+        log.warn("[ProviderRegistry] 调用了已废弃的 YAML 配置解析方法，请迁移到 resolveForUser()");
         ProviderCatalogSnapshot snapshot = currentSnapshot();
         TdAgentProperties.Model modelProperties = properties.getModel();
         String providerId = normalize(modelProperties.getProviderId(), "dashscope");
@@ -121,19 +135,15 @@ public class TdAgentProviderRegistry {
      * <p>与 {@link #resolveConfiguredModel()} 不同，此方法使用请求级别指定的供应商和模型，
      * 而非全局配置。供应商的 API Key、Base URL 等凭证从供应商目录中获取。</p>
      *
-     * <p>解析优先级：</p>
-     * <ol>
-     *     <li>使用指定的 providerId 从目录中查找供应商配置</li>
-     *     <li>使用指定的 modelId 查找该供应商下的模型（为 null 时使用供应商的第一个模型）</li>
-     *     <li>使用全局配置中的 stream、enableThinking 等行为参数</li>
-     * </ol>
-     *
      * @param providerId 供应商 ID，为 null 时使用全局默认供应商
      * @param modelId    模型 ID，为 null 时使用供应商的默认模型
      * @return 已解析的模型配置
      * @throws IllegalStateException 如果指定的供应商或模型不存在
+     * @deprecated 使用 {@link #resolveForUser(String, String, String)} 从数据库读取配置
      */
+    @Deprecated
     public TdAgentResolvedModelConfig resolveConfiguredModel(String providerId, String modelId) {
+        log.warn("[ProviderRegistry] 调用了已废弃的 YAML 配置解析方法，请迁移到 resolveForUser()");
         ProviderCatalogSnapshot snapshot = currentSnapshot();
         TdAgentProperties.Model modelProperties = properties.getModel();
 
@@ -172,6 +182,81 @@ public class TdAgentProviderRegistry {
                 .enableThinking(modelProperties.isEnableThinking())
                 .additionalBodyParams(copyAdditionalBodyParams(provider.getGenerateKwargs()))
                 .build();
+    }
+
+    /**
+     * 根据用户 ID 和指定的供应商/模型解析配置（从数据库读取）。
+     *
+     * <p>解析优先级：</p>
+     * <ol>
+     *     <li>如果指定了 providerId，从 DB 查找该供应商</li>
+     *     <li>如果未指定 providerId，使用用户激活的默认供应商</li>
+     *     <li>如果指定了 modelId，使用该模型；否则使用供应商选中的默认模型</li>
+     * </ol>
+     *
+     * @param userId     用户 ID，必填
+     * @param providerId 供应商 ID，为 null 时使用用户激活的默认供应商
+     * @param modelId    模型 ID，为 null 时使用供应商选中的默认模型
+     * @return 已解析的模型配置
+     * @throws IllegalStateException 如果用户无供应商配置、API Key 未配置或指定的供应商/模型不存在
+     */
+    public TdAgentResolvedModelConfig resolveForUser(String userId, String providerId, String modelId) {
+        long startTime = System.nanoTime();
+
+        // 1. 从 DB 加载供应商描述符
+        TdAgentProviderDescriptor provider = loadProviderFromDb(userId, providerId);
+        if (provider == null) {
+            throw new IllegalStateException("用户未配置任何激活的模型供应商，请先在 /model-config 页面配置");
+        }
+
+        // 2. 解析模型
+        String configuredModelId = firstNonBlank(modelId, provider.getModels().isEmpty()
+                ? null : provider.getModels().get(0).getId());
+        TdAgentModelDescriptor model = resolveModel(provider, configuredModelId);
+
+        // 3. 验证 API Key
+        String apiKey = provider.getApiKey();
+        if (apiKey == null || apiKey.isBlank()) {
+            throw new IllegalStateException("供应商 API Key 未配置: " + provider.getId());
+        }
+
+        // 4. 从全局 YAML 配置读取行为参数（非供应商凭证类）
+        TdAgentProperties.Model modelProperties = properties.getModel();
+
+        TdAgentResolvedModelConfig config = TdAgentResolvedModelConfig.builder()
+                .providerId(provider.getId())
+                .providerName(provider.getName())
+                .providerType(TdAgentProviderType.fromValue(provider.getProviderType()))
+                .modelId(model.getId())
+                .modelName(model.getName())
+                .apiKey(apiKey)
+                .baseUrl(provider.getBaseUrl())
+                .endpointPath(provider.getEndpointPath())
+                .formatter(provider.getFormatter())
+                .stream(modelProperties.isStream())
+                .enableThinking(modelProperties.isEnableThinking())
+                .additionalBodyParams(copyAdditionalBodyParams(provider.getGenerateKwargs()))
+                .build();
+
+        long duration = (System.nanoTime() - startTime) / 1_000_000;
+        log.info("[ProviderRegistry] 从 DB 解析配置 - userId: {}, providerId: {}, modelId: {}, resolved: {}/{}, duration: {}ms",
+                userId, config.getProviderId(), config.getModelId(), config.getProviderType(), config.getModelName(), duration);
+
+        return config;
+    }
+
+    /**
+     * 从数据库加载供应商描述符。
+     *
+     * @param userId     用户 ID
+     * @param providerId 供应商 ID，为 null 时使用激活的默认供应商
+     * @return 供应商描述符，不存在时返回 null
+     */
+    private TdAgentProviderDescriptor loadProviderFromDb(String userId, String providerId) {
+        if (providerId != null && !providerId.isBlank()) {
+            return dbConfigLoader.loadForUserAndProvider(userId, providerId);
+        }
+        return dbConfigLoader.loadActivatedForUser(userId);
     }
 
     /**

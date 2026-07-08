@@ -37,6 +37,7 @@ example
 
 # Frontend
 */package-lock.json
+node_modules
 
 # Trea
 .vscode

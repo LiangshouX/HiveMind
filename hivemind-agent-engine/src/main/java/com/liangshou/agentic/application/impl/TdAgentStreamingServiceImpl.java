@@ -1,8 +1,11 @@
 package com.liangshou.agentic.application.impl;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.liangshou.agentic.agents.ConversationSessionContext;
 import com.liangshou.agentic.agents.TdAgentFactory;
 import com.liangshou.agentic.agents.TdAgentModelFactory;
+import com.liangshou.agentic.agents.TdAgentToolkitFactory;
 import com.liangshou.agentic.agents.guard.approval.ToolApprovalService;
 import com.liangshou.agentic.agents.provider.TdAgentResolvedModelConfig;
 import com.liangshou.agentic.agents.session.AgentSessionStateService;
@@ -23,6 +26,9 @@ import io.agentscope.core.agent.Event;
 import io.agentscope.core.agent.EventType;
 import io.agentscope.core.agent.StreamOptions;
 import io.agentscope.core.message.*;
+import io.agentscope.core.tool.AgentTool;
+import io.agentscope.core.tool.ToolCallParam;
+import io.agentscope.core.tool.Toolkit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -71,6 +77,8 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
     private final TdAgentProperties properties;
     private final TdAgentModelFactory modelFactory;
     private final ITokenUsageRecordService tokenUsageRecordService;
+    private final TdAgentToolkitFactory toolkitFactory;
+    private final ObjectMapper objectMapper;
 
     /**
      * 构造器
@@ -94,7 +102,9 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
             TdAgentActiveSessionRegistry activeSessionRegistry,
             TdAgentProperties properties,
             TdAgentModelFactory modelFactory,
-            ITokenUsageRecordService tokenUsageRecordService) {
+            ITokenUsageRecordService tokenUsageRecordService,
+            TdAgentToolkitFactory toolkitFactory,
+            ObjectMapper objectMapper) {
         this.agentFactory = agentFactory;
         this.chatService = chatService;
         this.IChatCommandService = IChatCommandService;
@@ -104,6 +114,8 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
         this.properties = properties;
         this.modelFactory = modelFactory;
         this.tokenUsageRecordService = tokenUsageRecordService;
+        this.toolkitFactory = toolkitFactory;
+        this.objectMapper = objectMapper;
     }
 
     /**
@@ -172,26 +184,21 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
         log.info("[Streaming Service-批准] 工具审批已通过 - approvalIds: {}, count: {}",
                 request.getApprovalIds(), approvals.size());
 
+        // 创建新 Agent（MongoConversationMemory 自动从 MongoDB 加载对话历史）
+        // 不调用 agentSessionStateService.restore()，因为会话状态中的 pendingToolCalls
+        // 与 MongoConversationMemory 中的消息历史不一致，会导致 "Pending tool calls" 错误
         ReActAgent agent = agentFactory.createAgent(context);
-        agentSessionStateService.restore(context, agent);
 
-        // 构建工具响应消息，告知 Agent 这些工具调用已获批准，可以继续执行
-        Msg toolResponse =
-                Msg.builder()
-                        .role(MsgRole.TOOL)
-                        .content(
-                                approvals.stream()
-                                        .<io.agentscope.core.message.ContentBlock>map(
-                                                approval ->
-                                                        new ToolResultBlock(
-                                                                approval.getToolCallId(),
-                                                                approval.getToolName(),
-                                                                TextBlock.builder()
-                                                                        .text("工具调用已获批准，请继续执行")
-                                                                        .build()))
-                                        .toList())
-                        .build();
-        log.info("[Streaming Service-批准] 构建批准响应消息，继续执行");
+        // 真正执行已批准的工具，将实际输出返回给 Agent
+        List<ContentBlock> toolResults = approvals.stream()
+                .map(approval -> executeApprovedTool(context, approval))
+                .toList();
+
+        Msg toolResponse = Msg.builder()
+                .role(MsgRole.TOOL)
+                .content(toolResults)
+                .build();
+        log.info("[Streaming Service-批准] 工具已执行完成，继续推理 - results: {}", toolResults.size());
         return execute(context, agent, agent.stream(toolResponse, streamOptions()), false, null, null);
     }
 
@@ -212,8 +219,9 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
         log.info("[Streaming Service-拒绝] 工具审批已拒绝 - approvalIds: {}, count: {}",
                 request.getApprovalIds(), approvals.size());
 
+        // 创建新 Agent（MongoConversationMemory 自动从 MongoDB 加载对话历史）
+        // 不调用 agentSessionStateService.restore()，避免会话状态与消息历史不一致
         ReActAgent agent = agentFactory.createAgent(context);
-        agentSessionStateService.restore(context, agent);
 
         Msg toolResponse =
                 Msg.builder()
@@ -502,6 +510,88 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
 
     private String key(String userId, String sessionId) {
         return userId + ":" + sessionId;
+    }
+
+    /**
+     * 执行单个已批准的工具调用，返回真实的工具执行结果。
+     *
+     * <p>流程：</p>
+     * <ol>
+     *     <li>创建 Toolkit（包含 GuardedAgentTool 包装）</li>
+     *     <li>按工具名查找对应的 AgentTool</li>
+     *     <li>构建 ToolCallParam（携带原始 toolCallId）</li>
+     *     <li>调用 tool.callAsync() — GuardedAgentTool 检查 isApproved()=true，真正执行</li>
+     * </ol>
+     *
+     * @param context   会话上下文
+     * @param approval  审批记录
+     * @return 工具执行结果 ContentBlock
+     */
+    private ContentBlock executeApprovedTool(ConversationSessionContext context, ToolApprovalDocument approval) {
+        String toolName = approval.getToolName();
+        String toolCallId = approval.getToolCallId();
+        log.info("[审批执行] 开始执行已批准工具 - toolName: {}, toolCallId: {}", toolName, toolCallId);
+
+        try {
+            // 创建 Toolkit（包含 GuardedAgentTool，isApproved=true 会真正执行）
+            Toolkit toolkit = toolkitFactory.createToolkit(context);
+            AgentTool tool = toolkit.getTool(toolName);
+            if (tool == null) {
+                log.warn("[审批执行] 工具未找到 - toolName: {}", toolName);
+                return new ToolResultBlock(
+                        toolCallId, toolName,
+                        TextBlock.builder().text("工具执行失败：工具 " + toolName + " 未找到").build());
+            }
+
+            // 解析原始输入参数
+            Map<String, Object> inputMap = parseToolInput(approval.getToolInputJson());
+
+            // 构建 ToolCallParam，携带原始 toolCallId
+            ToolUseBlock toolUseBlock = ToolUseBlock.builder()
+                    .id(toolCallId)
+                    .name(toolName)
+                    .input(inputMap)
+                    .build();
+            ToolCallParam param = ToolCallParam.builder()
+                    .toolUseBlock(toolUseBlock)
+                    .build();
+
+            // 同步执行工具（GuardedAgentTool 检查 isApproved=true → 委托执行）
+            ToolResultBlock result = tool.callAsync(param).block();
+            log.info("[审批执行] 工具执行完成 - toolName: {}, hasResult: {}", toolName, result != null);
+
+            if (result == null) {
+                return new ToolResultBlock(
+                        toolCallId, toolName,
+                        TextBlock.builder().text("工具执行完成，无输出").build());
+            }
+
+            // 原始工具返回的 ToolResultBlock 可能没有设置 toolUseId，
+            // 必须用原始 toolCallId 重建，否则 ReActAgent.validateAndAddToolResults 会拒绝
+            List<ContentBlock> output = result.getOutput();
+            return new ToolResultBlock(toolCallId, toolName, output);
+        } catch (Exception e) {
+            log.error("[审批执行] 工具执行异常 - toolName: {}, error: {}", toolName, e.getMessage(), e);
+            return new ToolResultBlock(
+                    toolCallId, toolName,
+                    TextBlock.builder().text("工具执行异常：" + e.getMessage()).build());
+        }
+    }
+
+    /**
+     * 解析工具输入参数 JSON。
+     */
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> parseToolInput(String toolInputJson) {
+        if (toolInputJson == null || toolInputJson.isBlank()) {
+            return Map.of();
+        }
+        try {
+            return objectMapper.readValue(toolInputJson, new TypeReference<>() {});
+        } catch (Exception e) {
+            log.warn("[审批执行] 解析工具输入参数失败: {}", e.getMessage());
+            return Map.of();
+        }
     }
 
     /**
