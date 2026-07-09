@@ -7,6 +7,7 @@ package com.liangshou.agentic.common.enums;
  * <ul>
  *     <li><b>MESSAGE</b> - 普通文本消息片段</li>
  *     <li><b>REASONING</b> - Agent 的思考过程（思维链）</li>
+ *     <li><b>TOOL_USE</b> - 工具调用请求</li>
  *     <li><b>TOOL_RESULT</b> - 工具执行结果</li>
  *     <li><b>RESULT</b> - 最终响应结果</li>
  *     <li><b>APPROVAL_REQUIRED</b> - 需要用户审批工具执行</li>
@@ -23,6 +24,8 @@ public enum TdAgentStreamEventType {
     MESSAGE,
 
     REASONING,
+
+    TOOL_USE,
 
     TOOL_RESULT,
 

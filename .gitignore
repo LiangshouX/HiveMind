@@ -57,3 +57,4 @@ local_vector_store
 .specify/
 .codegraph/
 specs/
+.lib-repo/

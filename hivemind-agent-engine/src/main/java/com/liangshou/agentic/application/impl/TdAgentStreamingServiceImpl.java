@@ -37,6 +37,7 @@ import reactor.core.publisher.Flux;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
@@ -306,12 +307,19 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
                             ? TdAgentStreamEventType.TOOL_RESULT
                             : TdAgentStreamEventType.MESSAGE;
 
+                    // 对于 TOOL_RESULT 事件，从 Msg 内容中提取 ToolUseBlock 信息并附加到 metadata
+                    Map<String, Object> eventMetadata = new LinkedHashMap<>();
+                    eventMetadata.put("eventType", event.getType().name());
+                    if (streamEventType == TdAgentStreamEventType.TOOL_RESULT && event.getMessage() != null) {
+                        extractToolUseMetadata(event.getMessage(), eventMetadata);
+                    }
+
                     TdAgentStreamEvent streamEvent = toStreamEvent(
                             context,
                             streamEventType,
                             event.getMessage(),
                             event.isLast(),
-                            Map.of("eventType", event.getType().name()));
+                            eventMetadata);
 
                     log.debug("[流式执行-事件] 准备发送 SSE 事件 - type: {}, last: {}",
                             streamEventType, event.isLast());
@@ -436,6 +444,35 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
                 .last(last)
                 .metadata(metadata)
                 .build();
+    }
+
+    /**
+     * 从 Msg 内容中提取 ToolUseBlock 信息，添加到事件 metadata 中。
+     * <p>
+     * AgentScope 的流式事件没有 TOOL_USE 类型，工具调用信息需要从 Msg 的 content blocks 中提取。
+     * 当 TOOL_RESULT 事件触发时，对应的 ToolUseBlock 通常也在同一个 Msg 中，
+     * 通过提取其 name、input 和 id，前端可以在流式阶段正确展示工具调用信息。
+     *
+     * @param msg      包含 ToolUseBlock 的消息对象
+     * @param metadata 要填充的 metadata map
+     */
+    private void extractToolUseMetadata(Msg msg, Map<String, Object> metadata) {
+        if (msg == null || msg.getContent() == null) {
+            return;
+        }
+        for (ContentBlock block : msg.getContent()) {
+            if (block instanceof ToolUseBlock toolUseBlock) {
+                metadata.put("toolName", toolUseBlock.getName());
+                metadata.put("toolUseId", toolUseBlock.getId());
+                try {
+                    metadata.put("toolInput", objectMapper.writeValueAsString(toolUseBlock.getInput()));
+                } catch (Exception e) {
+                    metadata.put("toolInput", toolUseBlock.getInput() != null ? toolUseBlock.getInput().toString() : "");
+                }
+                // 只取第一个 ToolUseBlock
+                break;
+            }
+        }
     }
 
     private StreamOptions streamOptions() {

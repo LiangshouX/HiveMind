@@ -211,7 +211,11 @@ function normalizeHistory(
   fallback: SessionState,
   user: AuthUser,
 ): SessionState {
-  const messages = history.messages.map((item) => mapStoredMessage(item, user));
+  const rawMessages = history.messages.map((item) => mapStoredMessage(item, user));
+  // 合并连续的 assistant 消息为一条，与流式阶段的行为一致
+  // ReAct Agent 一轮对话会产生多条 Msg（thinking+tool_use、tool_result、text），
+  // 但流式阶段前端只创建一条 assistant 消息，所以加载时也需要合并
+  const messages = mergeConsecutiveAssistantMessages(rawMessages);
   return {
     ...fallback,
     title: history.session?.title?.trim() || fallback.title,
@@ -225,25 +229,85 @@ function normalizeHistory(
   };
 }
 
-function toEventBlock(event: TdAgentStreamEvent): UiMessageBlock | null {
+/**
+ * 合并连续的 assistant 消息为一条。
+ * MongoDB 中 ReAct Agent 一轮对话会存为多条 assistant StoredMessage，
+ * 但流式阶段前端只创建一条 assistant 消息将所有事件塞入同一个 blocks 数组，
+ * 刷新加载时需要保持一致的气泡数量。
+ */
+function mergeConsecutiveAssistantMessages(messages: UiMessage[]): UiMessage[] {
+  const result: UiMessage[] = [];
+  let pendingAssistant: UiMessage | null = null;
+
+  for (const msg of messages) {
+    if (msg.role === "assistant") {
+      if (pendingAssistant === null) {
+        // 第一条 assistant 消息，暂存
+        pendingAssistant = { ...msg, blocks: [...msg.blocks] };
+      } else {
+        // 追加到上一条 assistant 消息的 blocks 中
+        pendingAssistant = {
+          ...pendingAssistant,
+          blocks: [...pendingAssistant.blocks, ...msg.blocks],
+          // 取最新的 createdAt
+          createdAt: msg.createdAt > pendingAssistant.createdAt ? msg.createdAt : pendingAssistant.createdAt,
+        };
+      }
+    } else {
+      // 非 assistant 消息，先把暂存的 assistant 消息推入结果
+      if (pendingAssistant) {
+        result.push(pendingAssistant);
+        pendingAssistant = null;
+      }
+      result.push(msg);
+    }
+  }
+  // 处理末尾的 assistant 消息
+  if (pendingAssistant) {
+    result.push(pendingAssistant);
+  }
+  return result;
+}
+
+function toEventBlocks(event: TdAgentStreamEvent): UiMessageBlock[] {
   switch (event.type) {
     case "MESSAGE":
-      return createBlock("text", "", event.content);
+      return [createBlock("text", "", event.content)];
     case "REASONING":
-      return createBlock("reasoning", "推理", event.content);
-    case "TOOL_RESULT":
-      // 工具结果用代码块格式展示
-      return createBlock("tool_result", "工具结果", event.content ? `\`\`\`\n${event.content}\n\`\`\`` : "");
+      return [createBlock("reasoning", "推理", event.content)];
+    case "TOOL_USE":
+      // 工具调用用代码块格式展示
+      const toolInput = event.content ? `\`\`\`json\n${event.content}\n\`\`\`` : "";
+      return [createBlock("tool_use", "工具调用", toolInput, {
+        toolName: event.metadata?.toolName as string | undefined,
+      })];
+    case "TOOL_RESULT": {
+      const toolName = event.metadata?.toolName as string | undefined;
+      const toolInputJson = event.metadata?.toolInput as string | undefined;
+      const blocks: UiMessageBlock[] = [];
+
+      // 如果携带了工具调用元数据，先创建 tool_use block
+      if (toolName) {
+        const formattedInput = toolInputJson ? `\`\`\`json\n${toolInputJson}\n\`\`\`` : "";
+        blocks.push(createBlock("tool_use", "工具调用", formattedInput, { toolName }));
+      }
+
+      // 创建 tool_result block
+      const formattedResult = event.content ? `\`\`\`\n${event.content}\n\`\`\`` : "";
+      blocks.push(createBlock("tool_result", "工具结果", formattedResult, { toolName }));
+
+      return blocks;
+    }
     case "RESULT":
-      return createBlock("result", "最终结果", event.content);
+      return [createBlock("result", "最终结果", event.content)];
     case "ERROR":
-      return createBlock("error", "异常", event.content);
+      return [createBlock("error", "异常", event.content)];
     case "APPROVAL_REQUIRED":
-      return createBlock("approval", "等待审批", event.content, {
+      return [createBlock("approval", "等待审批", event.content, {
         approvals: (event.metadata?.pendingApprovals as ToolApproval[] | undefined) ?? [],
-      });
+      })];
     default:
-      return null;
+      return [];
   }
 }
 
@@ -565,30 +629,37 @@ export function useAgentConsole(
           continue;
         }
 
-        const block = toEventBlock(event);
-        if (!block) {
+        const newBlocks = toEventBlocks(event);
+        if (newBlocks.length === 0) {
           continue;
         }
 
-        console.log("[flushPendingEvents] 处理事件 - type:", event.type, "block.type:", block.type);
+        console.log("[flushPendingEvents] 处理事件 - type:", event.type, "blocks:", newBlocks.map(b => b.type));
 
-        patchMessage(sessionId, assistantMessageId, (message) => ({
-          ...message,
-          blocks: mergeStreamBlock(message.blocks, block),
-          streaming: event.type !== "ERROR",
-          failed: event.type === "ERROR",
-        }));
+        patchMessage(sessionId, assistantMessageId, (message) => {
+          let blocks = message.blocks;
+          for (const block of newBlocks) {
+            blocks = mergeStreamBlock(blocks, block);
+          }
+          return {
+            ...message,
+            blocks,
+            streaming: event.type !== "ERROR",
+            failed: event.type === "ERROR",
+          };
+        });
 
+        const lastBlock = newBlocks[newBlocks.length - 1];
         updateSession(sessionId, (session) => ({
           ...session,
           updatedAt: nowIso(),
           preview:
-            block.type === "approval" ? "等待审批继续执行" : block.content.trim() || session.preview,
+            lastBlock.type === "approval" ? "等待审批继续执行" : lastBlock.content.trim() || session.preview,
           // 关键修复：如果有 APPROVAL_REQUIRED 事件，优先使用其 metadata 中的数据
           // 这样可以避免 syncPendingApprovals 异步延迟导致的数据不一致
-          pendingApprovals: hasApprovalRequired && block.type === "approval"
+          pendingApprovals: hasApprovalRequired && lastBlock.type === "approval"
             ? pendingApprovalsFromEvent
-            : (block.type === "approval" ? block.approvals || [] : session.pendingApprovals),
+            : (lastBlock.type === "approval" ? lastBlock.approvals || [] : session.pendingApprovals),
         }));
       }
 

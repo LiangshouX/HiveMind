@@ -1,6 +1,7 @@
 export type TdAgentStreamEventType =
   | "MESSAGE"
   | "REASONING"
+  | "TOOL_USE"
   | "TOOL_RESULT"
   | "RESULT"
   | "APPROVAL_REQUIRED"
