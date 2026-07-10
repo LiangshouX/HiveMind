@@ -33,6 +33,7 @@ example
 */agentscope-java
 .env
 */.env
+dist/
 
 
 # Frontend
@@ -44,15 +45,14 @@ node_modules
 */.vscode
 *.py
 
-# vibe coding cli
-.qwen
-*/.qwen
 
 # ReMe Local data
 local_vector_store
 */local_vector_store
 
 # Vibe Coding
+.qwen
+*/.qwen
 .claude/
 .specify/
 .codegraph/
