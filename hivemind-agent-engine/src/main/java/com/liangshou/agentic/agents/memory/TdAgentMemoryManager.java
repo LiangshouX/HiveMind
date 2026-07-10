@@ -6,6 +6,7 @@ import com.liangshou.agentic.agents.memory.compaction.ContextCompressor;
 import com.liangshou.agentic.agents.memory.compaction.ContextWindowManager;
 import com.liangshou.agentic.agents.memory.compaction.TokenMeter;
 import com.liangshou.agentic.agents.memory.reme.TdAgentReMeService;
+import com.liangshou.agentic.application.IConversationPersistenceService;
 import com.liangshou.agentic.common.config.TdAgentProperties;
 import io.agentscope.core.message.Msg;
 import io.agentscope.core.message.MsgRole;
@@ -110,10 +111,11 @@ public class TdAgentMemoryManager {
         CompactionResult result = compressor.compress(context, memory, history);
 
         if (result.isCompacted()) {
-            log.info("[TdAgentMemoryManager] 压缩成功 - tokens: {} → {} (减少 {:.1f}%), " +
+            String ratio = String.format("%.1f", result.compressionRatio() * 100);
+            log.info("[TdAgentMemoryManager] 压缩成功 - tokens: {} → {} (减少 {}%), " +
                             "messages: {} → {}, 策略: {}",
                     result.getTokensBefore(), result.getTokensAfter(),
-                    result.compressionRatio() * 100,
+                    ratio,
                     result.getMessagesBefore(), result.getMessagesAfter(),
                     result.getStrategy());
         }
@@ -163,6 +165,48 @@ public class TdAgentMemoryManager {
 
         memory.applyCompaction(remaining, summary);
         return true;
+    }
+
+    /**
+     * 强制执行压缩（跳过阈值检查），用于 /compress 命令等手动触发场景。
+     *
+     * <p>该方法会创建临时的 {@link MongoConversationMemory} 实例，加载会话历史后
+     * 直接调用压缩器执行压缩，不受 token 阈值和消息数阈值的限制。</p>
+     *
+     * @param context           会话上下文
+     * @param persistenceService 对话持久化服务
+     * @return 压缩结果；如果消息数过少（≤2）无法压缩则返回 null
+     */
+    public CompactionResult forceCompact(
+            ConversationSessionContext context,
+            IConversationPersistenceService persistenceService) {
+
+        MongoConversationMemory memory = new MongoConversationMemory(
+                context, persistenceService, "");
+        List<Msg> history = memory.getMessages();
+
+        if (history.size() <= 2) {
+            log.info("[TdAgentMemoryManager] 消息数过少，跳过手动压缩 - sessionId: {}, 消息数: {}",
+                    context.getSessionId(), history.size());
+            return null;
+        }
+
+        log.info("[TdAgentMemoryManager] 触发手动压缩 - sessionId: {}, 消息数: {}",
+                context.getSessionId(), history.size());
+
+        CompactionResult result = compressor.compress(context, memory, history);
+
+        if (result.isCompacted()) {
+            String ratio = String.format("%.1f", result.compressionRatio() * 100);
+            log.info("[TdAgentMemoryManager] 手动压缩成功 - tokens: {} → {} (减少 {}%), " +
+                            "messages: {} → {}, 策略: {}",
+                    result.getTokensBefore(), result.getTokensAfter(),
+                    ratio,
+                    result.getMessagesBefore(), result.getMessagesAfter(),
+                    result.getStrategy());
+        }
+
+        return result;
     }
 
     /**

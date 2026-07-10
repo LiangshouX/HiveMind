@@ -138,11 +138,13 @@ public class ContextCompressor {
         String strategy = newSummary != null
                 && !newSummary.equals(memory.getCompressedSummary()) ? "REME" : "LOCAL";
 
-        log.info("[ContextCompressor] 压缩完成 - sessionId: {}, tokens: {} → {} (减少 {:.1f}%), " +
+        String ratio = String.format("%.1f",
+                totalTokensBefore > 0 ? (1.0 - (double) totalTokensAfter / totalTokensBefore) * 100 : 0);
+        log.info("[ContextCompressor] 压缩完成 - sessionId: {}, tokens: {} → {} (减少 {}%), " +
                         "保留: system({}) + head({}) + tail({}), 压缩: middle({}), 策略: {}, 耗时: {}ms",
                 context.getSessionId(),
                 totalTokensBefore, totalTokensAfter,
-                totalTokensBefore > 0 ? (1.0 - (double) totalTokensAfter / totalTokensBefore) * 100 : 0,
+                ratio,
                 layers.systemMessages.size(),
                 layers.headMessages.size(),
                 layers.tailMessages.size(),
@@ -213,13 +215,13 @@ public class ContextCompressor {
         // 重新计算 head 实际结束位置（考虑空消息跳过）
         int headIndex = 0;
         int selected = 0;
-        for (int i = 0; i < total && selected < headSize; i++) {
+        for (int i = 0; i < tailStart && selected < headSize; i++) {
             if (!isEmptyMessage(nonSystemMessages.get(i))) {
                 selected++;
                 headIndex = i + 1;
             }
         }
-        headActualEnd = headIndex;
+        headActualEnd = Math.min(headIndex, tailStart);
 
         List<Msg> middleMessages = new ArrayList<>(nonSystemMessages.subList(headActualEnd, tailStart));
         List<Msg> tailMessages = nonSystemMessages.subList(tailStart, total);
