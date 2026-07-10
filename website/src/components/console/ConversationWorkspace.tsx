@@ -3,24 +3,28 @@ import {
     BranchesOutlined,
     CheckCircleOutlined,
     ClockCircleOutlined,
+    DownOutlined,
     FireOutlined,
     LoadingOutlined,
     PaperClipOutlined,
     PauseCircleOutlined,
     RadarChartOutlined,
+    RightOutlined,
     RobotOutlined,
     SendOutlined,
     ThunderboltOutlined,
     ToolOutlined,
 } from "@ant-design/icons";
 import {Bubble, Prompts, Sender, Welcome} from "@ant-design/x";
-import {Avatar, Button, Card, Space, Spin, Tag, Tooltip, Typography} from "antd";
+import type {SenderProps} from "@ant-design/x/es/sender/interface";
+import {SenderContext} from "@ant-design/x/es/sender/context";
+import {Avatar, Button, Card, Input, Space, Spin, Tag, Tooltip, Typography} from "antd";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import "dayjs/locale/zh-cn";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import {useEffect, useRef, useState} from "react";
+import React, {useContext, useEffect, useRef, useState, useCallback} from "react";
 import type {AuthUser, SessionState} from "../../types";
 import {ChatSendButton} from "./ChatSendButton";
 import {ModelSelector} from "../model/ModelSelector";
@@ -92,6 +96,105 @@ function toneIcon(type: string) {
     }
 }
 
+/**
+ * Custom TextArea that overrides the Sender's broken submitDisabled state.
+ * The Sender initializes submitDisabled via useState(!inputValue) but never
+ * re-syncs it when the value changes, so Enter key never triggers onSubmit.
+ * This component reads triggerSend directly from SenderContext and handles
+ * keyboard events properly: Enter sends, Ctrl+Enter / Shift+Enter insert newline.
+ */
+/** Ref interface expected by the Sender component */
+interface SenderTextAreaRef {
+    nativeElement?: HTMLElement | null;
+    focus: (options?: any) => void;
+    blur: () => void;
+    insert: (...args: any[]) => void;
+    clear: () => void;
+    getValue: () => { value: string; slotConfig: any[]; skill?: any };
+}
+
+const EnterSendTextArea = React.forwardRef<SenderTextAreaRef>((props, ref) => {
+    const ctx = useContext(SenderContext as React.Context<SenderProps & { triggerSend?: () => void }>);
+    const {
+        value,
+        onChange,
+        onKeyDown: ctxOnKeyDown,
+        disabled,
+        readOnly,
+        submitType = 'enter',
+        prefixCls,
+        styles = {},
+        classNames = {},
+        autoSize,
+        placeholder,
+        onFocus,
+        onBlur,
+    } = ctx;
+
+    const inputRef = useRef<any>(null);
+    const isCompositionRef = useRef(false);
+
+    // Expose the same ref structure as Ant Design's TextArea so Sender can access it
+    React.useImperativeHandle(ref, () => ({
+        nativeElement: inputRef.current?.resizableTextArea?.textArea,
+        focus: (options?: any) => inputRef.current?.focus(options),
+        blur: () => inputRef.current?.blur(),
+        insert: (...args: any[]) => inputRef.current?.insert?.(...args),
+        clear: () => inputRef.current?.clear(),
+        getValue: () => inputRef.current?.getValue?.() ?? { value: '', slotConfig: [], skill: undefined },
+    }));
+
+    const handleCompositionStart = () => {
+        isCompositionRef.current = true;
+    };
+
+    const handleCompositionEnd = () => {
+        isCompositionRef.current = false;
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        ctxOnKeyDown?.(e);
+        const {key, shiftKey, ctrlKey, altKey, metaKey} = e;
+
+        if (isCompositionRef.current || key !== 'Enter' || e.defaultPrevented) {
+            return;
+        }
+
+        const isModifierPressed = ctrlKey || altKey || metaKey;
+        const shouldSubmit =
+            (submitType === 'enter' && !shiftKey && !isModifierPressed) ||
+            (submitType === 'shiftEnter' && shiftKey && !isModifierPressed);
+
+        if (shouldSubmit) {
+            e.preventDefault();
+            // Call triggerSend directly from context, bypassing Sender's broken submitDisabled check
+            (ctx as any).triggerSend?.();
+        }
+    };
+
+    return (
+        <Input.TextArea
+            {...props}
+            ref={inputRef}
+            value={value}
+            onChange={(e) => onChange?.(e.target.value, e)}
+            onKeyDown={handleKeyDown}
+            onCompositionStart={handleCompositionStart}
+            onCompositionEnd={handleCompositionEnd}
+            disabled={disabled}
+            readOnly={readOnly}
+            autoSize={autoSize}
+            placeholder={placeholder}
+            onFocus={onFocus}
+            onBlur={onBlur}
+            variant="borderless"
+            className={`${prefixCls}-input ${classNames?.input || ''}`}
+            style={styles?.input}
+        />
+    );
+});
+EnterSendTextArea.displayName = 'EnterSendTextArea';
+
 interface ConversationWorkspaceProps {
     user: AuthUser;
     busy: boolean;
@@ -126,6 +229,49 @@ export function ConversationWorkspace({
     const [prevMessageCount, setPrevMessageCount] = useState(0);
     const prevSessionIdRef = useRef<string | undefined>(undefined);
     const [shouldScroll, setShouldScroll] = useState(false);
+    // 推理块默认折叠：记录用户手动展开过的 blockId
+    const expandedByUserRef = useRef<Set<string>>(new Set());
+    const [collapsedBlocks, setCollapsedBlocks] = useState<Set<string>>(() => {
+        const initial = new Set<string>();
+        activeSession?.messages.forEach((msg) =>
+            msg.blocks.forEach((b) => { if (b.type === "reasoning") initial.add(b.id); })
+        );
+        return initial;
+    });
+
+    // 新推理块（流式到达时）自动折叠
+    const processedIdsRef = useRef<Set<string>>(new Set());
+    useEffect(() => {
+        if (!activeSession) return;
+        let changed = false;
+        const next = new Set(collapsedBlocks);
+        activeSession.messages.forEach((msg) =>
+            msg.blocks.forEach((b) => {
+                if (b.type === "reasoning" && !processedIdsRef.current.has(b.id)) {
+                    processedIdsRef.current.add(b.id);
+                    if (!expandedByUserRef.current.has(b.id)) {
+                        next.add(b.id);
+                        changed = true;
+                    }
+                }
+            })
+        );
+        if (changed) setCollapsedBlocks(next);
+    }, [activeSession?.messages]);
+
+    const toggleBlockCollapse = useCallback((blockId: string) => {
+        setCollapsedBlocks((prev) => {
+            const next = new Set(prev);
+            if (next.has(blockId)) {
+                next.delete(blockId);
+                expandedByUserRef.current.add(blockId);
+            } else {
+                next.add(blockId);
+                expandedByUserRef.current.delete(blockId);
+            }
+            return next;
+        });
+    }, []);
 
     const bubbleItems =
         activeSession?.messages.map((message) => ({
@@ -151,31 +297,54 @@ export function ConversationWorkspace({
                         ) : null}
                     </div>
 
-                    {message.blocks.map((block) => (
+                    {message.blocks.map((block) => {
+                        const isReasoning = block.type === "reasoning";
+                        const isCollapsed = collapsedBlocks.has(block.id);
+
+                        return (
                         <div key={block.id} className={`message-block tone-${blockTone(block.type)}`}>
                             {block.title || block.toolName ? (
-                                <div className="message-block-title" style={{color: 'var(--td-text-base)'}}>
+                                <div
+                                    className="message-block-title"
+                                    style={{
+                                        color: 'var(--td-text-base)',
+                                        ...(isReasoning ? { cursor: 'pointer', userSelect: 'none' } : {}),
+                                    }}
+                                    onClick={isReasoning ? () => toggleBlockCollapse(block.id) : undefined}
+                                >
                                     <Space size={8}>
-                                        {toneIcon(block.type)}
+                                        {isReasoning ? (
+                                            <span style={{ fontSize: 10, color: 'var(--td-text-tertiary)' }}>
+                                                {isCollapsed ? <RightOutlined/> : <DownOutlined/>}
+                                            </span>
+                                        ) : toneIcon(block.type)}
                                         {block.title ? <span>{block.title}</span> : null}
                                         {block.toolName ? <Tag>{block.toolName}</Tag> : null}
                                     </Space>
                                 </div>
                             ) : null}
 
-                            {/* 工具类型消息不需要展示 rawInput，因为 content 已经是代码块格式 */}
-                            {block.rawInput && block.type !== "tool_use" && block.type !== "tool_result" ? (
-                                <pre className="message-raw" style={{
-                                    background: 'var(--td-code-bg)',
-                                    border: '1px solid var(--td-code-border)',
-                                    color: 'var(--td-code-text)'
-                                }}>{block.rawInput}</pre>
-                            ) : null}
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateRows: (isReasoning && isCollapsed) ? '0fr' : '1fr',
+                                transition: 'grid-template-rows 200ms ease-out',
+                            }}>
+                                <div style={{overflow: 'hidden', minHeight: 0}}>
+                                    {/* 工具类型消息不需要展示 rawInput，因为 content 已经是代码块格式 */}
+                                    {block.rawInput && block.type !== "tool_use" && block.type !== "tool_result" ? (
+                                        <pre className="message-raw" style={{
+                                            background: 'var(--td-code-bg)',
+                                            border: '1px solid var(--td-code-border)',
+                                            color: 'var(--td-code-text)'
+                                        }}>{block.rawInput}</pre>
+                                    ) : null}
 
-                            <div className="markdown-body" style={{color: 'var(--td-text-base)'}}>
-                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                    {block.content || " "}
-                                </ReactMarkdown>
+                                    <div className="markdown-body" style={{color: 'var(--td-text-base)'}}>
+                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                            {block.content || " "}
+                                        </ReactMarkdown>
+                                    </div>
+                                </div>
                             </div>
 
                             {block.approvals?.length ? (
@@ -211,7 +380,8 @@ export function ConversationWorkspace({
                                 </div>
                             ) : null}
                         </div>
-                    ))}
+                        );
+                    })}
                 </div>
             ),
         })) ?? [];
@@ -441,6 +611,7 @@ export function ConversationWorkspace({
                                 onCancel={() => void onInterrupt()}
                                 loading={busy}
                                 submitType="enter"
+                                components={{input: EnterSendTextArea as any}}
                                 autoSize={{minRows: 2, maxRows: 8}}
                                 placeholder="输入任务..."
                                 style={{
