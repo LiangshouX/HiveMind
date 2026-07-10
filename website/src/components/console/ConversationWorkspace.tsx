@@ -104,6 +104,8 @@ interface ConversationWorkspaceProps {
     onRefreshSession: () => void;
     onInterrupt: () => void | Promise<void>;
     onSend: () => void | Promise<void>;
+    onApprove?: () => void | Promise<void>;
+    onReject?: () => void | Promise<void>;
 }
 
 export function ConversationWorkspace({
@@ -117,6 +119,8 @@ export function ConversationWorkspace({
                                           onSelectModel,
                                           onInterrupt,
                                           onSend,
+                                          onApprove,
+                                          onReject,
                                       }: ConversationWorkspaceProps) {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const [prevMessageCount, setPrevMessageCount] = useState(0);
@@ -198,6 +202,12 @@ export function ConversationWorkspace({
                                             </Space>
                                         </Card>
                                     ))}
+                                    {activeSession?.pendingApprovals?.length ? (
+                                        <Space style={{marginTop: 8}}>
+                                            <Button onClick={() => void onReject?.()}>驳回</Button>
+                                            <Button type="primary" onClick={() => void onApprove?.()}>通过</Button>
+                                        </Space>
+                                    ) : null}
                                 </div>
                             ) : null}
                         </div>

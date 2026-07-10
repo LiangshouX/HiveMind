@@ -1,6 +1,5 @@
 import {ConfigProvider, Layout, theme} from "antd";
 import {useNavigate} from "react-router-dom";
-import {ApprovalDrawerPanel} from "../../components/console/ApprovalDrawerPanel.tsx";
 import {ConsoleSidebar} from "../../components/console/ConsoleSidebar.tsx";
 import {ConversationWorkspace} from "../../components/console/ConversationWorkspace.tsx";
 import {useAgentConsole} from "../../hooks/useAgentConsole.ts";
@@ -20,11 +19,9 @@ export function ChatPage() {
         activeSession,
         activeSessionId,
         input,
-        approvalComment,
         groupedConversationItems,
         selectedModelId,
         setInput,
-        setApprovalComment,
         selectModel,
         createNewSession,
         selectSession,
@@ -115,16 +112,10 @@ export function ChatPage() {
                         onRefreshSession={() => void refreshSessions(activeSessionId)}
                         onInterrupt={interruptCurrent}
                         onSend={sendMessage}
+                        onApprove={() => handleApprovalAction("approve")}
+                        onReject={() => handleApprovalAction("reject")}
                     />
                 </Content>
-
-                <ApprovalDrawerPanel
-                    approvals={activeSession?.pendingApprovals ?? []}
-                    approvalComment={approvalComment}
-                    onApprovalCommentChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => setApprovalComment(event.target.value)}
-                    onApprove={() => handleApprovalAction("approve")}
-                    onReject={() => handleApprovalAction("reject")}
-                />
             </Layout>
         </ConfigProvider>
     );
