@@ -639,8 +639,12 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
      */
     private void recordTokenUsage(ConversationSessionContext context, Msg message) {
         try {
-            // 获取当前模型配置
-            TdAgentResolvedModelConfig modelConfig = modelFactory.currentConfig();
+            // 优先使用会话上下文中已解析的模型配置（从 DB 加载，与实际对话一致）
+            TdAgentResolvedModelConfig modelConfig = context.getResolvedModelConfig();
+            if (modelConfig == null) {
+                log.warn("[流式执行-Token记录] 上下文无模型配置快照，回退到全局默认配置");
+                modelConfig = modelFactory.currentConfig();
+            }
 
             // 构建模型配置 JSON（用于 Service 解析）
             String modelConfigJson = String.format(

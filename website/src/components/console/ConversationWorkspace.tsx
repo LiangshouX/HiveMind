@@ -553,14 +553,11 @@ export function ConversationWorkspace({
                                                     avatar: (
                                                         <Avatar
                                                             size={32}
+                                                            src="/logo.svg"
                                                             style={{
                                                                 background: "linear-gradient(135deg, var(--td-primary), var(--td-highlight))",
-                                                                color: "var(--td-text-inverse)",
-                                                                fontWeight: 600,
                                                             }}
-                                                        >
-                                                            唐
-                                                        </Avatar>
+                                                        />
                                                     ),
                                                 },
                                                 system: {
