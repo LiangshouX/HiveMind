@@ -12,6 +12,7 @@ import com.liangshou.agentic.agents.session.AgentSessionStateService;
 import com.liangshou.agentic.agents.streaming.TdAgentActiveSessionRegistry;
 import com.liangshou.agentic.agents.streaming.TdAgentStreamEvent;
 import com.liangshou.agentic.application.ITokenUsageRecordService;
+import com.liangshou.agentic.application.IConversationPersistenceService;
 import com.liangshou.agentic.common.config.TdAgentProperties;
 import com.liangshou.agentic.common.enums.TdAgentStreamEventType;
 import com.liangshou.agentic.domain.tool.model.ToolApprovalDocument;
@@ -80,19 +81,23 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
     private final ITokenUsageRecordService tokenUsageRecordService;
     private final TdAgentToolkitFactory toolkitFactory;
     private final ObjectMapper objectMapper;
+    private final IConversationPersistenceService conversationPersistenceService;
 
     /**
      * 构造器
      *
-     * @param agentFactory             Agent 工厂
-     * @param chatService              聊天服务
-     * @param IChatCommandService      命令服务
-     * @param agentSessionStateService 会话状态服务
-     * @param toolApprovalService      工具审批服务
-     * @param activeSessionRegistry    活动会话注册表
-     * @param properties               外部化配置
-     * @param modelFactory             模型工厂
-     * @param tokenUsageRecordService  Token 使用量记录服务
+     * @param agentFactory                  Agent 工厂
+     * @param chatService                   聊天服务
+     * @param IChatCommandService           命令服务
+     * @param agentSessionStateService      会话状态服务
+     * @param toolApprovalService           工具审批服务
+     * @param activeSessionRegistry         活动会话注册表
+     * @param properties                    外部化配置
+     * @param modelFactory                  模型工厂
+     * @param tokenUsageRecordService       Token 使用量记录服务
+     * @param toolkitFactory                工具箱工厂
+     * @param objectMapper                  ObjectMapper
+     * @param conversationPersistenceService 对话持久化服务
      */
     public TdAgentStreamingServiceImpl(
             TdAgentFactory agentFactory,
@@ -105,7 +110,8 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
             TdAgentModelFactory modelFactory,
             ITokenUsageRecordService tokenUsageRecordService,
             TdAgentToolkitFactory toolkitFactory,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper,
+            IConversationPersistenceService conversationPersistenceService) {
         this.agentFactory = agentFactory;
         this.chatService = chatService;
         this.IChatCommandService = IChatCommandService;
@@ -117,6 +123,7 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
         this.tokenUsageRecordService = tokenUsageRecordService;
         this.toolkitFactory = toolkitFactory;
         this.objectMapper = objectMapper;
+        this.conversationPersistenceService = conversationPersistenceService;
     }
 
     /**
@@ -185,6 +192,9 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
         log.info("[Streaming Service-批准] 工具审批已通过 - approvalIds: {}, count: {}",
                 request.getApprovalIds(), approvals.size());
 
+        // 将审批记录写入对话消息历史，确保刷新后能正确展示审批状态
+        conversationPersistenceService.appendApprovalMessages(context, approvals);
+
         // 创建新 Agent（MongoConversationMemory 自动从 MongoDB 加载对话历史）
         // 不调用 agentSessionStateService.restore()，因为会话状态中的 pendingToolCalls
         // 与 MongoConversationMemory 中的消息历史不一致，会导致 "Pending tool calls" 错误
@@ -219,6 +229,9 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
                 toolApprovalService.reject(request.getApprovalIds(), request.getComment());
         log.info("[Streaming Service-拒绝] 工具审批已拒绝 - approvalIds: {}, count: {}",
                 request.getApprovalIds(), approvals.size());
+
+        // 将审批记录写入对话消息历史，确保刷新后能正确展示审批状态
+        conversationPersistenceService.appendApprovalMessages(context, approvals);
 
         // 创建新 Agent（MongoConversationMemory 自动从 MongoDB 加载对话历史）
         // 不调用 agentSessionStateService.restore()，避免会话状态与消息历史不一致
@@ -276,6 +289,8 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
 
         SseEmitter emitter = new SseEmitter(0L);
         AtomicReference<Msg> finalMessage = new AtomicReference<>();
+        // 缓存最近的 ToolUseBlock 信息，用于在 TOOL_RESULT 事件时填充 metadata
+        AtomicReference<ToolUseBlock> lastToolUseBlock = new AtomicReference<>();
 
         if (registerActive) {
             activeSessionRegistry.register(sessionKey, agent, providerId, modelId);
@@ -307,11 +322,21 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
                             ? TdAgentStreamEventType.TOOL_RESULT
                             : TdAgentStreamEventType.MESSAGE;
 
-                    // 对于 TOOL_RESULT 事件，从 Msg 内容中提取 ToolUseBlock 信息并附加到 metadata
+                    // 对于 REASONING 事件，提取 ToolUseBlock 并缓存
+                    if (streamEventType == TdAgentStreamEventType.REASONING && event.getMessage() != null) {
+                        extractAndCacheToolUseBlock(event.getMessage(), lastToolUseBlock);
+                    }
+
+                    // 对于 TOOL_RESULT 事件，从缓存中获取 ToolUseBlock 信息并附加到 metadata
                     Map<String, Object> eventMetadata = new LinkedHashMap<>();
                     eventMetadata.put("eventType", event.getType().name());
-                    if (streamEventType == TdAgentStreamEventType.TOOL_RESULT && event.getMessage() != null) {
-                        extractToolUseMetadata(event.getMessage(), eventMetadata);
+                    if (streamEventType == TdAgentStreamEventType.TOOL_RESULT) {
+                        ToolUseBlock cachedToolUse = lastToolUseBlock.getAndSet(null);
+                        if (cachedToolUse != null) {
+                            populateToolUseMetadata(cachedToolUse, eventMetadata);
+                            log.info("[流式执行-事件] TOOL_RESULT 元数据(从缓存) - toolName: {}, toolInput: {}",
+                                    eventMetadata.get("toolName"), eventMetadata.get("toolInput"));
+                        }
                     }
 
                     TdAgentStreamEvent streamEvent = toStreamEvent(
@@ -435,15 +460,63 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
             Msg msg,
             boolean last,
             Map<String, Object> metadata) {
+        String content = "";
+        if (msg != null) {
+            if (type == TdAgentStreamEventType.REASONING) {
+                // REASONING 事件的 Msg 只包含 ThinkingBlock，需要从 ThinkingBlock 中提取内容
+                content = msg.getContent().stream()
+                        .filter(ThinkingBlock.class::isInstance)
+                        .map(ThinkingBlock.class::cast)
+                        .map(ThinkingBlock::getThinking)
+                        .reduce((a, b) -> a + "\n" + b)
+                        .orElse("");
+            } else if (type == TdAgentStreamEventType.TOOL_RESULT) {
+                // TOOL_RESULT 事件的 Msg 只包含 ToolResultBlock，需要从 ToolResultBlock 中提取内容
+                content = msg.getContent().stream()
+                        .filter(ToolResultBlock.class::isInstance)
+                        .map(ToolResultBlock.class::cast)
+                        .map(this::extractToolResultText)
+                        .reduce((a, b) -> a + "\n" + b)
+                        .orElse("");
+            } else {
+                content = msg.getTextContent();
+            }
+        }
         return TdAgentStreamEvent.builder()
                 .type(type)
                 .sessionId(context.getSessionId())
                 .userId(context.getUserId())
                 .messageId(msg == null ? null : msg.getId())
-                .content(msg == null ? "" : msg.getTextContent())
+                .content(content)
                 .last(last)
                 .metadata(metadata)
                 .build();
+    }
+
+    /**
+     * 从 ToolResultBlock 中提取工具执行的输出文本。
+     *
+     * @param toolResultBlock 工具结果块
+     * @return 提取的文本内容
+     */
+    private String extractToolResultText(ToolResultBlock toolResultBlock) {
+        return toolResultBlock.getOutput().stream()
+                .filter(TextBlock.class::isInstance)
+                .map(TextBlock.class::cast)
+                .map(TextBlock::getText)
+                .reduce((left, right) -> left + System.lineSeparator() + right)
+                .orElse(toJson(toolResultBlock.getOutput()));
+    }
+
+    private String toJson(Object value) {
+        if (value == null) {
+            return "";
+        }
+        try {
+            return objectMapper.writeValueAsString(value);
+        } catch (Exception e) {
+            return String.valueOf(value);
+        }
     }
 
     /**
@@ -472,6 +545,46 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
                 // 只取第一个 ToolUseBlock
                 break;
             }
+        }
+    }
+
+    /**
+     * 从 REASONING 事件的 Msg 中提取 ToolUseBlock 并缓存。
+     * <p>
+     * AgentScope 的 REASONING 事件 Msg 可能包含 ToolUseBlock（工具调用请求），
+     * 而 TOOL_RESULT 事件的 Msg 只包含 ToolResultBlock。
+     * 通过缓存 REASONING 事件中的 ToolUseBlock，可以在 TOOL_RESULT 事件时获取工具调用信息。
+     *
+     * @param msg              包含 ToolUseBlock 的消息对象
+     * @param lastToolUseBlock 缓存引用
+     */
+    private void extractAndCacheToolUseBlock(Msg msg, AtomicReference<ToolUseBlock> lastToolUseBlock) {
+        if (msg == null || msg.getContent() == null) {
+            return;
+        }
+        for (ContentBlock block : msg.getContent()) {
+            if (block instanceof ToolUseBlock toolUseBlock) {
+                lastToolUseBlock.set(toolUseBlock);
+                log.debug("[流式执行] 缓存 ToolUseBlock - name: {}, id: {}",
+                        toolUseBlock.getName(), toolUseBlock.getId());
+                break;
+            }
+        }
+    }
+
+    /**
+     * 将 ToolUseBlock 信息填充到 metadata 中。
+     *
+     * @param toolUseBlock 工具调用块
+     * @param metadata     要填充的 metadata map
+     */
+    private void populateToolUseMetadata(ToolUseBlock toolUseBlock, Map<String, Object> metadata) {
+        metadata.put("toolName", toolUseBlock.getName());
+        metadata.put("toolUseId", toolUseBlock.getId());
+        try {
+            metadata.put("toolInput", objectMapper.writeValueAsString(toolUseBlock.getInput()));
+        } catch (Exception e) {
+            metadata.put("toolInput", toolUseBlock.getInput() != null ? toolUseBlock.getInput().toString() : "");
         }
     }
 

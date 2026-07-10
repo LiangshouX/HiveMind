@@ -48,7 +48,7 @@ export function ProviderForm({ visible, provider, onSubmit, onCancel }: Provider
         if (provider.models && provider.models.length > 0) {
           if (typeof provider.models[0] === 'string') {
             // 旧格式：string[] -> ModelConfig[]
-            models = (provider.models as unknown as string[]).map((name, index) => ({
+            models = (provider.models as unknown as string[]).map((name) => ({
               id: name,
               name: name,
               supportsMultimodal: false,

@@ -4,7 +4,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.liangshou.agentic.domain.memory.model.StoredMessage;
 import com.liangshou.agentic.domain.memory.model.StoredMessageContent;
+import com.liangshou.agentic.domain.tool.model.ToolApprovalDocument;
 import io.agentscope.core.message.*;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -38,6 +40,7 @@ import java.util.Map;
  * @author LiangshouX
  */
 @Component
+@Slf4j
 public class MessageMapper {
 
     private final ObjectMapper objectMapper;
@@ -146,6 +149,30 @@ public class MessageMapper {
     }
 
     /**
+     * 将 ToolApprovalDocument 转换为 StoredMessageContent。
+     *
+     * <p>该方法将审批记录转换为 type="approval" 的存储格式，用于将审批信息嵌入对话消息历史。
+     * 审批完成后，审批记录会被转换为消息内容并追加到 conversations_memory 中，
+     * 确保刷新加载时能够正确展示审批状态。</p>
+     *
+     * @param approval 审批记录文档
+     * @return 转换后的存储格式内容块，type="approval"
+     */
+    public StoredMessageContent toStoredContent(ToolApprovalDocument approval) {
+        return StoredMessageContent.builder()
+                .type("approval")
+                .id(approval.getToolCallId())
+                .name(approval.getToolName())
+                .input(approval.getToolInputJson())
+                .approvalId(approval.getId())
+                .riskLevel(approval.getRiskLevel())
+                .reason(approval.getReason())
+                .status(approval.getStatus().name())
+                .reviewComment(approval.getReviewComment())
+                .build();
+    }
+
+    /**
      * 将单个 AgentScope 内容块转换为存储格式。
      *
      * <p>该方法根据内容块的类型执行不同的转换逻辑：</p>
@@ -184,10 +211,15 @@ public class MessageMapper {
                     .build();
         }
         if (block instanceof ToolResultBlock toolResultBlock) {
+            String text = extractToolResultText(toolResultBlock);
+            log.info("ToolResultBlock 转换 - name: {}, text: {}, metadata: {}",
+                    toolResultBlock.getName(),
+                    text != null ? text.substring(0, Math.min(100, text.length())) : "null",
+                    toolResultBlock.getMetadata() != null ? "有" : "无");
             return StoredMessageContent.builder()
                     .type("tool_result")
                     .name(toolResultBlock.getName())
-                    .text(extractToolResultText(toolResultBlock))
+                    .text(text)
                     .inputRaw(toJson(toolResultBlock.getMetadata()))
                     .id(toolResultBlock.getId())
                     .build();

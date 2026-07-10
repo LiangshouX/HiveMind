@@ -1,6 +1,10 @@
 # 上下文压缩（Context Compression）设计方案
 
-> 文档版本: v1.0 | 日期: 2026-07-04 | 作者: Claude Code
+> 文档版本: v1.0 
+> 
+> 日   期: 2026-07-04 
+> 
+> 作   者: Claude Code
 
 ---
 

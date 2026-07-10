@@ -6,6 +6,7 @@ import com.liangshou.agentic.domain.memory.model.ConversationMemoryDocument;
 import com.liangshou.agentic.domain.memory.model.ConversationViewDocument;
 import com.liangshou.agentic.domain.memory.model.StoredMessage;
 import com.liangshou.agentic.domain.memory.model.StoredMessageContent;
+import com.liangshou.agentic.domain.tool.model.ToolApprovalDocument;
 import com.liangshou.agentic.infrastructure.mongo.repository.ConversationMemoryRepository;
 import com.liangshou.agentic.infrastructure.mongo.repository.ConversationViewRepository;
 import com.liangshou.agentic.common.util.MessageMapper;
@@ -417,6 +418,61 @@ public class ConversationPersistenceServiceImpl implements IConversationPersiste
             }
         }
         return "";
+    }
+
+    @Override
+    public void appendApprovalMessages(
+            ConversationSessionContext context, List<ToolApprovalDocument> approvals) {
+        if (approvals == null || approvals.isEmpty()) {
+            return;
+        }
+
+        Instant now = Instant.now();
+        loadMemoryDocument(context).ifPresent(document -> {
+            List<StoredMessage> messages = document.getMessages();
+            if (messages == null) {
+                messages = new ArrayList<>();
+            }
+
+            // 找到最后一个 TOOL_RESULT 或 REASONING 的位置，在其后插入审批消息
+            int insertIndex = messages.size();
+            for (int i = messages.size() - 1; i >= 0; i--) {
+                StoredMessage msg = messages.get(i);
+                if (msg.getContent() != null) {
+                    boolean hasToolResult = msg.getContent().stream()
+                            .anyMatch(c -> "tool_result".equals(c.getType()));
+                    boolean hasThinking = msg.getContent().stream()
+                            .anyMatch(c -> "thinking".equals(c.getType()));
+                    if (hasToolResult || hasThinking) {
+                        insertIndex = i + 1;
+                        break;
+                    }
+                }
+            }
+
+            // 创建包含所有审批记录的 StoredMessage
+            List<StoredMessageContent> approvalContents = approvals.stream()
+                    .map(messageMapper::toStoredContent)
+                    .toList();
+
+            StoredMessage approvalMessage = StoredMessage.builder()
+                    .msgId("approval-" + UUID.randomUUID().toString())
+                    .role("ASSISTANT")
+                    .name("HiveMindAgent")
+                    .content(new ArrayList<>(approvalContents))
+                    .timestamp(now.toString())
+                    .build();
+
+            // 插入到指定位置
+            messages.add(insertIndex, approvalMessage);
+
+            document.setMessages(new ArrayList<>(messages));
+            document.setUpdatedAt(now);
+            conversationMemoryRepository.save(document);
+
+            log.info("审批消息已追加到对话历史 - sessionId: {}, approvalCount: {}, insertIndex: {}",
+                    context.getSessionId(), approvals.size(), insertIndex);
+        });
     }
 }
 

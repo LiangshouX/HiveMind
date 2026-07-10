@@ -89,6 +89,12 @@ export interface StoredMessageContent {
   input?: string;
   inputRaw?: string;
   id?: string;
+  // approval 类型字段
+  approvalId?: string;
+  riskLevel?: string;
+  reason?: string;
+  status?: string;      // APPROVED / REJECTED
+  reviewComment?: string;
 }
 
 export interface StoredMessage {

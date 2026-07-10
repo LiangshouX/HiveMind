@@ -3,6 +3,7 @@ package com.liangshou.agentic.application;
 import com.liangshou.agentic.agents.ConversationSessionContext;
 import com.liangshou.agentic.domain.memory.model.ConversationMemoryDocument;
 import com.liangshou.agentic.domain.memory.model.ConversationViewDocument;
+import com.liangshou.agentic.domain.tool.model.ToolApprovalDocument;
 import io.agentscope.core.message.Msg;
 
 import java.util.List;
@@ -162,4 +163,15 @@ public interface IConversationPersistenceService {
      * @param title     新的会话标题
      */
     void updateSessionTitle(String userId, String sessionId, String title);
+
+    /**
+     * 追加审批消息到对话历史。
+     *
+     * <p>审批完成后，将审批记录作为 approval 类型的消息内容追加到 conversations_memory，
+     * 确保刷新加载时能够正确展示审批状态。审批消息会被插入到最后一条 TOOL_RESULT 或 REASONING 之后。</p>
+     *
+     * @param context   会话上下文
+     * @param approvals 审批记录列表
+     */
+    void appendApprovalMessages(ConversationSessionContext context, List<ToolApprovalDocument> approvals);
 }

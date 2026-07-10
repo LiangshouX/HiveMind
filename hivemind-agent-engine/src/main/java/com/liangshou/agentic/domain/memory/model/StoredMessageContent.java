@@ -36,4 +36,31 @@ public class StoredMessageContent {
     private String inputRaw;
 
     private String id;
+
+    // --- Approval 类型字段 ---
+
+    /**
+     * 审批记录 ID（仅 type="approval" 时使用）
+     */
+    private String approvalId;
+
+    /**
+     * 风险等级（仅 type="approval" 时使用）
+     */
+    private String riskLevel;
+
+    /**
+     * 审批原因（仅 type="approval" 时使用）
+     */
+    private String reason;
+
+    /**
+     * 审批状态：APPROVED / REJECTED（仅 type="approval" 时使用）
+     */
+    private String status;
+
+    /**
+     * 审批备注（仅 type="approval" 时使用）
+     */
+    private String reviewComment;
 }

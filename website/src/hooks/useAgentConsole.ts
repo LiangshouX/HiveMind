@@ -162,6 +162,27 @@ function mapStoredMessage(stored: StoredMessage, user: AuthUser): UiMessage {
         rawInput: item.inputRaw,
       });
     }
+    if (item.type === "approval") {
+      // approval: 审批记录，展示审批状态和工具调用信息
+      const toolInput = item.input || "";
+      const formattedContent = toolInput ? `\`\`\`json\n${toolInput}\n\`\`\`` : "";
+      const title = item.status === "APPROVED" ? "审批通过" : "审批拒绝";
+      return createBlock("approval", title, formattedContent, {
+        toolName: item.name,
+        approvals: [{
+          id: item.approvalId || "",
+          sessionId: "",
+          userId: "",
+          toolCallId: item.id,
+          toolName: item.name,
+          toolInputJson: item.input,
+          riskLevel: item.riskLevel,
+          reason: item.reason,
+          status: item.status,
+          reviewComment: item.reviewComment,
+        }],
+      });
+    }
     // text 类型：如果是 assistant 的最后一条 text，标记为"最终结果"
     if (item.type === "text" && isAssistant && index === lastTextIndex && contentItems.length > 1) {
       return createBlock("result", "最终结果", item.text ?? "");
@@ -243,14 +264,29 @@ function mergeConsecutiveAssistantMessages(messages: UiMessage[]): UiMessage[] {
     if (msg.role === "assistant") {
       if (pendingAssistant === null) {
         // 第一条 assistant 消息，暂存
-        pendingAssistant = { ...msg, blocks: [...msg.blocks] };
+        pendingAssistant = {
+          id: msg.id,
+          role: msg.role,
+          name: msg.name,
+          createdAt: msg.createdAt,
+          blocks: [...msg.blocks],
+          streaming: msg.streaming,
+          failed: msg.failed,
+        };
       } else {
         // 追加到上一条 assistant 消息的 blocks 中
+        const currentCreatedAt: string = pendingAssistant.createdAt;
+        const msgCreatedAt: string = msg.createdAt;
+        const newCreatedAt: string = new Date(msgCreatedAt) > new Date(currentCreatedAt)
+          ? msgCreatedAt : currentCreatedAt;
         pendingAssistant = {
-          ...pendingAssistant,
+          id: pendingAssistant.id,
+          role: pendingAssistant.role,
+          name: pendingAssistant.name,
+          createdAt: newCreatedAt,
           blocks: [...pendingAssistant.blocks, ...msg.blocks],
-          // 取最新的 createdAt
-          createdAt: msg.createdAt > pendingAssistant.createdAt ? msg.createdAt : pendingAssistant.createdAt,
+          streaming: pendingAssistant.streaming,
+          failed: pendingAssistant.failed,
         };
       }
     } else {
