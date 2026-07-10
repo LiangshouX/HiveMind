@@ -9,6 +9,7 @@ import com.liangshou.agentic.domain.memory.model.ConversationViewDocument;
 import com.liangshou.agentic.application.ITdAgentChatService;
 import com.liangshou.agentic.application.dto.*;
 import com.liangshou.agentic.common.utils.Result;
+import com.liangshou.agentic.infrastructure.provider.DbProviderConfigLoader;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,6 +20,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.security.Principal;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -40,18 +42,21 @@ public class TdAgentChatController {
     private final ToolApprovalService toolApprovalService;
     private final JdbcTemplate jdbcTemplate;
     private final TdAgentProviderRegistry providerRegistry;
+    private final DbProviderConfigLoader dbConfigLoader;
 
     public TdAgentChatController(
             ITdAgentChatService chatService,
             ITdAgentStreamingService streamingService,
             ToolApprovalService toolApprovalService,
             JdbcTemplate jdbcTemplate,
-            TdAgentProviderRegistry providerRegistry) {
+            TdAgentProviderRegistry providerRegistry,
+            DbProviderConfigLoader dbConfigLoader) {
         this.chatService = chatService;
         this.streamingService = streamingService;
         this.toolApprovalService = toolApprovalService;
         this.jdbcTemplate = jdbcTemplate;
         this.providerRegistry = providerRegistry;
+        this.dbConfigLoader = dbConfigLoader;
     }
 
     @PostMapping("/chat")
@@ -151,6 +156,11 @@ public class TdAgentChatController {
         Map<String, TdAgentProviderDescriptor> catalogMap = catalogProviders.stream()
                 .collect(Collectors.toMap(TdAgentProviderDescriptor::getId, p -> p));
 
+        // 从数据库加载用户自定义的供应商配置
+        List<TdAgentProviderDescriptor> userProviders = dbConfigLoader.loadForUser(userId);
+        Map<String, TdAgentProviderDescriptor> userProviderMap = userProviders.stream()
+                .collect(Collectors.toMap(TdAgentProviderDescriptor::getId, p -> p));
+
         // 构建响应
         List<ActiveModelsResponse.ActiveProvider> providers = new ArrayList<>();
         for (Map<String, Object> row : rows) {
@@ -158,11 +168,15 @@ public class TdAgentChatController {
             String providerName = (String) row.get("provider_name");
             String providerType = (String) row.get("model_provider_type");
 
-            TdAgentProviderDescriptor catalogProvider = catalogMap.get(providerId);
+            // 优先从用户自定义配置中获取，否则从内置目录获取
+            TdAgentProviderDescriptor provider = userProviderMap.get(providerId);
+            if (provider == null) {
+                provider = catalogMap.get(providerId);
+            }
 
             List<ActiveModelsResponse.ActiveModel> models = new ArrayList<>();
-            if (catalogProvider != null && catalogProvider.getModels() != null) {
-                for (TdAgentModelDescriptor model : catalogProvider.getModels()) {
+            if (provider != null && provider.getModels() != null) {
+                for (TdAgentModelDescriptor model : provider.getModels()) {
                     models.add(ActiveModelsResponse.ActiveModel.builder()
                             .modelId(model.getId())
                             .modelName(model.getName())

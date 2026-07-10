@@ -17,6 +17,7 @@ import {
   Form,
   Input,
   Select,
+  Checkbox,
   message,
   Space,
   Tag,
@@ -55,6 +56,13 @@ interface ModelSelectModalProps {
   onConfirm: (modelId: string, modelName: string) => void;
 }
 
+interface ModelItem {
+  id: string;
+  name: string;
+  supportsMultimodal?: boolean;
+  supportsVideo?: boolean;
+}
+
 const ModelSelectModal: React.FC<ModelSelectModalProps> = ({
   open,
   provider,
@@ -71,11 +79,18 @@ const ModelSelectModal: React.FC<ModelSelectModalProps> = ({
     }
   }, [provider]);
 
-  const models: Array<{ id: string; name: string }> = React.useMemo(() => {
+  const models: ModelItem[] = React.useMemo(() => {
     if (!provider?.modelsJson) return [];
     try {
       const parsed = JSON.parse(provider.modelsJson);
-      return Array.isArray(parsed) ? parsed : [];
+      if (!Array.isArray(parsed)) return [];
+      // 支持新旧两种格式
+      return parsed.map((item: unknown) => {
+        if (typeof item === "string") {
+          return { id: item, name: item };
+        }
+        return item as ModelItem;
+      });
     } catch {
       return [];
     }
@@ -100,7 +115,7 @@ const ModelSelectModal: React.FC<ModelSelectModalProps> = ({
       {models.length === 0 ? (
         <Alert
           message="暂无可用模型"
-          description="请先测试连接以发现可用模型列表"
+          description="请先添加模型配置，或测试连接以发现可用模型"
           type="info"
           showIcon
         />
@@ -212,12 +227,34 @@ const ModelConfigPage: React.FC = () => {
 
   const handleEdit = (provider: ProviderVO) => {
     setEditingProvider(provider);
+
+    // 解析模型列表
+    let models: Array<{ id: string; name: string; supportsMultimodal?: boolean; supportsVideo?: boolean }> = [];
+    try {
+      if (provider.modelsJson) {
+        const parsed = JSON.parse(provider.modelsJson);
+        if (Array.isArray(parsed)) {
+          models = parsed.map((item: unknown) => {
+            if (typeof item === "string") {
+              return { id: item, name: item, supportsMultimodal: false, supportsVideo: false };
+            }
+            return item as { id: string; name: string; supportsMultimodal?: boolean; supportsVideo?: boolean };
+          });
+        }
+      }
+    } catch {
+      // ignore parse error
+    }
+
     form.setFieldsValue({
       providerName: provider.providerName,
       modelProviderId: provider.modelProviderId,
       modelProviderType: provider.modelProviderType,
       baseUrl: provider.baseUrl,
       apiKey: "", // do not fill real key
+      models,
+      modelId: provider.modelId,
+      modelName: provider.modelName,
     });
     setModalOpen(true);
   };
@@ -293,6 +330,25 @@ const ModelConfigPage: React.FC = () => {
         dto.apiKey = values.apiKey.trim();
       }
 
+      // 处理模型列表：转换为 modelsJson 格式
+      if (values.models && Array.isArray(values.models)) {
+        const modelsJson = values.models
+          .filter((m: { id?: string; name?: string }) => m.id && m.name)
+          .map((m: { id: string; name: string; supportsMultimodal?: boolean; supportsVideo?: boolean }) => ({
+            id: m.id,
+            name: m.name,
+            supportsMultimodal: m.supportsMultimodal || false,
+            supportsVideo: m.supportsVideo || false,
+          }));
+        dto.modelsJson = JSON.stringify(modelsJson);
+
+        // 如果没有选择模型，默认选择第一个
+        if (modelsJson.length > 0 && !values.modelId) {
+          dto.modelId = modelsJson[0].id;
+          dto.modelName = modelsJson[0].name;
+        }
+      }
+
       if (editingProvider) {
         await updateProvider(editingProvider.id, dto);
         message.success("Provider 已更新");
@@ -330,9 +386,42 @@ const ModelConfigPage: React.FC = () => {
       });
 
       if (result.reachable) {
+        const modelCount = result.discoveredModels?.length || 0;
         message.success(
-          `连接成功! 延迟 ${result.latencyMs}ms, 发现 ${result.discoveredModels?.length || 0} 个模型`,
+          `连接成功! 延迟 ${result.latencyMs}ms, 发现 ${modelCount} 个模型`,
         );
+
+        // 如果发现了模型，询问用户是否要添加到模型列表
+        if (modelCount > 0) {
+          Modal.confirm({
+            title: "发现可用模型",
+            content: `发现 ${modelCount} 个模型，是否将它们添加到模型列表中？`,
+            okText: "添加",
+            cancelText: "跳过",
+            onOk: () => {
+              // 获取当前表单中的模型列表
+              const currentModels = form.getFieldValue("models") || [];
+              const existingIds = new Set(currentModels.map((m: { id: string }) => m.id));
+
+              // 过滤掉已存在的模型
+              const newModels = (result.discoveredModels || [])
+                .filter((m) => !existingIds.has(m.id))
+                .map((m) => ({
+                  id: m.id,
+                  name: m.name,
+                  supportsMultimodal: false,
+                  supportsVideo: false,
+                }));
+
+              if (newModels.length > 0) {
+                form.setFieldValue("models", [...currentModels, ...newModels]);
+                message.success(`已添加 ${newModels.length} 个新模型`);
+              } else {
+                message.info("所有模型已存在");
+              }
+            },
+          });
+        }
       } else {
         message.warning(`连接失败: ${result.errorMessage || "未知错误"}`);
       }
@@ -554,6 +643,102 @@ const ModelConfigPage: React.FC = () => {
           >
             测试连接
           </Button>
+
+          {/* 模型列表配置 */}
+          <div style={{ marginTop: 16 }}>
+            <Text strong style={{ display: "block", marginBottom: 8 }}>
+              模型配置
+            </Text>
+            <Text type="secondary" style={{ display: "block", marginBottom: 12, fontSize: 12 }}>
+              配置该 Provider 支持的模型。模型 ID 用于 API 调用，显示名称用于界面展示。
+            </Text>
+            <Form.List name="models">
+              {(fields, { add, remove }) => (
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {fields.map((field, index) => (
+                    <div
+                      key={field.key}
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 8,
+                        padding: "12px",
+                        border: "1px solid var(--td-border-color)",
+                        borderRadius: "8px",
+                        background: "var(--td-bg-container)",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ color: "var(--td-text-secondary)", fontSize: 12, minWidth: 20 }}>
+                          #{index + 1}
+                        </span>
+                        <Form.Item
+                          {...field}
+                          name={[field.name, "id"]}
+                          rules={[{ required: true, message: "请输入模型 ID" }]}
+                          style={{ marginBottom: 0, flex: 1 }}
+                        >
+                          <Input
+                            placeholder="模型 ID (例如: qwen-turbo)"
+                            style={{ flex: 1 }}
+                          />
+                        </Form.Item>
+                        <Form.Item
+                          {...field}
+                          name={[field.name, "name"]}
+                          rules={[{ required: true, message: "请输入模型名称" }]}
+                          style={{ marginBottom: 0, flex: 1 }}
+                        >
+                          <Input
+                            placeholder="显示名称 (例如: 通义千问-Turbo)"
+                            style={{ flex: 1 }}
+                          />
+                        </Form.Item>
+                        <Button
+                          type="text"
+                          danger
+                          size="small"
+                          onClick={() => remove(field.name)}
+                        >
+                          删除
+                        </Button>
+                      </div>
+                      <div style={{ display: "flex", gap: 16, paddingLeft: 28 }}>
+                        <Tooltip title="启用后该模型可处理图片等多模态内容">
+                          <Form.Item
+                            {...field}
+                            name={[field.name, "supportsMultimodal"]}
+                            valuePropName="checked"
+                            style={{ marginBottom: 0 }}
+                          >
+                            <Checkbox>多模态支持</Checkbox>
+                          </Form.Item>
+                        </Tooltip>
+                        <Tooltip title="启用后该模型可处理视频内容">
+                          <Form.Item
+                            {...field}
+                            name={[field.name, "supportsVideo"]}
+                            valuePropName="checked"
+                            style={{ marginBottom: 0 }}
+                          >
+                            <Checkbox>视频支持</Checkbox>
+                          </Form.Item>
+                        </Tooltip>
+                      </div>
+                    </div>
+                  ))}
+                  <Button
+                    type="dashed"
+                    onClick={() => add({ id: "", name: "", supportsMultimodal: false, supportsVideo: false })}
+                    icon={<PlusOutlined />}
+                    block
+                  >
+                    添加模型
+                  </Button>
+                </div>
+              )}
+            </Form.List>
+          </div>
         </Form>
       </Modal>
 

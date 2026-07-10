@@ -1,9 +1,19 @@
 import { MinusCircleOutlined, PlusOutlined } from "@ant-design/icons";
-import { Button, Form, Input, Modal, Select, Space } from "antd";
+import { Button, Checkbox, Form, Input, Modal, Select, Space, Tooltip } from "antd";
 import type { InputRef } from "antd";
 import { useEffect, useRef, useState } from "react";
 
 export type ProviderType = "SYSTEM" | "CUSTOM" | "LOCAL";
+
+/**
+ * 模型配置项
+ */
+export interface ModelConfig {
+  id: string;
+  name: string;
+  supportsMultimodal?: boolean;
+  supportsVideo?: boolean;
+}
 
 export interface ProviderFormData {
   id?: string;
@@ -11,7 +21,7 @@ export interface ProviderFormData {
   type: ProviderType;
   baseUrl: string;
   apiKey?: string;
-  models: string[];
+  models: ModelConfig[];
 }
 
 interface ProviderFormProps {
@@ -33,8 +43,26 @@ export function ProviderForm({ visible, provider, onSubmit, onCancel }: Provider
   useEffect(() => {
     if (visible) {
       if (provider) {
+        // 转换 models 格式：支持旧格式 (string[]) 和新格式 (ModelConfig[])
+        let models: ModelConfig[] = [];
+        if (provider.models && provider.models.length > 0) {
+          if (typeof provider.models[0] === 'string') {
+            // 旧格式：string[] -> ModelConfig[]
+            models = (provider.models as unknown as string[]).map((name, index) => ({
+              id: name,
+              name: name,
+              supportsMultimodal: false,
+              supportsVideo: false,
+            }));
+          } else {
+            // 新格式：ModelConfig[]
+            models = provider.models as ModelConfig[];
+          }
+        }
+
         form.setFieldsValue({
           ...provider,
+          models,
           apiKey: isApiKeyMasked ? "••••••••" : undefined,
         });
       } else {
@@ -74,7 +102,7 @@ export function ProviderForm({ visible, provider, onSubmit, onCancel }: Provider
       title={isEdit ? "编辑 Provider" : "添加 Provider"}
       open={visible}
       onCancel={onCancel}
-      width={640}
+      width={720}
       styles={{
         mask: {
           backgroundColor: "rgba(0, 0, 0, 0.45)",
@@ -158,34 +186,87 @@ export function ProviderForm({ visible, provider, onSubmit, onCancel }: Provider
 
         <Form.Item
           label={<span style={{ color: "var(--td-text-base)" }}>模型列表</span>}
-          tooltip="添加该 Provider 支持的模型名称"
+          tooltip="配置该 Provider 支持的模型。模型 ID 用于 API 调用，显示名称用于界面展示。"
         >
           <Form.List name="models">
             {(fields, { add, remove }) => (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {fields.map((field) => (
-                  <div key={field.key} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <Form.Item
-                      {...field}
-                      rules={[{ required: true, message: "请输入模型名称" }]}
-                      style={{ marginBottom: 0, flex: 1 }}
-                    >
-                      <Input placeholder="例如: qwen-turbo / deepseek-chat" />
-                    </Form.Item>
-                    <MinusCircleOutlined
-                      onClick={() => remove(field.name)}
-                      style={{
-                        color: "var(--td-text-tertiary)",
-                        cursor: "pointer",
-                        fontSize: 16,
-                        flexShrink: 0,
-                      }}
-                    />
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {fields.map((field, index) => (
+                  <div
+                    key={field.key}
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 8,
+                      padding: "12px",
+                      border: "1px solid var(--td-border-color)",
+                      borderRadius: "8px",
+                      background: "var(--td-bg-container)",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ color: "var(--td-text-secondary)", fontSize: 12, minWidth: 20 }}>
+                        #{index + 1}
+                      </span>
+                      <Form.Item
+                        {...field}
+                        name={[field.name, "id"]}
+                        rules={[{ required: true, message: "请输入模型 ID" }]}
+                        style={{ marginBottom: 0, flex: 1 }}
+                      >
+                        <Input
+                          placeholder="模型 ID (例如: qwen-turbo)"
+                          style={{ flex: 1 }}
+                        />
+                      </Form.Item>
+                      <Form.Item
+                        {...field}
+                        name={[field.name, "name"]}
+                        rules={[{ required: true, message: "请输入模型名称" }]}
+                        style={{ marginBottom: 0, flex: 1 }}
+                      >
+                        <Input
+                          placeholder="显示名称 (例如: 通义千问-Turbo)"
+                          style={{ flex: 1 }}
+                        />
+                      </Form.Item>
+                      <MinusCircleOutlined
+                        onClick={() => remove(field.name)}
+                        style={{
+                          color: "var(--td-text-tertiary)",
+                          cursor: "pointer",
+                          fontSize: 16,
+                          flexShrink: 0,
+                        }}
+                      />
+                    </div>
+                    <div style={{ display: "flex", gap: 16, paddingLeft: 28 }}>
+                      <Tooltip title="启用后该模型可处理图片等多模态内容">
+                        <Form.Item
+                          {...field}
+                          name={[field.name, "supportsMultimodal"]}
+                          valuePropName="checked"
+                          style={{ marginBottom: 0 }}
+                        >
+                          <Checkbox>多模态支持</Checkbox>
+                        </Form.Item>
+                      </Tooltip>
+                      <Tooltip title="启用后该模型可处理视频内容">
+                        <Form.Item
+                          {...field}
+                          name={[field.name, "supportsVideo"]}
+                          valuePropName="checked"
+                          style={{ marginBottom: 0 }}
+                        >
+                          <Checkbox>视频支持</Checkbox>
+                        </Form.Item>
+                      </Tooltip>
+                    </div>
                   </div>
                 ))}
                 <Button
                   type="dashed"
-                  onClick={() => add()}
+                  onClick={() => add({ id: "", name: "", supportsMultimodal: false, supportsVideo: false })}
                   icon={<PlusOutlined />}
                   block
                   style={{

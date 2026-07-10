@@ -245,8 +245,10 @@ public class ProviderServiceImpl implements IProviderService {
         try {
             long startTime = System.currentTimeMillis();
 
-            // 构建请求
-            String modelsUrl = baseUrl.replaceAll("/+$", "") + "/models";
+            // 智能构建 models URL
+            String modelsUrl = buildModelsUrl(baseUrl);
+            log.info("[连接测试] 请求 URL: {}, providerId: {}", modelsUrl, providerVO.getModelProviderId());
+
             RestTemplate restTemplate = new RestTemplate();
 
             HttpHeaders headers = new HttpHeaders();
@@ -267,12 +269,37 @@ public class ProviderServiceImpl implements IProviderService {
                 // 解析模型列表
                 List<ConnectionTestResult.ModelInfo> models = parseModelList(response.getBody());
                 testResult.setDiscoveredModels(models);
+                log.info("[连接测试] 成功 - userId: {}, id: {}, 延迟: {}ms, 发现模型: {}",
+                        userId, id, latency, models.size());
             } else {
                 testResult.setReachable(false);
                 testResult.setErrorMessage("HTTP " + response.getStatusCode().value());
             }
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            log.warn("[连接测试] HTTP 错误 - userId: {}, id: {}, status: {}, response: {}",
+                    userId, id, e.getStatusCode(), e.getResponseBodyAsString());
+
+            // 如果 /models 端点返回 401，尝试使用 /chat/completions 端点验证
+            if (e.getStatusCode().value() == 401) {
+                log.info("[连接测试] /models 端点返回 401，尝试 /chat/completions 验证");
+                return testConnectionWithChatEndpoint(providerVO.getModelProviderId(), baseUrl, decryptedApiKey);
+            }
+
+            testResult.setReachable(false);
+            if (e.getStatusCode().value() == 403) {
+                testResult.setErrorMessage("无权限访问该 API");
+            } else if (e.getStatusCode().value() == 404) {
+                testResult.setErrorMessage("API 端点不存在，请检查 baseUrl 是否正确");
+            } else {
+                testResult.setErrorMessage("HTTP " + e.getStatusCode().value() + ": " + e.getResponseBodyAsString());
+            }
+        } catch (org.springframework.web.client.ResourceAccessException e) {
+            log.warn("[连接测试] 网络错误 - userId: {}, id: {}, baseUrl: {}, error: {}",
+                    userId, id, baseUrl, e.getMessage());
+            testResult.setReachable(false);
+            testResult.setErrorMessage("无法连接到服务器，请检查网络和 baseUrl 是否正确");
         } catch (Exception e) {
-            log.warn("Provider 连接测试失败 - userId: {}, id: {}, error: {}", userId, id, e.getMessage());
+            log.warn("[连接测试] 未知错误 - userId: {}, id: {}, error: {}", userId, id, e.getMessage());
             testResult.setReachable(false);
             testResult.setErrorMessage(e.getMessage());
         }
@@ -295,7 +322,10 @@ public class ProviderServiceImpl implements IProviderService {
         try {
             long startTime = System.currentTimeMillis();
 
-            String modelsUrl = baseUrl.replaceAll("/+$", "") + "/models";
+            // 智能构建 models URL：处理不同 provider 的 API 格式
+            String modelsUrl = buildModelsUrl(baseUrl);
+            log.info("[连接测试] 请求 URL: {}, providerId: {}", modelsUrl, providerId);
+
             RestTemplate restTemplate = new RestTemplate();
 
             HttpHeaders headers = new HttpHeaders();
@@ -314,17 +344,155 @@ public class ProviderServiceImpl implements IProviderService {
                 testResult.setReachable(true);
                 List<ConnectionTestResult.ModelInfo> models = parseModelList(response.getBody());
                 testResult.setDiscoveredModels(models);
+                log.info("[连接测试] 成功 - providerId: {}, 延迟: {}ms, 发现模型: {}",
+                        providerId, latency, models.size());
             } else {
                 testResult.setReachable(false);
                 testResult.setErrorMessage("HTTP " + response.getStatusCode().value());
             }
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            log.warn("[连接测试] HTTP 错误 - providerId: {}, baseUrl: {}, status: {}, response: {}",
+                    providerId, baseUrl, e.getStatusCode(), e.getResponseBodyAsString());
+
+            // 如果 /models 端点返回 401，尝试使用 /chat/completions 端点验证
+            if (e.getStatusCode().value() == 401) {
+                log.info("[连接测试] /models 端点返回 401，尝试 /chat/completions 验证");
+                return testConnectionWithChatEndpoint(providerId, baseUrl, apiKey);
+            }
+
+            testResult.setReachable(false);
+            // 提供更友好的错误信息
+            if (e.getStatusCode().value() == 403) {
+                testResult.setErrorMessage("无权限访问该 API");
+            } else if (e.getStatusCode().value() == 404) {
+                testResult.setErrorMessage("API 端点不存在，请检查 baseUrl 是否正确");
+            } else {
+                testResult.setErrorMessage("HTTP " + e.getStatusCode().value() + ": " + e.getResponseBodyAsString());
+            }
+        } catch (org.springframework.web.client.ResourceAccessException e) {
+            log.warn("[连接测试] 网络错误 - providerId: {}, baseUrl: {}, error: {}",
+                    providerId, baseUrl, e.getMessage());
+            testResult.setReachable(false);
+            testResult.setErrorMessage("无法连接到服务器，请检查网络和 baseUrl 是否正确");
         } catch (Exception e) {
-            log.warn("Provider 连接测试失败 - providerId: {}, baseUrl: {}, error: {}", providerId, baseUrl, e.getMessage());
+            log.warn("[连接测试] 未知错误 - providerId: {}, baseUrl: {}, error: {}",
+                    providerId, baseUrl, e.getMessage());
             testResult.setReachable(false);
             testResult.setErrorMessage(e.getMessage());
         }
 
         return testResult;
+    }
+
+    /**
+     * 使用 /chat/completions 端点验证连接。
+     * 当 /models 端点返回 401 时，尝试使用此方法验证。
+     */
+    private ConnectionTestResult testConnectionWithChatEndpoint(String providerId, String baseUrl, String apiKey) {
+        ConnectionTestResult testResult = new ConnectionTestResult();
+
+        try {
+            long startTime = System.currentTimeMillis();
+
+            // 构建 chat completions URL
+            String chatUrl = baseUrl.replaceAll("/+$", "");
+            if (!chatUrl.endsWith("/chat/completions")) {
+                chatUrl = chatUrl + "/chat/completions";
+            }
+
+            log.info("[连接测试] 尝试 /chat/completions 端点: {}", chatUrl);
+
+            RestTemplate restTemplate = new RestTemplate();
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
+            if (apiKey != null && !apiKey.isBlank()) {
+                headers.set("Authorization", "Bearer " + apiKey);
+            }
+
+            // 构建一个最小的请求体
+            String requestBody = """
+                    {
+                        "model": "gpt-3.5-turbo",
+                        "messages": [{"role": "user", "content": "hi"}],
+                        "max_tokens": 1,
+                        "stream": false
+                    }
+                    """;
+
+            HttpEntity<String> entity = new HttpEntity<>(requestBody, headers);
+            ResponseEntity<String> response = restTemplate.exchange(chatUrl, HttpMethod.POST, entity, String.class);
+
+            long latency = System.currentTimeMillis() - startTime;
+            testResult.setLatencyMs(latency);
+
+            if (response.getStatusCode().is2xxSuccessful()) {
+                testResult.setReachable(true);
+                log.info("[连接测试] /chat/completions 验证成功 - providerId: {}, 延迟: {}ms",
+                        providerId, latency);
+            } else {
+                testResult.setReachable(false);
+                testResult.setErrorMessage("HTTP " + response.getStatusCode().value());
+            }
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            log.warn("[连接测试] /chat/completions 也失败 - providerId: {}, status: {}, response: {}",
+                    providerId, e.getStatusCode(), e.getResponseBodyAsString());
+
+            testResult.setReachable(false);
+            if (e.getStatusCode().value() == 401) {
+                testResult.setErrorMessage("API Key 无效或已过期");
+            } else if (e.getStatusCode().value() == 400) {
+                // 400 可能是因为模型名称不正确，但连接是通的
+                testResult.setReachable(true);
+                testResult.setErrorMessage("连接成功，但模型配置可能需要调整");
+            } else {
+                testResult.setErrorMessage("HTTP " + e.getStatusCode().value() + ": " + e.getResponseBodyAsString());
+            }
+        } catch (Exception e) {
+            log.warn("[连接测试] /chat/completions 异常 - providerId: {}, error: {}",
+                    providerId, e.getMessage());
+            testResult.setReachable(false);
+            testResult.setErrorMessage(e.getMessage());
+        }
+
+        return testResult;
+    }
+
+    /**
+     * 智能构建 models URL
+     * 处理不同 provider 的 API 格式：
+     * - 如果 baseUrl 已包含 /models，直接使用
+     * - 如果 baseUrl 以 /v1 结尾，追加 /models
+     * - 如果 baseUrl 以 /v1/ 结尾，追加 models
+     * - 其他情况，追加 /v1/models
+     */
+    private String buildModelsUrl(String baseUrl) {
+        String normalized = baseUrl.replaceAll("/+$", "");
+
+        // 如果已经包含 /models，直接使用
+        if (normalized.endsWith("/models")) {
+            return normalized;
+        }
+
+        // 如果以 /v1 结尾，追加 /models
+        if (normalized.endsWith("/v1")) {
+            return normalized + "/models";
+        }
+
+        // 如果以 /v1/ 结尾，追加 models
+        if (normalized.endsWith("/v1/")) {
+            return normalized + "models";
+        }
+
+        // 检查是否是常见的 API 路径格式
+        if (normalized.matches(".*\\/v\\d+$")) {
+            // 已经是版本化路径，追加 /models
+            return normalized + "/models";
+        }
+
+        // 其他情况，尝试追加 /v1/models
+        return normalized + "/v1/models";
     }
 
     // ======================== Active Models ========================
