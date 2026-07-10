@@ -486,3 +486,14 @@ body {
   background: rgba(52, 211, 153, 0.05);
 }
 
+/* Bubble 紧凑样式 — 减少 filled/shadow 变体的内边距 */
+[class*="ant-bubble-content"] {
+  padding: 6px 10px !important;
+  min-height: unset !important;
+}
+
+/* message-meta 紧凑 */
+.message-meta {
+  margin-bottom: 4px;
+}
+
