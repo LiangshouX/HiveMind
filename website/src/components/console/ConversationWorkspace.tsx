@@ -589,86 +589,78 @@ export function ConversationWorkspace({
                     </div>
 
                     <div className="sender-shell" style={{
-                        background: 'var(--td-bg-elevated)',
+                        background: 'var(--td-input-bg)',
                         borderTop: '1px solid var(--td-border-light)',
                         borderBottomLeftRadius: '12px',
                         borderBottomRightRadius: '12px',
-                        padding: '24px'
+                        padding: '8px 12px 4px',
+                        boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.02)',
+                        transition: 'border-color 0.3s',
                     }}>
-                        <div style={{
-                            background: 'var(--td-input-bg)',
-                            border: '1px solid var(--td-border-color)',
-                            borderRadius: '12px',
-                            padding: '12px 16px',
-                            boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.02), 0 2px 8px var(--td-pattern-color)',
-                            transition: 'border-color 0.3s',
-                            position: 'relative'
-                        }}>
-                            <Sender
-                                value={input}
-                                onChange={onInputChange}
-                                onSubmit={() => void onSend()}
-                                onCancel={() => void onInterrupt()}
-                                loading={busy}
-                                submitType="enter"
-                                components={{input: EnterSendTextArea as any}}
-                                autoSize={{minRows: 2, maxRows: 8}}
-                                placeholder="输入任务..."
-                                style={{
-                                    resize: 'none',
-                                    color: 'var(--td-text-base)',
-                                    fontSize: '15px',
-                                    padding: '0 0 16px 0',
-                                    boxShadow: 'none',
-                                    background: 'transparent'
-                                }}
-                                suffix={busy ? (
-                                    <Tooltip title="中断输出">
-                                        <Button
-                                            type="primary"
-                                            danger
-                                            icon={<PauseCircleOutlined/>}
-                                            onClick={() => void onInterrupt()}
-                                            style={{
-                                                background: 'var(--td-primary)',
-                                                borderColor: 'var(--td-primary)',
-                                                borderRadius: '8px',
-                                                height: '40px',
-                                                padding: '0 20px',
-                                                fontWeight: 600,
-                                                letterSpacing: '1px'
-                                            }}
-                                        >
-                                            停
-                                        </Button>
-                                    </Tooltip>
-                                ) : (
-                                    <ChatSendButton
-                                        disabled={!input.trim()}
-                                        loading={busy}
-                                        onClick={() => void onSend()}
-                                    />
-                                )}
-                                footer={() => {
-                                    return (
-                                        <Space>
-                                            <Tooltip title="附件">
-                                                <Button type="text" icon={<PaperClipOutlined/>}
-                                                        style={{color: 'var(--td-text-tertiary)'}}/>
-                                            </Tooltip>
-                                            <Tooltip title="语音">
-                                                <Button type="text" icon={<AudioOutlined/>}
-                                                        style={{color: 'var(--td-text-tertiary)'}}/>
-                                            </Tooltip>
-                                            <Tooltip title="快捷指令">
-                                                <Button type="text" icon={<ThunderboltOutlined/>}
-                                                        style={{color: 'var(--td-highlight)'}}/>
-                                            </Tooltip>
-                                        </Space>
-                                    );
-                                }}
-                            />
-                        </div>
+                        <Sender
+                            value={input}
+                            onChange={onInputChange}
+                            onSubmit={() => void onSend()}
+                            onCancel={() => void onInterrupt()}
+                            loading={busy}
+                            submitType="enter"
+                            components={{input: EnterSendTextArea as any}}
+                            autoSize={{minRows: 1, maxRows: 6}}
+                            placeholder="输入任务..."
+                            style={{
+                                resize: 'none',
+                                color: 'var(--td-text-base)',
+                                fontSize: '15px',
+                                padding: '0 0 4px 0',
+                                boxShadow: 'none',
+                                background: 'transparent'
+                            }}
+                            suffix={busy ? (
+                                <Tooltip title="中断输出">
+                                    <Button
+                                        type="primary"
+                                        danger
+                                        icon={<PauseCircleOutlined/>}
+                                        onClick={() => void onInterrupt()}
+                                        style={{
+                                            background: 'var(--td-primary)',
+                                            borderColor: 'var(--td-primary)',
+                                            borderRadius: '8px',
+                                            height: '32px',
+                                            padding: '0 16px',
+                                            fontWeight: 600,
+                                            letterSpacing: '1px'
+                                        }}
+                                    >
+                                        停
+                                    </Button>
+                                </Tooltip>
+                            ) : (
+                                <ChatSendButton
+                                    disabled={!input.trim()}
+                                    loading={busy}
+                                    onClick={() => void onSend()}
+                                />
+                            )}
+                            footer={() => {
+                                return (
+                                    <Space size={2}>
+                                        <Tooltip title="附件">
+                                            <Button type="text" icon={<PaperClipOutlined/>} size="small"
+                                                    style={{color: 'var(--td-text-tertiary)', width: 26, height: 26}}/>
+                                        </Tooltip>
+                                        <Tooltip title="语音">
+                                            <Button type="text" icon={<AudioOutlined/>} size="small"
+                                                    style={{color: 'var(--td-text-tertiary)', width: 26, height: 26}}/>
+                                        </Tooltip>
+                                        <Tooltip title="快捷指令">
+                                            <Button type="text" icon={<ThunderboltOutlined/>} size="small"
+                                                    style={{color: 'var(--td-highlight)', width: 26, height: 26}}/>
+                                        </Tooltip>
+                                    </Space>
+                                );
+                            }}
+                        />
                     </div>
                 </div>
             </div>
