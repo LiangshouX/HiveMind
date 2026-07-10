@@ -212,7 +212,7 @@ public class MessageMapper {
         }
         if (block instanceof ToolResultBlock toolResultBlock) {
             String text = extractToolResultText(toolResultBlock);
-            log.info("ToolResultBlock 转换 - name: {}, text: {}, metadata: {}",
+            log.debug("ToolResultBlock 转换 - name: {}, text: {}, metadata: {}",
                     toolResultBlock.getName(),
                     text != null ? text.substring(0, Math.min(100, text.length())) : "null",
                     toolResultBlock.getMetadata() != null ? "有" : "无");

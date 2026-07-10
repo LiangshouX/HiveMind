@@ -86,17 +86,17 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
     /**
      * 构造器
      *
-     * @param agentFactory                  Agent 工厂
-     * @param chatService                   聊天服务
-     * @param IChatCommandService           命令服务
-     * @param agentSessionStateService      会话状态服务
-     * @param toolApprovalService           工具审批服务
-     * @param activeSessionRegistry         活动会话注册表
-     * @param properties                    外部化配置
-     * @param modelFactory                  模型工厂
-     * @param tokenUsageRecordService       Token 使用量记录服务
-     * @param toolkitFactory                工具箱工厂
-     * @param objectMapper                  ObjectMapper
+     * @param agentFactory                   Agent 工厂
+     * @param chatService                    聊天服务
+     * @param IChatCommandService            命令服务
+     * @param agentSessionStateService       会话状态服务
+     * @param toolApprovalService            工具审批服务
+     * @param activeSessionRegistry          活动会话注册表
+     * @param properties                     外部化配置
+     * @param modelFactory                   模型工厂
+     * @param tokenUsageRecordService        Token 使用量记录服务
+     * @param toolkitFactory                 工具箱工厂
+     * @param objectMapper                   ObjectMapper
      * @param conversationPersistenceService 对话持久化服务
      */
     public TdAgentStreamingServiceImpl(
@@ -317,10 +317,10 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
                     TdAgentStreamEventType streamEventType = event.getType() == EventType.AGENT_RESULT
                             ? TdAgentStreamEventType.RESULT
                             : event.getType() == EventType.REASONING
-                            ? TdAgentStreamEventType.REASONING
-                            : event.getType() == EventType.TOOL_RESULT
-                            ? TdAgentStreamEventType.TOOL_RESULT
-                            : TdAgentStreamEventType.MESSAGE;
+                              ? TdAgentStreamEventType.REASONING
+                              : event.getType() == EventType.TOOL_RESULT
+                                ? TdAgentStreamEventType.TOOL_RESULT
+                                : TdAgentStreamEventType.MESSAGE;
 
                     // 对于 REASONING 事件，提取 ToolUseBlock 并缓存
                     if (streamEventType == TdAgentStreamEventType.REASONING && event.getMessage() != null) {
@@ -334,7 +334,7 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
                         ToolUseBlock cachedToolUse = lastToolUseBlock.getAndSet(null);
                         if (cachedToolUse != null) {
                             populateToolUseMetadata(cachedToolUse, eventMetadata);
-                            log.info("[流式执行-事件] TOOL_RESULT 元数据(从缓存) - toolName: {}, toolInput: {}",
+                            log.debug("[流式执行-事件] TOOL_RESULT 元数据(从缓存) - toolName: {}, toolInput: {}",
                                     eventMetadata.get("toolName"), eventMetadata.get("toolInput"));
                         }
                     }
@@ -450,7 +450,7 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
         } catch (Exception e) {
             log.warn("[流式清理] 完成 Emitter 时发生异常 - error: {}", e.getMessage());
         }
-        
+
         log.info("[流式清理] 清理工作已完成 - sessionKey: {}", sessionKey);
     }
 
@@ -673,8 +673,8 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
      *     <li>调用 tool.callAsync() — GuardedAgentTool 检查 isApproved()=true，真正执行</li>
      * </ol>
      *
-     * @param context   会话上下文
-     * @param approval  审批记录
+     * @param context  会话上下文
+     * @param approval 审批记录
      * @return 工具执行结果 ContentBlock
      */
     private ContentBlock executeApprovedTool(ConversationSessionContext context, ToolApprovalDocument approval) {
@@ -731,13 +731,13 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
     /**
      * 解析工具输入参数 JSON。
      */
-    @SuppressWarnings("unchecked")
     private Map<String, Object> parseToolInput(String toolInputJson) {
         if (toolInputJson == null || toolInputJson.isBlank()) {
             return Map.of();
         }
         try {
-            return objectMapper.readValue(toolInputJson, new TypeReference<>() {});
+            return objectMapper.readValue(toolInputJson, new TypeReference<>() {
+            });
         } catch (Exception e) {
             log.warn("[审批执行] 解析工具输入参数失败: {}", e.getMessage());
             return Map.of();

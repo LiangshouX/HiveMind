@@ -456,7 +456,7 @@ public class ConversationPersistenceServiceImpl implements IConversationPersiste
                     .toList();
 
             StoredMessage approvalMessage = StoredMessage.builder()
-                    .msgId("approval-" + UUID.randomUUID().toString())
+                    .msgId("approval-" + UUID.randomUUID())
                     .role("ASSISTANT")
                     .name("HiveMindAgent")
                     .content(new ArrayList<>(approvalContents))
