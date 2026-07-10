@@ -139,6 +139,23 @@ public class TdAgentChatController {
     }
 
     /**
+     * 使用 LLM 为指定会话生成摘要标题。
+     */
+    @PostMapping("/sessions/{sessionId}/generate-title")
+    public Result<String> generateTitle(
+            Principal principal,
+            @PathVariable String sessionId,
+            @RequestParam(required = false) String providerId,
+            @RequestParam(required = false) String modelId) {
+        String userId = currentUserId(principal);
+        String title = chatService.generateSessionTitle(userId, sessionId, providerId, modelId);
+        if (title != null) {
+            return Result.success(title);
+        }
+        return Result.error(500, "标题生成失败");
+    }
+
+    /**
      * 获取当前用户已激活的模型列表。
      */
     @GetMapping("/active-models")

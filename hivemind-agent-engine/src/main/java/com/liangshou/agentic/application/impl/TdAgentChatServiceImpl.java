@@ -2,12 +2,15 @@ package com.liangshou.agentic.application.impl;
 
 import com.liangshou.agentic.agents.ConversationSessionContext;
 import com.liangshou.agentic.agents.TdAgentFactory;
+import com.liangshou.agentic.agents.TdAgentModelFactory;
 import com.liangshou.agentic.agents.guard.approval.ToolApprovalService;
 import com.liangshou.agentic.agents.provider.TdAgentProviderRegistry;
 import com.liangshou.agentic.agents.provider.TdAgentResolvedModelConfig;
 import com.liangshou.agentic.agents.session.AgentSessionStateService;
 import com.liangshou.agentic.domain.memory.model.ConversationMemoryDocument;
 import com.liangshou.agentic.domain.memory.model.ConversationViewDocument;
+import com.liangshou.agentic.domain.memory.model.StoredMessage;
+import com.liangshou.agentic.domain.memory.model.StoredMessageContent;
 import com.liangshou.agentic.application.IConversationPersistenceService;
 import com.liangshou.agentic.application.IChatCommandService;
 import com.liangshou.agentic.application.ITdAgentChatService;
@@ -17,6 +20,10 @@ import com.liangshou.agentic.application.dto.SessionHistoryResponse;
 import io.agentscope.core.ReActAgent;
 import io.agentscope.core.message.Msg;
 import io.agentscope.core.message.MsgRole;
+import io.agentscope.core.message.TextBlock;
+import io.agentscope.core.model.Model;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -44,12 +51,15 @@ import java.util.Map;
 @SuppressWarnings("unused")
 public class TdAgentChatServiceImpl implements ITdAgentChatService {
 
+    private static final Logger log = LoggerFactory.getLogger(TdAgentChatServiceImpl.class);
+
     private final TdAgentFactory agentFactory;
     private final IChatCommandService chatCommandService;
     private final IConversationPersistenceService persistenceService;
     private final AgentSessionStateService agentSessionStateService;
     private final ToolApprovalService toolApprovalService;
     private final TdAgentProviderRegistry providerRegistry;
+    private final TdAgentModelFactory modelFactory;
 
     /**
      * 构造器
@@ -60,6 +70,7 @@ public class TdAgentChatServiceImpl implements ITdAgentChatService {
      * @param agentSessionStateService 会话状态服务
      * @param toolApprovalService      工具审批服务
      * @param providerRegistry         供应商注册表
+     * @param modelFactory             模型工厂
      */
     public TdAgentChatServiceImpl(
             TdAgentFactory agentFactory,
@@ -67,13 +78,15 @@ public class TdAgentChatServiceImpl implements ITdAgentChatService {
             IConversationPersistenceService persistenceService,
             AgentSessionStateService agentSessionStateService,
             ToolApprovalService toolApprovalService,
-            TdAgentProviderRegistry providerRegistry) {
+            TdAgentProviderRegistry providerRegistry,
+            TdAgentModelFactory modelFactory) {
         this.agentFactory = agentFactory;
         this.chatCommandService = chatCommandService;
         this.persistenceService = persistenceService;
         this.agentSessionStateService = agentSessionStateService;
         this.toolApprovalService = toolApprovalService;
         this.providerRegistry = providerRegistry;
+        this.modelFactory = modelFactory;
     }
 
     /**
@@ -162,6 +175,99 @@ public class TdAgentChatServiceImpl implements ITdAgentChatService {
     @Override
     public void deleteSession(String userId, String sessionId) {
         persistenceService.deleteSession(userId, sessionId);
+    }
+
+    /**
+     * 使用 LLM 为指定会话生成摘要标题。
+     */
+    @Override
+    public String generateSessionTitle(String userId, String sessionId, String providerId, String modelId) {
+        try {
+            // 1. 加载会话历史，提取用户消息内容
+            ConversationSessionContext context = ConversationSessionContext.builder()
+                    .userId(userId)
+                    .sessionId(sessionId)
+                    .build();
+            ConversationMemoryDocument history =
+                    persistenceService.getSessionHistory(userId, sessionId).orElse(null);
+            if (history == null || history.getMessages() == null || history.getMessages().isEmpty()) {
+                log.warn("会话历史为空，无法生成标题 - userId: {}, sessionId: {}", userId, sessionId);
+                return null;
+            }
+
+            // 提取前几条用户消息的文本内容
+            String userMessages = history.getMessages().stream()
+                    .filter(msg -> "USER".equalsIgnoreCase(msg.getRole()))
+                    .limit(3)
+                    .flatMap(msg -> msg.getContent().stream())
+                    .map(StoredMessageContent::getText)
+                    .filter(text -> text != null && !text.isBlank())
+                    .reduce("", (a, b) -> a.isBlank() ? b : a + "\n" + b);
+
+            if (userMessages.isBlank()) {
+                log.warn("用户消息内容为空，无法生成标题 - userId: {}, sessionId: {}", userId, sessionId);
+                return null;
+            }
+
+            // 2. 解析模型配置并创建模型实例
+            TdAgentResolvedModelConfig resolvedConfig;
+            try {
+                resolvedConfig = providerRegistry.resolveForUser(userId, providerId, modelId);
+            } catch (Exception e) {
+                log.error("解析模型配置失败，无法生成标题 - userId: {}, error: {}", userId, e.getMessage());
+                return null;
+            }
+            Model model = modelFactory.createFromConfig(resolvedConfig);
+
+            // 3. 构造摘要 prompt 并调用 LLM
+            String prompt = "请根据以下对话内容，生成一个简短的会话标题（不超过20个字符，不要包含引号或标点符号前缀）。\n"
+                    + "只输出标题本身，不要输出任何其他内容。\n\n"
+                    + "对话内容：\n" + userMessages;
+
+            Msg titleMsg = Msg.builder()
+                    .role(MsgRole.USER)
+                    .textContent(prompt)
+                    .build();
+
+            // 使用 Model.stream() 调用 LLM，收集完整响应
+            List<io.agentscope.core.model.ChatResponse> responses = model.stream(List.of(titleMsg), null, null)
+                    .collectList()
+                    .block();
+
+            String generatedTitle = null;
+            if (responses != null && !responses.isEmpty()) {
+                generatedTitle = responses.stream()
+                        .flatMap(r -> r.getContent().stream())
+                        .filter(TextBlock.class::isInstance)
+                        .map(TextBlock.class::cast)
+                        .map(TextBlock::getText)
+                        .filter(text -> text != null && !text.isBlank())
+                        .reduce("", (a, b) -> a + b)
+                        .trim();
+            }
+
+            if (generatedTitle == null || generatedTitle.isBlank()) {
+                log.warn("LLM 返回的标题为空 - userId: {}, sessionId: {}", userId, sessionId);
+                return null;
+            }
+
+            // 4. 清理标题：去除引号、换行符，截断过长内容
+            generatedTitle = generatedTitle.trim()
+                    .replaceAll("[\"'`\n\r]", "")
+                    .replaceAll("^标题[：:]\\s*", "");
+            if (generatedTitle.length() > 30) {
+                generatedTitle = generatedTitle.substring(0, 30);
+            }
+
+            // 5. 持久化标题
+            persistenceService.updateSessionTitle(userId, sessionId, generatedTitle);
+            log.info("LLM 标题生成成功 - userId: {}, sessionId: {}, title: {}", userId, sessionId, generatedTitle);
+
+            return generatedTitle;
+        } catch (Exception e) {
+            log.error("生成会话标题失败 - userId: {}, sessionId: {}, error: {}", userId, sessionId, e.getMessage(), e);
+            return null;
+        }
     }
 
     @Override

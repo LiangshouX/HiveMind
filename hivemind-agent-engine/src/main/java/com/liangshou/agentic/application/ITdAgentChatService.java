@@ -68,6 +68,20 @@ public interface ITdAgentChatService {
      */
     ConversationSessionContext buildContext(String userId, String sessionId, String title);
 
+    /**
+     * 使用 LLM 为指定会话生成摘要标题。
+     *
+     * <p>该方法加载会话的前几条用户消息，通过 LLM 生成一个简短的标题摘要，
+     * 并更新到 MongoDB 中的 ConversationViewDocument 和 ConversationMemoryDocument。</p>
+     *
+     * @param userId     用户标识
+     * @param sessionId  会话标识
+     * @param providerId 供应商 ID（可选，为 null 时使用默认供应商）
+     * @param modelId    模型 ID（可选，为 null 时使用默认模型）
+     * @return LLM 生成的标题；如果会话不存在或生成失败则返回 null
+     */
+    String generateSessionTitle(String userId, String sessionId, String providerId, String modelId);
+
     default boolean isPaused(Msg response) {
         if (response == null || response.getGenerateReason() == null) {
             return false;

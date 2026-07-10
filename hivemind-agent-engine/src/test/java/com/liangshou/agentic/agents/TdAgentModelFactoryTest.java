@@ -41,6 +41,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * @see io.agentscope.core.model.DashScopeChatModel
  * @see io.agentscope.core.model.OpenAIChatModel
  */
+@SuppressWarnings("deprecation")
 class TdAgentModelFactoryTest {
 
     @TempDir

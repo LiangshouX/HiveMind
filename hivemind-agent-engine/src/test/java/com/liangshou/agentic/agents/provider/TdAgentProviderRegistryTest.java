@@ -23,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * @author LiangshouX
  */
 @DisplayName("TdAgentProviderRegistry 单元测试")
+@SuppressWarnings("deprecation")
 class TdAgentProviderRegistryTest {
     @TempDir
     Path tempDir;

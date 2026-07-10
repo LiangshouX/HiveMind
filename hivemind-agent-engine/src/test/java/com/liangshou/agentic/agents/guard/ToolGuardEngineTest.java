@@ -31,6 +31,7 @@ import static org.mockito.Mockito.*;
  * @see com.liangshou.agentic.domain.shared.enums.ToolRiskLevel
  * @see com.liangshou.agentic.agents.guard.ToolGuardDecision
  */
+@SuppressWarnings("deprecation")
 class ToolGuardEngineTest {
 
     private ToolConfigProvider configProvider;

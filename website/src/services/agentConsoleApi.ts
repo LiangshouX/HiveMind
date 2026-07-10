@@ -205,4 +205,24 @@ export const agentConsoleApi = {
   ) {
     return postSse("/approvals/reject", payload, onEvent, signal);
   },
+
+  async generateTitle(
+    sessionId: string,
+    providerId?: string,
+    modelId?: string,
+  ): Promise<string | null> {
+    const params = new URLSearchParams();
+    if (providerId) params.set("providerId", providerId);
+    if (modelId) params.set("modelId", modelId);
+    const query = params.toString() ? `?${params.toString()}` : "";
+    const response = await fetch(
+      buildUrl(`/sessions/${sessionId}/generate-title${query}`),
+      {
+        method: "POST",
+        headers: createHeaders(),
+      },
+    );
+    const result = await parseApiResult<string>(response);
+    return result ?? null;
+  },
 };

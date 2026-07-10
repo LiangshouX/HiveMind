@@ -166,7 +166,10 @@ public class TdAgentModelFactory {
      * </ul>
      *
      * @return 已解析的模型配置对象，包含所有必要的连接和生成参数
+     * @deprecated 使用 {@link TdAgentProviderRegistry#resolveForUser(String, String, String)} 从数据库加载配置
      */
+    @Deprecated
+    @SuppressWarnings("deprecation")
     public TdAgentResolvedModelConfig currentConfig() {
         return providerRegistry.resolveConfiguredModel();
     }

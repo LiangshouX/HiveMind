@@ -151,4 +151,15 @@ public interface IConversationPersistenceService {
      * @return 格式化的预览文本，每行格式为：[timestamp] role: text
      */
     String buildRecentPreview(ConversationSessionContext context, int limit);
+
+    /**
+     * 更新会话标题。
+     *
+     * <p>该方法同时更新 ConversationViewDocument 和 ConversationMemoryDocument 中的标题字段。</p>
+     *
+     * @param userId    用户标识
+     * @param sessionId 会话标识
+     * @param title     新的会话标题
+     */
+    void updateSessionTitle(String userId, String sessionId, String title);
 }

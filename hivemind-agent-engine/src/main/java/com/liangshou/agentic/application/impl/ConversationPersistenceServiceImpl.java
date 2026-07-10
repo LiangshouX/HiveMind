@@ -370,6 +370,39 @@ public class ConversationPersistenceServiceImpl implements IConversationPersiste
         return normalized.length() > 10 ? normalized.substring(0, 10) : normalized;
     }
 
+    /**
+     * 更新会话标题。
+     *
+     * @param userId    用户标识
+     * @param sessionId 会话标识
+     * @param title     新的会话标题
+     */
+    @Override
+    public void updateSessionTitle(String userId, String sessionId, String title) {
+        if (title == null || title.isBlank()) {
+            return;
+        }
+        String trimmedTitle = title.trim();
+        Instant now = Instant.now();
+
+        // 更新 ConversationViewDocument
+        conversationViewRepository.findByUserIdAndSessionId(userId, sessionId)
+                .ifPresent(view -> {
+                    view.setTitle(trimmedTitle);
+                    view.setUpdatedAt(now);
+                    conversationViewRepository.save(view);
+                    log.info("会话视图标题已更新 - userId: {}, sessionId: {}, title: {}", userId, sessionId, trimmedTitle);
+                });
+
+        // 更新 ConversationMemoryDocument
+        conversationMemoryRepository.findByUserIdAndSessionId(userId, sessionId)
+                .ifPresent(doc -> {
+                    doc.setTitle(trimmedTitle);
+                    doc.setUpdatedAt(now);
+                    conversationMemoryRepository.save(doc);
+                });
+    }
+
     private long calculateRoundCount(List<Msg> messages) {
         return messages.stream()
                 .filter(message -> message.getRole() != null && "USER".equals(message.getRole().name()))

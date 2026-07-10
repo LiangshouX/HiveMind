@@ -186,7 +186,7 @@ public class SkillFileStorageService {
              TarArchiveInputStream tais = new TarArchiveInputStream(gzis)) {
 
             TarArchiveEntry entry;
-            while ((entry = tais.getNextTarEntry()) != null) {
+            while ((entry = (TarArchiveEntry) tais.getNextEntry()) != null) {
                 if (entry.isDirectory()) {
                     continue;
                 }

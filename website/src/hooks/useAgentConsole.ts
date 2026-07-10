@@ -800,10 +800,10 @@ export function useAgentConsole(
       return;
     }
     const sessionId = activeSessionId || createSessionId();
-    const nextTitle =
-      activeSession?.temp || !activeSession?.messages.length
-        ? deriveTitleFromText(text)
-        : activeSession?.title || deriveTitleFromText(text);
+    const isFirstMessage = activeSession?.temp || !activeSession?.messages.length;
+    const nextTitle = isFirstMessage
+      ? deriveTitleFromText(text)
+      : activeSession?.title || deriveTitleFromText(text);
     const session = ensureSession(sessionId, activeSession?.temp ? "新对话" : nextTitle);
     const userMessage = createUserMessage(text, user);
 
@@ -826,6 +826,23 @@ export function useAgentConsole(
         signal,
       ),
     );
+
+    // 首条消息完成后，异步调用 LLM 生成摘要标题
+    if (isFirstMessage) {
+      agentConsoleApi
+        .generateTitle(sessionId, selectedProviderId, selectedModelId)
+        .then((title) => {
+          if (title) {
+            updateSession(sessionId, (current) => ({
+              ...current,
+              title,
+            }));
+          }
+        })
+        .catch((err) => {
+          console.warn("LLM 标题生成失败，保留截取标题", err);
+        });
+    }
   }, [
     activateSession,
     activeSession,
@@ -839,6 +856,7 @@ export function useAgentConsole(
     runStream,
     selectedModelId,
     selectedProviderId,
+    updateSession,
     user,
   ]);
 

@@ -637,6 +637,7 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
      * @param context 会话上下文
      * @param message 最终结果消息
      */
+    @SuppressWarnings("deprecation")
     private void recordTokenUsage(ConversationSessionContext context, Msg message) {
         try {
             // 优先使用会话上下文中已解析的模型配置（从 DB 加载，与实际对话一致）

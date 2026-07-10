@@ -176,7 +176,7 @@ public class TdAgentToolGuardHook implements Hook {
         List<ToolUseBlock> toolUses = reasoningMessage.getContentBlocks(ToolUseBlock.class);
         List<Map.Entry<ToolUseBlock, ToolGuardDecision>> decisions =
                 toolUses.stream()
-                        .map(toolUse -> Map.entry(toolUse, toolGuardEngine.evaluate(toolUse.getName(), toolUse.getInput())))
+                        .map(toolUse -> Map.entry(toolUse, toolGuardEngine.evaluate(toolUse.getName(), toolUse.getInput(), context.getUserId())))
                         .toList();
         List<Map.Entry<ToolUseBlock, ToolGuardDecision>> denied =
                 decisions.stream().filter(entry -> !entry.getValue().isAllowed()).toList();
@@ -206,7 +206,7 @@ public class TdAgentToolGuardHook implements Hook {
                                     .filter(entry -> entry.getKey().getId().equals(toolUse.getId()))
                                     .map(Map.Entry::getValue)
                                     .findFirst()
-                                    .orElse(toolGuardEngine.evaluate(toolUse.getName(), toolUse.getInput())));
+                                    .orElse(toolGuardEngine.evaluate(toolUse.getName(), toolUse.getInput(), context.getUserId())));
             postReasoningEvent.stopAgent();
         }
         return Mono.just(event);
