@@ -86,7 +86,7 @@ public class SystemToolRegistry {
                 .runEnvironment(RunEnvironment.SANDBOX)
                 .riskLevel(ToolRiskLevel.HIGH)
                 .enabled(true)
-                .approvalRequired(true)
+                .approvalRequired(false)
                 .denyPatterns(List.of("rm -rf", "del /f", "format ", "shutdown ", "reboot ", "remove-item -recurse -force"))
                 .examples(List.of(
                         new ToolExample("安装 Python 包", "{\"command\": \"pip install requests\"}"),
@@ -102,7 +102,7 @@ public class SystemToolRegistry {
                 .runEnvironment(RunEnvironment.SANDBOX)
                 .riskLevel(ToolRiskLevel.HIGH)
                 .enabled(true)
-                .approvalRequired(true)
+                .approvalRequired(false)
                 .denyPatterns(List.of("os.system(", "subprocess.", "__import__('os')", "__import__('subprocess')"))
                 .examples(List.of(
                         new ToolExample("打印 Hello World", "{\"code\": \"print('Hello World')\"}"),
@@ -132,7 +132,7 @@ public class SystemToolRegistry {
                 .runEnvironment(RunEnvironment.SANDBOX)
                 .riskLevel(ToolRiskLevel.HIGH)
                 .enabled(true)
-                .approvalRequired(true)
+                .approvalRequired(false)
                 .denyPatterns(List.of("/etc/shadow", "/etc/passwd", ".env", "/etc/nginx/"))
                 .examples(List.of(
                         new ToolExample("创建 Python 脚本", "{\"file_path\": \"hello.py\", \"content\": \"print('Hello')\"}")
@@ -146,7 +146,7 @@ public class SystemToolRegistry {
                 .runEnvironment(RunEnvironment.SANDBOX)
                 .riskLevel(ToolRiskLevel.HIGH)
                 .enabled(true)
-                .approvalRequired(true)
+                .approvalRequired(false)
                 .denyPatterns(List.of())
                 .examples(List.of(
                         new ToolExample("替换文件中的文本", "{\"file_path\": \"config.py\", \"old_str\": \"DEBUG = False\", \"new_str\": \"DEBUG = True\"}")
@@ -160,7 +160,7 @@ public class SystemToolRegistry {
                 .runEnvironment(RunEnvironment.SANDBOX)
                 .riskLevel(ToolRiskLevel.MEDIUM)
                 .enabled(true)
-                .approvalRequired(true)
+                .approvalRequired(false)
                 .denyPatterns(List.of())
                 .examples(List.of(
                         new ToolExample("重命名文件", "{\"source\": \"old_name.txt\", \"destination\": \"new_name.txt\"}")
@@ -203,7 +203,7 @@ public class SystemToolRegistry {
                 .runEnvironment(RunEnvironment.SANDBOX)
                 .riskLevel(ToolRiskLevel.HIGH)
                 .enabled(true)
-                .approvalRequired(true)
+                .approvalRequired(false)
                 .denyPatterns(List.of())
                 .examples(List.of(
                         new ToolExample("打开百度", "{\"url\": \"https://www.baidu.com\"}")
@@ -231,7 +231,7 @@ public class SystemToolRegistry {
                 .runEnvironment(RunEnvironment.SANDBOX)
                 .riskLevel(ToolRiskLevel.HIGH)
                 .enabled(true)
-                .approvalRequired(true)
+                .approvalRequired(false)
                 .denyPatterns(List.of())
                 .examples(List.of(
                         new ToolExample("点击按钮", "{\"index\": 1, \"ref\": \"点击搜索按钮\"}")
@@ -245,7 +245,7 @@ public class SystemToolRegistry {
                 .runEnvironment(RunEnvironment.SANDBOX)
                 .riskLevel(ToolRiskLevel.HIGH)
                 .enabled(true)
-                .approvalRequired(true)
+                .approvalRequired(false)
                 .denyPatterns(List.of())
                 .examples(List.of(
                         new ToolExample("输入搜索内容", "{\"index\": 2, \"ref\": \"搜索框\", \"text\": \"AgentScope\"}")
