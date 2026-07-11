@@ -170,10 +170,7 @@ npm run preview    # Preview production build locally
 Copy `.env.example` to `.env`. Key variable: `VITE_BACKEND_API_ROOT` (defaults to `/api/v1`).
 
 <!-- SPECKIT START -->
-**Active Feature**: Agent 模型配置统一数据源
-**Plan**: `specs/001-model-config-single-source/plan.md`
-**Spec**: `specs/001-model-config-single-source/spec.md`
-**Research**: `specs/001-model-config-single-source/research.md`
-**Data Model**: `specs/001-model-config-single-source/data-model.md`
-For implementation context, read the plan, research, and data-model files above.
+For additional context about technologies to be used, project structure,
+shell commands, and other important information, read the current plan:
+`specs/001-reme-mcp-chroma-migration/plan.md`
 <!-- SPECKIT END -->
