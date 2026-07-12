@@ -1,0 +1,29 @@
+# Environment files (secrets)
+.env
+.env.example
+
+# Local data
+.reme/
+data/
+
+# Logs
+logs/
+*.log
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Git
+.git
+.gitignore
+
+# Docker
+docker/docker-compose.yml

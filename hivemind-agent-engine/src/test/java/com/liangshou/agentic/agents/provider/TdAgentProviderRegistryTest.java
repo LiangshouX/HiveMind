@@ -353,6 +353,8 @@ class TdAgentProviderRegistryTest {
                     ]
                     """);
             TdAgentProperties properties = createProperties(catalog, "openai", null);
+            // 清除 modelName 默认值，使其回退到供应商的第一个模型
+            properties.getModel().setModelName(null);
             TdAgentProviderRegistry registry = new TdAgentProviderRegistry(
                     properties, objectMapper, resourceLoader, null);
             registry.initialize();
@@ -905,10 +907,9 @@ class TdAgentProviderRegistryTest {
                     properties, objectMapper, resourceLoader, null);
             registry.initialize();
 
-            TdAgentResolvedModelConfig config = registry.resolveConfiguredModel();
-
-            // 如果环境变量未设置，应该返回null，导致抛出API Key未配置的异常
-            assertNull(config.getApiKey());
+            // 环境变量 DASHSCOPE_API_KEY 未设置时，占位符解析为 null，
+            // resolveConfiguredModel() 应抛出 API Key 未配置的异常
+            assertThrows(IllegalStateException.class, registry::resolveConfiguredModel);
         }
     }
 

@@ -37,18 +37,9 @@ dist/
 
 
 # Frontend
-*/package-lock.json
 node_modules
 
-# Trea
-.vscode
-*/.vscode
-*.py
-
-
 # ReMe Local data
-local_vector_store
-*/local_vector_store
 .reme
 
 # Vibe Coding

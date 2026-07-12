@@ -1,40 +1,45 @@
+# ============================================================
 # ReMe MCP Server Docker Image
-# 基于 Python 3.11-slim，支持 MCP SSE 传输模式
+# Python 3.11-slim, supports MCP SSE transport
+# ============================================================
 
 FROM python:3.11-slim
 
-# 设置工作目录
+LABEL maintainer="LiangshouX"
+LABEL description="HiveMind ReMe - Long-term Memory Server"
+
 WORKDIR /app
 
-# 安装系统依赖
+# Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# 复制依赖文件
+# Copy dependency files first for layer caching
 COPY requirements.txt .
 
-# 安装 Python 依赖
+# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 复制应用代码
-COPY . .
+# Copy application code
+COPY scripts/ scripts/
+COPY README.md .
 
-# 创建数据目录
-RUN mkdir -p /workspace/session /workspace/daily /workspace/digest /workspace/metadata
+# Create data directories
+RUN mkdir -p /workspace/session /workspace/daily /workspace/digest /workspace/metadata /workspace/resource /workspace/mem_session /workspace/user-001
 
-# 暴露端口
+# Expose port
 EXPOSE 8002
 
-# 环境变量默认值
+# Environment variable defaults
 ENV HTTP_PORT=8002
 ENV LOG_LEVEL=INFO
 ENV REME_BACKEND=mcp
 ENV MCP_TRANSPORT=sse
 
-# 健康检查
-HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
-    CMD curl -f http://localhost:8002/ || exit 1
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=40s \
+    CMD curl -sf http://localhost:8002/ || exit 1
 
-# 启动命令
-CMD ["reme", "start", "service.backend=mcp", "mcp.transport=${MCP_TRANSPORT}", "log.level=${LOG_LEVEL}"]
+# Use shell form so environment variables get expanded
+CMD reme start service.backend=mcp mcp.transport=${MCP_TRANSPORT} log.level=${LOG_LEVEL}

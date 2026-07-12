@@ -1,0 +1,50 @@
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+.vscode
+*.iml
+
+# Claude / AI tools
+.claude/
+.specify/
+.codegraph/
+specs/
+.lib-repo/
+
+# Build artifacts (will be built inside Docker)
+*/target/
+dist/
+
+# Node modules
+website/node_modules/
+
+# Python
+reme-server/.reme/
+reme-server/logs/
+reme-server/__pycache__/
+
+# Environment files (secrets)
+.env
+*/.env
+!.env.example
+
+# Docker files (avoid recursive copy)
+docker-compose*.yml
+**/Dockerfile
+**/.dockerignore
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Documentation (not needed for build)
+docs/
+README.md
+LICENSE
+CLAUDE.md
+
+# Sessions mount
+sessions_mount_dir/

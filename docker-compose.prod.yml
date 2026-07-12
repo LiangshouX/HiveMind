@@ -1,0 +1,139 @@
+# ============================================================
+# HiveMind - Production Docker Compose (Pre-built Images)
+# Usage: docker compose -f docker-compose.prod.yml up -d
+# This uses pre-built images from GitHub Container Registry.
+# ============================================================
+
+services:
+  # ---- MySQL 8.0 ----
+  mysql:
+    image: mysql:8.0
+    container_name: hivemind-mysql
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-hivemind123}
+      MYSQL_DATABASE: hivemind
+      MYSQL_CHARACTER_SET_SERVER: utf8mb4
+      MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./hivemind-backend/src/main/resources/db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-hivemind123}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - hivemind-network
+
+  # ---- MongoDB 7.0 ----
+  mongodb:
+    image: mongo:7.0
+    container_name: hivemind-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+    networks:
+      - hivemind-network
+
+  # ---- ReMe Long-term Memory Server ----
+  reme-server:
+    image: ghcr.io/liangshoux/hivemind-reme:latest
+    container_name: hivemind-reme
+    ports:
+      - "8002:8002"
+    volumes:
+      - reme-workspace:/workspace
+    environment:
+      - FLOW_LLM_API_KEY=${FLOW_LLM_API_KEY:-sk-xxx}
+      - FLOW_LLM_BASE_URL=${FLOW_LLM_BASE_URL:-https://dashscope.aliyuncs.com/compatible-mode/v1}
+      - FLOW_EMBEDDING_API_KEY=${FLOW_EMBEDDING_API_KEY:-${FLOW_LLM_API_KEY:-sk-xxx}}
+      - FLOW_EMBEDDING_BASE_URL=${FLOW_EMBEDDING_BASE_URL:-https://dashscope.aliyuncs.com/compatible-mode/v1}
+      - REME_BACKEND=mcp
+      - MCP_TRANSPORT=sse
+      - HTTP_PORT=8002
+      - LOG_LEVEL=INFO
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8002/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - hivemind-network
+
+  # ---- HiveMind Java Backend ----
+  hivemind:
+    image: ghcr.io/liangshoux/hivemind-app:latest
+    container_name: hivemind-app
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SERVER_PORT=8080
+      - LOCAL_MYSQL_PWD=${MYSQL_ROOT_PASSWORD:-hivemind123}
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/hivemind?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+      - MONGODB_URI=mongodb://mongodb:27017/hivemind
+      - JWT_SECRET=${JWT_SECRET:-HiveMindJwtSecretKey2026ForDockerDeployment}
+      - AI_DASHSCOPE_API_KEY=${AI_DASHSCOPE_API_KEY:-}
+      - TDAGENT_MODEL_PROVIDER=${TDAGENT_MODEL_PROVIDER:-dashscope}
+      - TDAGENT_MODEL_NAME=${TDAGENT_MODEL_NAME:-qwen-max}
+      - TDAGENT_MODEL_ID=${TDAGENT_MODEL_ID:-qwen3-max}
+      - TDAGENT_MODEL_BASE_URL=${TDAGENT_MODEL_BASE_URL:-https://dashscope.aliyuncs.com}
+      - TDAGENT_REME_BASE_URL=http://reme-server:8002
+      - REME_MCP_SSE_URL=http://reme-server:8002/sse
+      - REME_MCP_ENABLED=true
+      - TDAGENT_SANDBOX_ENABLED=false
+    depends_on:
+      mysql:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      reme-server:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8080/swagger-ui.html"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+    restart: unless-stopped
+    networks:
+      - hivemind-network
+
+  # ---- HiveMind Frontend (Nginx) ----
+  web:
+    image: ghcr.io/liangshoux/hivemind-web:latest
+    container_name: hivemind-web
+    ports:
+      - "80:80"
+    depends_on:
+      hivemind:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - hivemind-network
+
+networks:
+  hivemind-network:
+    driver: bridge
+
+volumes:
+  mysql-data:
+    driver: local
+  mongo-data:
+    driver: local
+  reme-workspace:
+    driver: local
