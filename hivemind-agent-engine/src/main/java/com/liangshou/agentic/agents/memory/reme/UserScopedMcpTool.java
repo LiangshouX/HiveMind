@@ -6,6 +6,8 @@ import io.agentscope.core.message.ToolResultBlock;
 import io.agentscope.core.tool.ToolCallParam;
 import io.agentscope.core.tool.mcp.McpClientWrapper;
 import io.agentscope.core.tool.mcp.McpTool;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 
 import java.util.*;
@@ -21,6 +23,8 @@ import java.util.*;
  * @author LiangshouX
  */
 public class UserScopedMcpTool extends McpTool {
+
+    private static final Logger log = LoggerFactory.getLogger(UserScopedMcpTool.class);
 
     /** 需要添加用户路径前缀的文件操作工具 */
     private static final Set<String> FILE_PATH_TOOLS = Set.of(
@@ -73,21 +77,42 @@ public class UserScopedMcpTool extends McpTool {
 
     /**
      * 对文件操作类工具的参数应用用户路径前缀。
+     *
+     * <p>当 path 为空时，设置为 userId/（用户的根目录）。
+     * 当 path 不为空时，添加 userId/ 前缀。</p>
      */
     private ToolCallParam applyFilePathScope(ToolCallParam param) {
         Map<String, Object> input = param.getInput();
-        if (input == null || !input.containsKey("path")) {
+        if (input == null) {
+            log.debug("[UserScoped] input is null, skipping");
             return param;
         }
 
-        String path = (String) input.get("path");
-        if (path == null || path.isBlank() || path.startsWith(userId + "/")) {
+        // 获取 path，如果不存在则默认为空字符串
+        String path = input.containsKey("path") ? (String) input.get("path") : "";
+
+        // 如果 path 已经包含用户前缀，直接返回
+        if (path != null && path.startsWith(userId + "/")) {
+            log.debug("[UserScoped] path already has user prefix: {}", path);
             return param;
         }
 
-        // 创建新的参数 map，添加用户前缀
+        // 构建用户隔离的路径
+        String scopedPath;
+        if (path == null || path.isBlank()) {
+            // 空路径 → 用户根目录
+            scopedPath = userId + "/";
+        } else {
+            // 非空路径 → 添加用户前缀
+            scopedPath = userId + "/" + path;
+        }
+
+        log.info("[UserScoped] Tool: {}, userId: {}, originalPath: '{}', scopedPath: '{}'",
+                getName(), userId, path, scopedPath);
+
+        // 创建新的参数 map
         Map<String, Object> scopedInput = new HashMap<>(input);
-        scopedInput.put("path", userId + "/" + path);
+        scopedInput.put("path", scopedPath);
 
         // 创建新的 ToolCallParam
         return ToolCallParam.builder()
