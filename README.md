@@ -55,7 +55,7 @@ cd website && npm install && npm run dev      # 前端 :5173
 ## 📐 系统架构
 
 <p align="center">
-  <img src=".\docs\0.imgs\STRUCTURE.png" width="90%" alt="HiveMind Architecture" />
+  <img src=".\docs\0.imgs\STRUCTURE.png" width="100%" alt="HiveMind Architecture" />
 </p>
 
 ---
