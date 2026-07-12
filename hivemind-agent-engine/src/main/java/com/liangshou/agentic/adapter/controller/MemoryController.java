@@ -148,8 +148,11 @@ public class MemoryController {
     /**
      * 编辑记忆文件内容。
      *
+     * <p>使用 write 工具直接覆盖文件内容，避免 edit 工具的精确匹配问题。
+     * 先读取原文档的 frontmatter（description、metadata），再还原到新内容中。</p>
+     *
      * @param principal 当前登录用户（JWT 解析）
-     * @param request   编辑请求
+     * @param request   编辑请求（newText 为完整的新内容，包括 frontmatter）
      * @return 是否编辑成功
      */
     @PutMapping("/files/edit")
@@ -159,12 +162,52 @@ public class MemoryController {
         String userId = currentUserId(principal);
         log.info("Editing memory file for user: {}, path: {}", userId, request.getPath());
         try {
-            Map<String, Object> args = Map.of(
-                    "path", request.getPath(),
-                    "old", request.getOldText(),
-                    "new", request.getNewText()
-            );
-            remeService.callMcpTool("edit", args, userId);
+            // 1. 读取原文档，提取 frontmatter 信息
+            Map<String, Object> readArgs = Map.of("path", request.getPath());
+            String originalContent = remeService.callMcpTool("read", readArgs, userId);
+
+            // 2. 从原文档和新内容中解析 frontmatter
+            Map<String, String> originalFrontmatter = parseFrontmatter(originalContent);
+            Map<String, String> newFrontmatter = parseFrontmatter(request.getNewText());
+
+            // 3. 构建 write 工具参数，保留 frontmatter 信息
+            Map<String, Object> writeArgs = new HashMap<>();
+            writeArgs.put("path", request.getPath());
+            writeArgs.put("name", extractFileName(request.getPath()));
+
+            // description 字段：优先使用新内容的，否则使用原文档的
+            String description = newFrontmatter.getOrDefault("description",
+                    originalFrontmatter.getOrDefault("description", ""));
+            writeArgs.put("description", description);
+
+            // metadata 字段：合并原文档和新内容的额外 frontmatter 字段
+            Map<String, Object> metadata = new HashMap<>();
+            // 先放入原文档的非标准字段
+            originalFrontmatter.forEach((key, value) -> {
+                if (!key.equals("name") && !key.equals("description")) {
+                    metadata.put(key, value);
+                }
+            });
+            // 再放入新内容的字段（覆盖原文档的同名字段）
+            newFrontmatter.forEach((key, value) -> {
+                if (!key.equals("name") && !key.equals("description")) {
+                    metadata.put(key, value);
+                }
+            });
+            if (!metadata.isEmpty()) {
+                writeArgs.put("metadata", metadata);
+            }
+
+            // 4. 提取 body 内容（不含 frontmatter）
+            String bodyContent = extractBody(request.getNewText());
+            writeArgs.put("content", bodyContent);
+
+            log.debug("Write args: path={}, name={}, description={}, metadata={}",
+                    request.getPath(), extractFileName(request.getPath()), description, metadata);
+
+            // 5. 调用 write 工具
+            String result = remeService.callMcpTool("write", writeArgs, userId);
+            log.info("Write result: {}", result);
             return Result.success(true);
         } catch (Exception e) {
             log.error("Failed to edit memory file", e);
@@ -218,4 +261,84 @@ public class MemoryController {
         }
         return principal.getName();
     }
+
+    /**
+     * 从文件路径中提取文件名。
+     *
+     * @param path 文件路径，如 "daily/2026-07-12/笔记.md"
+     * @return 文件名，如 "笔记.md"
+     */
+    private String extractFileName(String path) {
+        if (path == null || path.isBlank()) {
+            return "untitled.md";
+        }
+        // 处理 Unix 和 Windows 路径分隔符
+        String normalized = path.replace("\\", "/");
+        int lastSlash = normalized.lastIndexOf('/');
+        return lastSlash >= 0 ? normalized.substring(lastSlash + 1) : normalized;
+    }
+
+    /**
+     * 解析 Markdown 文件的 frontmatter。
+     *
+     * @param content Markdown 内容
+     * @return frontmatter 键值对，如果没有 frontmatter 则返回空 Map
+     */
+    private Map<String, String> parseFrontmatter(String content) {
+        Map<String, String> result = new HashMap<>();
+        if (content == null || content.isBlank()) {
+            return result;
+        }
+
+        String trimmed = content.stripLeading();
+        if (!trimmed.startsWith("---")) {
+            return result;
+        }
+
+        // 找到第二个 ---
+        int endIndex = trimmed.indexOf("---", 3);
+        if (endIndex < 0) {
+            return result;
+        }
+
+        // 解析 frontmatter 内容
+        String frontmatterStr = trimmed.substring(3, endIndex).trim();
+        for (String line : frontmatterStr.split("\n")) {
+            int colonIndex = line.indexOf(':');
+            if (colonIndex > 0) {
+                String key = line.substring(0, colonIndex).trim();
+                String value = line.substring(colonIndex + 1).trim();
+                result.put(key, value);
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * 提取 Markdown 文件的 body 内容（不含 frontmatter）。
+     *
+     * @param content 完整的 Markdown 内容
+     * @return 不含 frontmatter 的 body 内容
+     */
+    private String extractBody(String content) {
+        if (content == null || content.isBlank()) {
+            return content;
+        }
+
+        String trimmed = content.stripLeading();
+        if (!trimmed.startsWith("---")) {
+            return content;
+        }
+
+        // 找到第二个 ---
+        int endIndex = trimmed.indexOf("---", 3);
+        if (endIndex < 0) {
+            return content;
+        }
+
+        // 返回 --- 之后的内容
+        return trimmed.substring(endIndex + 3).stripLeading();
+    }
+
 }
