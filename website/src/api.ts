@@ -35,6 +35,31 @@ export interface ToolSyncResponse {
   message: string;
 }
 
+// ── 沙箱管理相关类型 ──
+
+export interface SandboxInfo {
+  containerId: string;
+  containerName: string;
+  sandboxType: string;
+  status: string;
+  ports: string[];
+  baseUrl: string;
+  browserUrl: string;
+  mountDir: string;
+  version: string;
+  refCount: number;
+  providedTools: string[];
+}
+
+export interface SandboxHealth {
+  sandboxEnabled: boolean;
+  dockerConnected: boolean;
+  errorMessage: string | null;
+  totalSandboxes: number;
+  runningCount: number;
+  stoppedCount: number;
+}
+
 // ── 任务模板相关类型 ──
 
 export interface TaskTemplateParam {
@@ -192,6 +217,20 @@ export const api = {
     request.put(`/api/agent/tool-config/${encodeURIComponent(toolName)}`, data),
   syncSystemTools: (): Promise<ToolSyncResponse> =>
     request.post('/api/agent/tool-config/sync'),
+
+  // 沙箱管理
+  listSandboxes: (): Promise<SandboxInfo[]> =>
+    request.get('/api/agent/sandboxes'),
+  getSandboxHealth: (): Promise<SandboxHealth> =>
+    request.get('/api/agent/sandboxes/health'),
+  getSandboxDetail: (containerId: string): Promise<SandboxInfo> =>
+    request.get(`/api/agent/sandboxes/${encodeURIComponent(containerId)}`),
+  stopSandbox: (containerId: string): Promise<{ success: boolean }> =>
+    request.post(`/api/agent/sandboxes/${encodeURIComponent(containerId)}/stop`),
+  removeSandbox: (containerId: string): Promise<{ success: boolean }> =>
+    request.post(`/api/agent/sandboxes/${encodeURIComponent(containerId)}/remove`),
+  cleanupSandboxes: (): Promise<{ removed: number }> =>
+    request.post('/api/agent/sandboxes/cleanup'),
 
   // 任务模板
   listTaskTemplates: (): Promise<TaskTemplate[]> =>

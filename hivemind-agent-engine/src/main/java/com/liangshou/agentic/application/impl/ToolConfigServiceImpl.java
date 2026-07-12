@@ -11,10 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -123,26 +120,63 @@ public class ToolConfigServiceImpl implements IToolConfigService {
 
         // 查询用户已有工具名称
         List<ToolConfigDocument> existingConfigs = repository.findByUserId(userId);
-        Set<String> existingToolNames = existingConfigs.stream()
-                .map(ToolConfigDocument::getToolName)
-                .collect(Collectors.toSet());
+        Map<String, ToolConfigDocument> existingMap = existingConfigs.stream()
+                .collect(Collectors.toMap(ToolConfigDocument::getToolName, doc -> doc));
 
         // 找出新增工具
         List<ToolConfigDocument> newConfigs = new ArrayList<>();
         for (SystemToolDefinition sysTool : systemTools) {
-            if (!existingToolNames.contains(sysTool.getToolName())) {
+            if (!existingMap.containsKey(sysTool.getToolName())) {
                 newConfigs.add(createFromSystemDefinition(userId, sysTool));
             }
         }
 
-        // 批量保存
+        // 批量保存新增工具
         if (!newConfigs.isEmpty()) {
             repository.saveAll(newConfigs);
             log.info("[ToolConfig] 用户 {} 同步 {} 个新工具", userId, newConfigs.size());
-            // 刷新缓存
-            if (configProvider != null) {
-                configProvider.refreshCache(userId);
+        }
+
+        // 回填已有工具缺失的元数据（category、runEnvironment、description、examples）
+        List<ToolConfigDocument> backfillConfigs = new ArrayList<>();
+        for (SystemToolDefinition sysTool : systemTools) {
+            ToolConfigDocument existing = existingMap.get(sysTool.getToolName());
+            if (existing == null) continue;
+
+            boolean needsUpdate = false;
+            if (existing.getCategory() == null && sysTool.getCategory() != null) {
+                existing.setCategory(sysTool.getCategory());
+                needsUpdate = true;
             }
+            if (existing.getRunEnvironment() == null && sysTool.getRunEnvironment() != null) {
+                existing.setRunEnvironment(sysTool.getRunEnvironment());
+                needsUpdate = true;
+            }
+            if ((existing.getDescription() == null || existing.getDescription().isEmpty())
+                    && sysTool.getDescription() != null) {
+                existing.setDescription(sysTool.getDescription());
+                needsUpdate = true;
+            }
+            if ((existing.getExamples() == null || existing.getExamples().isEmpty())
+                    && sysTool.getExamples() != null && !sysTool.getExamples().isEmpty()) {
+                existing.setExamples(sysTool.getExamples());
+                needsUpdate = true;
+            }
+
+            if (needsUpdate) {
+                existing.setUpdatedAt(Instant.now());
+                backfillConfigs.add(existing);
+            }
+        }
+
+        if (!backfillConfigs.isEmpty()) {
+            repository.saveAll(backfillConfigs);
+            log.info("[ToolConfig] 用户 {} 回填 {} 个工具的元数据", userId, backfillConfigs.size());
+        }
+
+        int totalSynced = newConfigs.size() + backfillConfigs.size();
+        if (totalSynced > 0 && configProvider != null) {
+            configProvider.refreshCache(userId);
         }
 
         return newConfigs.size();
