@@ -1,5 +1,6 @@
 package com.liangshou.agentic.adapter.controller;
 
+import com.alibaba.fastjson2.JSONObject;
 import com.liangshou.agentic.agents.memory.reme.TdAgentReMeService;
 import com.liangshou.agentic.application.dto.ReMeMemoryRequest;
 import com.liangshou.agentic.common.utils.Result;
@@ -35,12 +36,11 @@ public class MemoryController {
     /**
      * 浏览用户的记忆文件列表。
      *
-     * <p>直接从文件系统读取用户目录下的文件列表，实现用户隔离。
-     * ReMe 的 workspace 目录结构：.reme/{userId}/{path}</p>
+     * <p>通过 MCP 工具获取用户目录下的文件列表，实现用户隔离。</p>
      *
      * @param principal 当前登录用户（JWT 解析）
      * @param path      目录路径（可选，默认为根目录）
-     * @return 文件列表
+     * @return 文件列表（相对于用户根目录的路径）
      */
     @GetMapping("/files")
     public Result<List<String>> listFiles(
@@ -49,14 +49,16 @@ public class MemoryController {
         String userId = currentUserId(principal);
         log.info("Listing memory files for user: {}, path: {}", userId, path);
         try {
-            // 构建用户隔离的目录路径
-            String userDir = userId + "/" + (path != null ? path : "");
-            if (userDir.endsWith("/")) {
-                userDir = userDir.substring(0, userDir.length() - 1);
-            }
+            Map<String, Object> args = new HashMap<>();
+            args.put("path", path);
+            args.put("recursive", true);
 
-            // 直接从文件系统读取
-            List<String> fileList = listFilesFromDirectory(userDir);
+            // 调用 MCP 工具
+            String resultText = remeService.callMcpTool("list", args, userId);
+            log.debug("MCP list result: {}", resultText);
+
+            // 解析 JSON 响应，提取文件列表
+            List<String> fileList = parseFileListFromJson(resultText, userId);
 
             log.info("Listed {} files for user: {}, path: {}", fileList.size(), userId, path);
             return Result.success(fileList);
@@ -67,39 +69,58 @@ public class MemoryController {
     }
 
     /**
-     * 从文件系统读取目录下的文件和子目录列表。
+     * 从 MCP list 工具的 JSON 响应中解析文件列表。
      *
-     * @param relativePath 相对于 ReMe workspace 的路径
-     * @return 文件和子目录名称列表
+     * <p>MCP 返回格式：</p>
+     * <pre>
+     * {"items": ["user-001\daily\2026-07-12\文件.md", ...], "count": 2, "path": "user-001/"}
+     * </pre>
+     *
+     * <p>解析后返回相对于用户根目录的文件名列表。</p>
+     *
+     * @param json   MCP 返回的 JSON 字符串
+     * @param userId 用户 ID（用于去除路径前缀）
+     * @return 文件名列表
      */
-    private List<String> listFilesFromDirectory(String relativePath) {
-        // ReMe workspace 目录
-        java.nio.file.Path workspacePath = java.nio.file.Path.of(".reme").toAbsolutePath().normalize();
-        java.nio.file.Path targetPath = workspacePath.resolve(relativePath).normalize();
-
-        // 安全检查：确保路径在 workspace 内
-        if (!targetPath.startsWith(workspacePath)) {
-            log.warn("Path traversal attempt detected: {}", relativePath);
+    private List<String> parseFileListFromJson(String json, String userId) {
+        if (json == null || json.isBlank()) {
             return List.of();
         }
 
-        // 目录不存在则返回空列表
-        if (!java.nio.file.Files.exists(targetPath) || !java.nio.file.Files.isDirectory(targetPath)) {
-            log.debug("Directory does not exist: {}", targetPath);
-            return List.of();
-        }
+        try {
+            JSONObject obj = JSONObject.parseObject(json);
+            if (!obj.containsKey("items")) {
+                return List.of();
+            }
 
-        try (var stream = java.nio.file.Files.list(targetPath)) {
-            return stream
-                    .map(java.nio.file.Path::getFileName)
-                    .map(java.nio.file.Path::toString)
-                    .sorted()
+            var items = obj.getJSONArray("items");
+            if (items == null) {
+                return List.of();
+            }
+
+            String userPrefix = userId + "\\";
+            String userPrefixUnix = userId + "/";
+
+            return items.toJavaList(String.class).stream()
+                    .map(item -> {
+                        // 去除用户前缀（支持 Windows 和 Unix 路径分隔符）
+                        if (item.startsWith(userPrefix)) {
+                            return item.substring(userPrefix.length());
+                        }
+                        if (item.startsWith(userPrefixUnix)) {
+                            return item.substring(userPrefixUnix.length());
+                        }
+                        return item;
+                    })
+                    // 统一使用 Unix 路径分隔符
+                    .map(item -> item.replace("\\", "/"))
                     .toList();
-        } catch (java.io.IOException e) {
-            log.error("Failed to list directory: {}", targetPath, e);
+        } catch (Exception e) {
+            log.warn("Failed to parse file list JSON: {}", json, e);
             return List.of();
         }
     }
+
 
     /**
      * 读取记忆文件内容。

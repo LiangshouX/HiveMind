@@ -199,7 +199,7 @@ public class McpReMeClient {
      * 对文件操作类工具的参数应用用户隔离。
      *
      * <p>如果工具是文件操作类（read、write、edit、list 等），
-     * 且参数中包含 path，则自动添加 userId/ 前缀。</p>
+     * 则自动为 path 添加 userId/ 前缀，实现用户间数据隔离。</p>
      *
      * @param toolName  工具名称
      * @param arguments 原始参数
@@ -212,13 +212,30 @@ public class McpReMeClient {
         }
 
         Map<String, Object> scoped = new HashMap<>(arguments);
-        String path = (String) scoped.get("path");
-        if (path != null && !path.isBlank()) {
-            // 添加用户 ID 前缀，避免路径穿越
-            String userPath = userId + "/" + path;
-            scoped.put("path", userPath);
-            log.debug("User scope applied: {} -> {}", path, userPath);
+        String path = (String) scoped.getOrDefault("path", "");
+        if (path == null) {
+            path = "";
         }
+
+        // 统一路径分隔符为 Unix 格式
+        String normalizedPath = path.replace("\\", "/");
+
+        // 构建用户隔离路径
+        String userPath;
+        if (normalizedPath.isBlank()) {
+            // 空路径 → 用户根目录
+            userPath = userId + "/";
+        } else if (normalizedPath.startsWith(userId + "/")) {
+            // 已有用户前缀，不重复添加
+            userPath = normalizedPath;
+        } else {
+            // 添加用户前缀
+            userPath = userId + "/" + normalizedPath;
+        }
+
+        scoped.put("path", userPath);
+        log.info("[UserScope] Tool: {}, userId: {}, originalPath: '{}', scopedPath: '{}'",
+                toolName, userId, path, userPath);
         return scoped;
     }
 

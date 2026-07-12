@@ -66,6 +66,11 @@ public class UserScopedMcpTool extends McpTool {
             param = applyFilePathScope(param);
         }
 
+        // 对 list 工具，确保 recursive=true
+        if ("list".equals(getName())) {
+            param = ensureRecursive(param);
+        }
+
         // 对搜索工具，调用后过滤结果
         if (SEARCH_TOOLS.contains(getName())) {
             return super.callAsync(param)
@@ -76,35 +81,67 @@ public class UserScopedMcpTool extends McpTool {
     }
 
     /**
+     * 确保 list 工具的 recursive 参数为 true。
+     */
+    private ToolCallParam ensureRecursive(ToolCallParam param) {
+        Map<String, Object> input = param.getInput();
+        if (input == null) {
+            input = new HashMap<>();
+        }
+
+        // 如果没有设置 recursive 或为 false，设置为 true
+        if (!input.containsKey("recursive") || !Boolean.TRUE.equals(input.get("recursive"))) {
+            Map<String, Object> newInput = new HashMap<>(input);
+            newInput.put("recursive", true);
+            log.info("[UserScoped] Set recursive=true for list tool");
+
+            return ToolCallParam.builder()
+                    .toolUseBlock(param.getToolUseBlock())
+                    .input(newInput)
+                    .agent(param.getAgent())
+                    .context(param.getContext())
+                    .emitter(param.getEmitter())
+                    .build();
+        }
+
+        return param;
+    }
+
+    /**
      * 对文件操作类工具的参数应用用户路径前缀。
      *
      * <p>当 path 为空时，设置为 userId/（用户的根目录）。
-     * 当 path 不为空时，添加 userId/ 前缀。</p>
+     * 当 path 不为空且不包含用户前缀时，添加 userId/ 前缀。</p>
      */
     private ToolCallParam applyFilePathScope(ToolCallParam param) {
         Map<String, Object> input = param.getInput();
         if (input == null) {
-            log.debug("[UserScoped] input is null, skipping");
             return param;
         }
 
         // 获取 path，如果不存在则默认为空字符串
         String path = input.containsKey("path") ? (String) input.get("path") : "";
+        if (path == null) {
+            path = "";
+        }
+
+        // 统一路径分隔符为 Unix 格式
+        String normalizedPath = path.replace("\\", "/");
 
         // 如果 path 已经包含用户前缀，直接返回
-        if (path != null && path.startsWith(userId + "/")) {
+        if (normalizedPath.startsWith(userId + "/") || normalizedPath.startsWith(userId + "\\")) {
             log.debug("[UserScoped] path already has user prefix: {}", path);
             return param;
         }
 
         // 构建用户隔离的路径
         String scopedPath;
-        if (path == null || path.isBlank()) {
+        if (normalizedPath.isBlank()) {
             // 空路径 → 用户根目录
             scopedPath = userId + "/";
         } else {
             // 非空路径 → 添加用户前缀
-            scopedPath = userId + "/" + path;
+            scopedPath = userId + "/" + normalizedPath;
         }
 
         log.info("[UserScoped] Tool: {}, userId: {}, originalPath: '{}', scopedPath: '{}'",

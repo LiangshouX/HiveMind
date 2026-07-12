@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Typography, Switch, Button, Input, Card, Row, Col, message, Space, Spin, Collapse, Empty } from 'antd';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Typography, Switch, Button, Input, Card, Row, Col, message, Space, Spin, Collapse, Empty, Tag } from 'antd';
 import {
   SaveOutlined, ReloadOutlined, FileMarkdownOutlined, EyeOutlined, EditOutlined,
   CloudUploadOutlined, CloudDownloadOutlined, FolderOutlined, FileTextOutlined,
@@ -12,6 +12,31 @@ import type { ProfileFile } from '../../types/profile';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
+
+/**
+ * 解析 Markdown 中的 frontmatter
+ */
+function parseFrontmatter(content: string): { frontmatter: Record<string, string>; body: string } {
+  if (!content) return { frontmatter: {}, body: '' };
+
+  const match = content.match(/^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/);
+  if (!match) return { frontmatter: {}, body: content };
+
+  const frontmatterStr = match[1];
+  const body = match[2];
+
+  const frontmatter: Record<string, string> = {};
+  frontmatterStr.split('\n').forEach(line => {
+    const colonIndex = line.indexOf(':');
+    if (colonIndex > 0) {
+      const key = line.substring(0, colonIndex).trim();
+      const value = line.substring(colonIndex + 1).trim();
+      frontmatter[key] = value;
+    }
+  });
+
+  return { frontmatter, body };
+}
 
 /** 文件分类 */
 interface FileCategory {
@@ -230,6 +255,16 @@ const CourtRules: React.FC = () => {
     return !name.includes('.');
   };
 
+  // 获取当前激活的内容（必须在条件返回之前，遵循 Hooks 规则）
+  const isMemoryMode = activeCategory === 'memory' && currentMemoryFile;
+  const currentDisplayContent = isMemoryMode ? memoryEditContent : currentFile?.content;
+  const currentDisplayFile = isMemoryMode ? currentMemoryFile : activeFile;
+
+  // 解析 frontmatter（必须在条件返回之前，遵循 Hooks 规则）
+  const parsedContent = useMemo(() => {
+    return parseFrontmatter(currentDisplayContent || '');
+  }, [currentDisplayContent]);
+
   // 分类配置
   const categories: FileCategory[] = [
     {
@@ -251,15 +286,10 @@ const CourtRules: React.FC = () => {
   if (fetching) {
     return (
       <div style={{ height: 'calc(100vh - 120px)', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-        <Spin size="large" tip="加载中..." />
+        <Spin size="large" description="加载中..." />
       </div>
     );
   }
-
-  // 获取当前激活的内容
-  const isMemoryMode = activeCategory === 'memory' && currentMemoryFile;
-  const currentDisplayContent = isMemoryMode ? memoryEditContent : currentFile?.content;
-  const currentDisplayFile = isMemoryMode ? currentMemoryFile : activeFile;
 
   return (
     <div style={{ height: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column' }}>
@@ -467,6 +497,25 @@ const CourtRules: React.FC = () => {
               {currentDisplayFile ? (
                 preview ? (
                   <div style={{ lineHeight: 1.6 }}>
+                    {/* Frontmatter 展示 */}
+                    {Object.keys(parsedContent.frontmatter).length > 0 && (
+                      <div style={{
+                        background: '#f6f8fa',
+                        border: '1px solid #e1e4e8',
+                        borderRadius: 6,
+                        padding: '12px 16px',
+                        marginBottom: 16,
+                        fontSize: 13
+                      }}>
+                        {Object.entries(parsedContent.frontmatter).map(([key, value]) => (
+                          <div key={key} style={{ marginBottom: 4 }}>
+                            <Tag color="blue" style={{ marginRight: 8, fontFamily: 'monospace' }}>{key}</Tag>
+                            <Text>{value}</Text>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {/* Markdown 内容 */}
                     <ReactMarkdown
                       components={{
                         a: ({ node, ...props }) => {
@@ -475,7 +524,7 @@ const CourtRules: React.FC = () => {
                         },
                       }}
                     >
-                      {currentDisplayContent || ''}
+                      {parsedContent.body}
                     </ReactMarkdown>
                   </div>
                 ) : (
