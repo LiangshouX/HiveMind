@@ -220,8 +220,10 @@ public class TdAgentToolkitFactory {
             return;
         }
         try {
-            java.util.List<McpTool> mcpTools = mcpClient.toAgentTools();
-            log.info("[Toolkit] 从 ReMe MCP 获取到 {} 个工具", mcpTools.size());
+            // 使用用户 ID 创建带隔离的工具
+            String userId = context.getUserId();
+            java.util.List<McpTool> mcpTools = mcpClient.toAgentTools(userId);
+            log.info("[Toolkit] 从 ReMe MCP 获取到 {} 个工具 (用户: {})", mcpTools.size(), userId);
             for (McpTool mcpTool : mcpTools) {
                 registerTool(toolkit, context, mcpTool);
                 log.info("[Toolkit] 已注册 MCP 工具: {}", mcpTool.getName());

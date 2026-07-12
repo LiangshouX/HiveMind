@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -107,7 +108,7 @@ public class TdAgentReMeService {
     /**
      * 添加数据。
      *
-     * @param workspaceId workspace 标识
+     * @param workspaceId workspace 标识（格式：userId 或 userId::sessionId）
      * @param messages    消息列表
      */
     public void add(String workspaceId, List<Msg> messages) {
@@ -120,13 +121,14 @@ public class TdAgentReMeService {
         }
 
         if (useMcp) {
+            String userId = extractUserId(workspaceId);
             Map<String, Object> args = Map.of(
                     "messages", remeMessages.stream()
                             .map(m -> Map.of("role", m.getRole(), "content", m.getContent()))
                             .toList(),
                     "session_id", workspaceId
             );
-            mcpReMeClient.callTool("auto_memory", args);
+            mcpReMeClient.callToolForUser("auto_memory", args, userId);
         } else {
             // HTTP fallback (现有逻辑)
             ReMeAddRequest request =
@@ -141,7 +143,7 @@ public class TdAgentReMeService {
     /**
      * 检索内容。
      *
-     * @param workspaceId workspace 标识
+     * @param workspaceId workspace 标识（格式：userId 或 userId::sessionId）
      * @param query       查询内容
      * @return 返回结果
      */
@@ -151,11 +153,11 @@ public class TdAgentReMeService {
         }
 
         if (useMcp) {
-            Map<String, Object> args = Map.of(
-                    "query", query,
-                    "limit", properties.getReme().getTopK()
-            );
-            String result = mcpReMeClient.callToolText("search", args);
+            String userId = extractUserId(workspaceId);
+            Map<String, Object> args = new HashMap<>();
+            args.put("query", query);
+            args.put("limit", properties.getReme().getTopK());
+            String result = mcpReMeClient.callToolTextForUser("search", args, userId);
             return truncate(result);
         } else {
             // HTTP fallback (现有逻辑)
@@ -209,17 +211,18 @@ public class TdAgentReMeService {
     }
 
     /**
-     * 调用 MCP 工具（供 MemoryController 使用）。
+     * 调用 MCP 工具（供 MemoryController 使用，带用户隔离）。
      *
      * @param toolName  工具名称
      * @param arguments 工具参数
+     * @param userId    用户 ID，用于 workspace 隔离
      * @return 工具调用结果的文本内容
      */
-    public String callMcpTool(String toolName, Map<String, Object> arguments) {
+    public String callMcpTool(String toolName, Map<String, Object> arguments, String userId) {
         if (!useMcp) {
             throw new IllegalStateException("MCP mode is not enabled. Cannot call MCP tool: " + toolName);
         }
-        return mcpReMeClient.callToolText(toolName, arguments);
+        return mcpReMeClient.callToolTextForUser(toolName, arguments, userId);
     }
 
     /**
@@ -240,6 +243,23 @@ public class TdAgentReMeService {
      */
     public String sessionWorkspaceId(ConversationSessionContext context) {
         return context.getUserId() + "::" + context.getSessionId();
+    }
+
+    /**
+     * 从 workspaceId 中提取 userId。
+     *
+     * <p>workspaceId 格式为 "userId" 或 "userId::sessionId"，
+     * 本方法返回 "::" 之前的部分（即 userId）。</p>
+     *
+     * @param workspaceId workspace 标识
+     * @return userId
+     */
+    private String extractUserId(String workspaceId) {
+        if (workspaceId == null || workspaceId.isBlank()) {
+            return "";
+        }
+        int idx = workspaceId.indexOf("::");
+        return idx > 0 ? workspaceId.substring(0, idx) : workspaceId;
     }
 
     /**

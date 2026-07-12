@@ -47,7 +47,7 @@ public class MemoryController {
             Map<String, Object> args = new HashMap<>();
             args.put("path", path);
             args.put("recursive", false);
-            String result = remeService.callMcpTool("list", args);
+            String result = remeService.callMcpTool("list", args, userId);
             return Result.success(parseFileList(result));
         } catch (Exception e) {
             log.error("Failed to list memory files", e);
@@ -69,7 +69,7 @@ public class MemoryController {
         log.info("Reading memory file for user: {}, path: {}", userId, path);
         try {
             Map<String, Object> args = Map.of("path", path);
-            String content = remeService.callMcpTool("read", args);
+            String content = remeService.callMcpTool("read", args, userId);
             return Result.success(content);
         } catch (Exception e) {
             log.error("Failed to read memory file", e);
@@ -95,7 +95,7 @@ public class MemoryController {
                     "old", request.getOldText(),
                     "new", request.getNewText()
             );
-            remeService.callMcpTool("edit", args);
+            remeService.callMcpTool("edit", args, userId);
             return Result.success(true);
         } catch (Exception e) {
             log.error("Failed to edit memory file", e);
