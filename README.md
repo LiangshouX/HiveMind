@@ -1,769 +1,274 @@
 # HiveMind
 
+> **Enterprise-Grade AI Agent Platform with Multi-User Isolation**
+
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Java](https://img.shields.io/badge/Java-17+-orange.svg)](https://adoptium.net/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0.3-brightgreen.svg)](https://spring.io/projects/spring-boot)
-[![AgentScope](https://img.shields.io/badge/AgentScope-1.0.12-blue.svg)](https://agentscope.io/)
+[![AgentScope](https://img.shields.io/badge/AgentScope-1.0.12-blue.svg)](https://github.com/agentscope-ai/agentscope-java)
+[![React](https://img.shields.io/badge/React-19-61DAFB.svg)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6.svg)](https://www.typescriptlang.org/)
 
-**HiveMind** 是一个基于多 Agent 协作架构的云端 AI 助理平台，通过制度化、流程化的任务流转机制，实现复杂的多 Agent 协作工作流。
-
----
-
-## 📖 简介
-
-HiveMind 构建了一个层次分明、职责清晰的多 Agent 协作系统。系统能够自动将复杂任务拆解为子任务，分配给不同的 Agent 执行，并通过审查机制确保执行质量。
-
-### 核心理念
-
-- **制度化协作**：建立规范的任务流转机制，通过 Triage → Planner → Reviewer → Executor 四阶段流转
-- **职责分离**：不同 Agent 承担不同角色，各司其职，通过 SOUL 提示词系统定义角色人格
-- **安全可控**：Tool Guard 三层安全机制（deny → guard/approve → allow）确保工具调用的安全性
-- **长期记忆**：ReMe 支持跨会话的记忆检索与复用，通过记忆压缩机制管理上下文
-
----
-
-## ✨ 核心特性
-
-| 特性 | 描述 |
-|------|------|
-| 🤖 **多Agent协作** | 基于 Triage/Planner/Reviewer/Executor 四角色分工的任务编排系统 |
-| 🧠 **ReAct Agent** | 推理 + 行动的 Agent 执行模式，支持最大 200 轮迭代 |
-| 🛡️ **Tool Guard** | 三层安全防护：deny（无条件禁止）→ guard（需要审批）→ allow（允许执行） |
-| 💾 **长期记忆** | ReMe 跨会话记忆检索，支持记忆压缩和上下文管理 |
-| 🔌 **Skill 系统** | 内置 + 用户自定义技能扩展，支持 OSS 存储 |
-| 🔗 **MCP 集成** | Model Context Protocol 支持，可扩展外部工具 |
-| 📱 **多渠道接入** | 钉钉、飞书、Discord 等多平台接入 |
-| ⏰ **定时任务** | Cron 计划任务调度 |
-| 📊 **Token 统计** | 模型调用费用统计与监控 |
-| 🔒 **沙箱环境** | 代码执行、文件操作、浏览器自动化沙箱 |
-| 📝 **SOUL 系统** | 基于 Markdown 的 Agent 人格定义系统 |
-| 🎯 **流式响应** | 支持增量流式输出，实时展示 Agent 思考过程 |
-
----
-
-## 🏗️ 多Agent协作流程
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        用户                                      │
-│                    发送任务 / 闲聊消息                            │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                   Triage Agent (AGENT_TRIAGE)                    │
-│              消息分拣：识别任务 or 闲聊                           │
-│              SOUL: profiles/AGENT_TRIAGE/SOUL.md                 │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-              ┌───────────────┴───────────────┐
-              │ 任务                          │ 闲聊
-              ▼                               ▼
-┌─────────────────────────┐         ┌─────────────────┐
-│  Planner Agent           │         │   直接回复       │
-│  (AGENT_PLANNER)         │         │                 │
-│  任务规划：拆解子任务     │         │                 │
-│  SOUL: profiles/         │         │                 │
-│  AGENT_PLANNER/SOUL.md   │         │                 │
-└─────────────────────────┘         └─────────────────┘
-              │
-              ▼
-┌─────────────────────────┐
-│  Reviewer Agent          │
-│  (AGENT_REVIEWER)        │
-│  审查：审查方案           │
-│  通过→执行层             │
-│  驳回→规划层 (最多 3 轮)  │
-│  SOUL: profiles/         │
-│  AGENT_REVIEWER/SOUL.md  │
-└─────────────────────────┘
-              │
-              ▼
-┌─────────────────────────┐
-│  Executor Agent          │
-│  (AGENT_EXECUTOR)        │
-│  执行：派发执行           │
-│  汇总结果→规划层         │
-│  SOUL: profiles/         │
-│  AGENT_EXECUTOR/SOUL.md  │
-└─────────────────────────┘
-              │
-              ▼
-┌─────────────────────────┐
-│   报告呈报              │
-│   用户审阅              │
-└─────────────────────────┘
-```
-
-### Agent 角色说明
-
-| 角色 | 职责 | SOUL 文件 |
-|------|------|-----------|
-| **AGENT_TRIAGE** | 消息分拣，识别任务类型，路由到相应处理器 | `profiles/AGENT_TRIAGE/SOUL.md` |
-| **AGENT_PLANNER** | 任务规划，将复杂任务拆解为可执行的子任务 | `profiles/AGENT_PLANNER/SOUL.md` |
-| **AGENT_REVIEWER** | 方案审查，验证任务规划的合理性和可行性 | `profiles/AGENT_REVIEWER/SOUL.md` |
-| **AGENT_EXECUTOR** | 任务执行，派发执行子任务并汇总结果 | `profiles/AGENT_EXECUTOR/SOUL.md` |
+HiveMind 是一个面向云端部署的**多用户隔离 AI 助理平台**。基于 [AgentScope-Java](https://github.com/agentscope-ai/agentscope-java) 构建的 ReAct Agent 引擎，集成工具调用安全防护（Tool Guard）、分层记忆系统、沙箱执行环境、流式推理等企业级能力，为每个用户提供独立、安全、可扩展的 AI 助理服务。
 
 ---
 
 ## 🚀 快速开始
 
-### 环境要求
+**环境要求：** JDK 17+ · Node.js 18+ · MySQL 8.0+ · MongoDB 6.0+ · Docker（可选）
 
-| 组件 | 最低版本 | 推荐版本 |
-|------|---------|---------|
-| **JDK** | 17 | 17+ |
-| **Python** | 3.10 | 3.10-3.13 |
-| **Node.js** | 18 | 20+ |
-| **MySQL** | 8.0 | 8.0.36+ |
-| **MongoDB** | 6.0 | 7.0+ |
-| **Docker** | 20.10 | 24.0+ |
-
-### 安装步骤
-
-#### 1. 克隆项目
+### 1. 启动基础设施
 
 ```bash
-git clone https://github.com/your-org/hivemind.git
-cd hivemind
+docker run -d --name mysql -e MYSQL_ROOT_PASSWORD=root -e MYSQL_DATABASE=hivemind -p 3306:3306 mysql:8.0
+docker run -d --name mongodb -p 27017:27017 mongo:7.0
 ```
 
-#### 2. 启动基础设施
+### 2. 配置
 
 ```bash
-# 启动 MySQL
-docker run -d --name mysql \
-  -e MYSQL_ROOT_PASSWORD=root \
-  -e MYSQL_DATABASE=hivemind \
-  -p 3306:3306 \
-  mysql:8.0
-
-# 启动 MongoDB
-docker run -d --name mongodb \
-  -p 27017:27017 \
-  mongo:7.0
+# 编辑数据库连接和 LLM API Key
+vim hivemind-backend/src/main/resources/application-backend.yaml
+vim hivemind-agent-engine/src/main/resources/application-agentic.yaml
 ```
 
-#### 3. 配置后端
+### 3. 启动 ReMe 长期记忆服务（可选）
 
 ```bash
-# 复制配置文件
-cp hivemind-backend/src/main/resources/application-backend.yaml.example \
-   hivemind-backend/src/main/resources/application-backend.yaml
-
-# 编辑配置文件，设置数据库连接和 API Key
-```
-
-#### 4. 启动 ReMe Server（可选，使用长期记忆时需要）
-
-```bash
-cd reme-server
-
-# 配置环境变量
-cp .env.example .env
-# 编辑 .env 设置 DASHSCOPE_API_KEY 等
-
-# 启动服务
+cd reme-server && cp .env.example .env
+# 编辑 .env 设置 DASHSCOPE_API_KEY
 python start.py
-# 或使用 Docker
-docker-compose up -d
 ```
 
-#### 5. 构建并启动后端
+### 4. 构建并启动
 
 ```bash
-# 根目录执行
 mvn clean install
-
-# 启动应用
-mvn spring-boot:run -pl hivemind-launcher
+mvn spring-boot:run -pl hivemind-launcher    # 后端 :8080
+cd website && npm install && npm run dev      # 前端 :5173
 ```
 
-#### 6. 启动前端控制台
+访问 `http://localhost:5173`，注册账号即可使用。Swagger API 文档：`http://localhost:8080/swagger-ui.html`
 
-```bash
-cd website
-npm install
-npm run dev
-```
+---
 
-访问 `http://localhost:5173` 即可使用控制台。
+## 📐 系统架构
+
+![](.\docs\0.imgs\STRUCTURE.png)
+
+---
+
+## ✨ 核心能力
+
+### 🤖 ReAct Agent 引擎
+
+基于 [AgentScope-Java](https://github.com/agentscope-ai/agentscope-java) 构建的 ReAct（Reasoning + Acting）Agent，支持最多 **200 轮**推理-行动迭代。Agent 能够自主拆解复杂任务、选择工具、执行操作并验证结果。通过 `TdAgentFactory` 统一创建实例，集成模型、工具、记忆、Skill、Hook 等全部组件。
+
+### 🛡️ Tool Guard 三层安全引擎
+
+自研的工具调用防护机制，确保 Agent 的每一次外部操作都在安全边界内：
+
+<img src=".\docs\0.imgs\ToolGuard.png" style="zoom:50%;" />
+
+- **敏感路径自动拦截**：`.env`、`.git`、`id_rsa`、`pom.xml` 等关键文件受严格模式保护
+- **用户级工具配置**：每个用户可独立设置工具启用/禁用、拒绝模式、风险等级
+- **审批工作流**：Agent 暂停 → 前端展示审批卡片 → 用户批准/拒绝 → 恢复执行
+
+### 💾 分层记忆系统
+
+| 层次 | 存储 | 职责 |
+|------|------|------|
+| **短期记忆** | MongoDB | 会话级对话历史、Agent 运行状态、工具调用上下文、审批记录 |
+| **长期记忆** | ReMe Server (Python) | 跨会话语义化记忆检索、知识存储、经验积累、Per-User Workspace |
+| **记忆压缩** | 自动触发 | Token/消息数阈值触发 → 保留最近 6 条 + LLM 生成摘要（最大 2400 字符） |
+
+`MongoConversationMemory` 持久化完整对话历史，支持跨页面刷新恢复。每个用户拥有独立的 Memory Workspace，数据完全隔离。
+
+### 🏖️ 沙箱执行环境
+
+| 工具域 | 能力 | 风险等级 |
+|--------|------|---------|
+| **SANDBOX** | Shell 命令、Python 代码（IPython）、文件读写、目录操作、代码编辑 | HIGH |
+| **BROWSER** | 网页导航、元素交互、截图、文本快照、等待加载 | HIGH |
+| **BUILTIN** | 会话管理、历史预览、记忆搜索、系统时间 | LOW |
+
+### 🔌 MCP · Skill · SOUL
+
+- **MCP 工具协议**：支持 [Model Context Protocol](https://modelcontextprotocol.io/)，可动态接入外部工具服务（SYSTEM / CUSTOM 两级），Server 级 / Tool 级独立启用/禁用
+- **Skill 技能系统**：内置 + 用户自定义技能，支持 OSS 云存储，classpath 扫描自动注册
+- **SOUL 人格系统**：通过 Markdown 定义 Agent 人格和行为准则，用户可通过 Profile 系统（`SOUL.md` / `AGENTS.md` / `PROFILE.md`）自定义 Agent 行为模式
+
+### 📡 流式推理 & Token 追踪
+
+基于 SSE（Server-Sent Events）的实时流式对话，事件类型：`REASONING`（思考链）· `TOOL_RESULT`（工具结果）· `RESULT`（最终回答）· `APPROVAL_REQUIRED`（待审批）· `ERROR` · `DONE`
+
+自动记录每次 LLM 调用的 Token 消耗，支持按用户、按会话、按模型维度统计费用。
+
+---
+
+## 🛠️ 技术栈
+
+| 层 | 技术 |
+|----|------|
+| **前端** | React 19.2 · TypeScript 5.9 · Ant Design 6.3 · Ant Design X 2.4 · Vite 5 · Zustand 5 · React Router 7 |
+| **后端** | Java 17 · Spring Boot 4.0.3 · Spring Security · JWT 4.4 · MyBatis-Plus 3.5.15 · Caffeine 3.1.8 |
+| **Agent 引擎** | AgentScope-Java 1.0.12 · ReAct Agent · Tool Guard · ReMe · MCP · Skill |
+| **数据库** | MySQL 8.0（业务数据） · MongoDB 7.0（Agent 运行时） |
+| **外部服务** | DashScope / DeepSeek / OpenAI Compatible · ReMe Server (Python/FastAPI) · Aliyun OSS · AgentScope Studio |
+| **部署** | Docker · Testcontainers（集成测试） · SpringDoc OpenAPI（API 文档） |
 
 ---
 
 ## 📁 项目结构
 
 ```
-hivemind/
-├── hivemind-launcher/        # 🚀 启动模块（主入口）
-├── hivemind-agent-engine/    # 🤖 Agent 引擎核心
-│   ├── agents/                   # Agent 核心组件
-│   │   ├── guard/                # Tool Guard 安全防护
-│   │   ├── memory/               # 记忆管理（MongoDB + ReMe）
-│   │   ├── skill/                # Skill 技能系统
-│   │   └── tools/                # 工具注册与管理
-│   ├── profiles/                 # SOUL 人格定义文件
-│   │   ├── AGENT_TRIAGE/SOUL.md  # 分拣 Agent 人格
-│   │   ├── AGENT_PLANNER/SOUL.md # 规划 Agent 人格
-│   │   ├── AGENT_REVIEWER/SOUL.md# 审查 Agent 人格
-│   │   └── AGENT_EXECUTOR/SOUL.md# 执行 Agent 人格
-│   └── skills/                   # 内置技能定义
-├── hivemind-backend/         # 🏢 业务后端服务
-├── website/                      # 💻 前端控制台
-├── reme-server/                  # 🧠 Python 长期记忆服务
-├── example/                      # 📝 示例代码
-├── docs/                         # 📚 项目文档
-└── pom.xml                       # Maven 父工程
+HiveMind/
+├── hivemind-launcher/              # Spring Boot 启动入口，聚合所有子模块
+├── hivemind-agent-engine/          # AI Agent 引擎核心
+│   ├── agents/                     #   Agent 工厂、Tool Guard、记忆、沙箱、Skill、流式
+│   ├── application/                #   服务层（Chat、Streaming、Persistence）
+│   ├── domain/                     #   领域模型（Memory、Profile、Session、Skill、Tool）
+│   ├── infrastructure/             #   MongoDB Repository、MySQL Mapper、OSS 存储
+│   ├── common/                     #   配置、枚举、异常、工具类
+│   └── src/main/resources/
+│       ├── application-agentic.yaml    # Agent 引擎配置
+│       ├── provider/builtin_provider.json  # 内置 LLM 供应商
+│       ├── profiles/                   # SOUL 人格模板
+│       └── skills/                     # 内置 Skill 定义
+├── hivemind-backend/               # 业务后端服务
+│   ├── adapter/controller/         #   REST API（Auth、Task、Model、MCP、Cron）
+│   ├── service/                    #   业务服务实现
+│   └── infrastructure/             #   MySQL PO/Mapper、MongoDB Repository
+├── website/                        # 前端控制台（React 19 + TypeScript）
+│   └── src/
+│       ├── pages/                  #   页面（Login、Workspace、TaskCenter、Admin）
+│       ├── components/             #   组件（Auth、Console、Model）
+│       ├── hooks/                  #   useAgentConsole（流式对话核心 Hook）
+│       └── services/               #   API 客户端（fetch-based）
+├── reme-server/                    # ReMe 长期记忆服务（Python FastAPI）
+└── pom.xml                         # Maven 父工程
 ```
 
-### 模块说明
-
-| 模块 | 职责 | 技术栈 |
-|------|------|--------|
-| **hivemind-launcher** | 应用启动入口，聚合所有子模块 | Spring Boot 4.0.3 |
-| **hivemind-agent-engine** | AI Agent 核心运行时，提供对话、工具调用、记忆管理等能力 | AgentScope 1.0.12 + MongoDB |
-| **hivemind-backend** | 用户管理、任务管理、配置管理等业务服务 | Spring Boot + MyBatis Plus 3.5.15 |
-| **website** | Web 用户界面，提供与 AI 助理交互的所有功能 | React + TypeScript + Ant Design |
-| **reme-server** | 提供与 AgentScope-ReMe 兼容的长期记忆检索服务 | FastAPI + ReMe |
+**模块依赖：** `hivemind-launcher` → `hivemind-backend` → `hivemind-agent-engine`
 
 ---
 
-## 📖 使用文档
+## 🏛️ 架构设计
 
-### 基本用法
+### DDD 分层
 
-#### 1. 登录系统
-
-访问 `http://localhost:5173`，使用默认账号登录（首次启动需注册）。
-
-#### 2. 创建任务
-
-在控制台输入你的需求，系统会自动识别任务类型并分配给相应的 Agent：
+HiveMind 遵循领域驱动设计分层架构，严格控制依赖方向：
 
 ```
-请帮我分析最近的项目代码，找出可以优化的地方
+Adapter (REST Controllers)
+  │
+  ▼
+Application (Service · DTO · 业务编排)
+  │
+  ▼
+Domain (领域模型 · 领域服务 · 零外部依赖)
+  ▲
+  │ 实现
+Infrastructure (MongoDB · MySQL · OSS · 外部集成)
+  ▲
+Common (异常 · 工具类 · 配置)
 ```
 
-#### 3. 查看任务进度
-
-在任务列表中可以查看任务的实时状态和流转记录。
-
-#### 4. 配置模型
-
-在设置页面配置 LLM 供应商和 API Key：
-
-- 阿里云百炼（DashScope）
-- OpenAI
-- 其他兼容 OpenAI API 的供应商
-
-### 高级用法
-
-#### Tool Guard 配置
-
-在 `application-agentic.yaml` 中配置工具防护规则：
-
-```yaml
-tdagent:
-  tool-guard:
-    enabled: true
-    strict-mode: true
-    pending-expire-minutes: 60  # 审批请求过期时间（分钟）
-```
-
-**工具风险等级**：
-- **LOW**：低风险，可直接执行（如 `get_session_id`、`get_history_preview`）
-- **MEDIUM**：中风险，需要审批（如 `move_file`）
-- **HIGH**：高风险，需要严格审批（如 `run_shell_command`、`fs_write_file`）
-
-**工具分类**：
-- **BUILTIN**：内置工具（会话管理、历史记录、记忆搜索）
-- **SANDBOX**：沙盒工具（Shell 命令、Python 代码、文件操作）
-- **BROWSER**：浏览器工具（网页导航、截图、元素交互）
-
-#### 自定义 Skill
-
-在 `hivemind-agent-engine/src/main/resources/skills/` 目录下创建自定义技能：
-
-```json
-{
-  "name": "code_review",
-  "description": "代码审查技能",
-  "prompt": "你是一名资深代码审查专家...",
-  "tools": ["read_file", "search_code"]
-}
-```
-
-**Skill 配置选项**：
-```yaml
-tdagent:
-  skill:
-    enabled: true
-    builtin-location: classpath:skills
-    builtin-enabled-by-default: true
-    custom-enabled-by-default: true
-    storage:
-      oss:
-        enabled: false
-        accessKeyId: ""
-        accessKeySecret: ""
-```
-
-#### MCP 集成
-
-配置 Model Context Protocol 以扩展 Agent 能力。MCP 配置存储在 MySQL 数据库中，支持动态管理：
-
-```yaml
-# 在数据库 sys_mcp 表中配置
-# 支持 SYSTEM 和 CUSTOM 两种类型
-# 可以启用/禁用单个 Server 或 Tool
-```
-
-**MCP 表结构**：
-- `mcp_server`：MCP 服务器配置
-- `mcp_server_type`：类型（SYSTEM/CUSTOM）
-- `mcp_tool`：具体工具配置
-- `is_server_activated`：是否启用服务器
-- `is_tool_activated`：是否启用工具
-
----
-
-## 🛡️ Tool Guard 安全体系
-
-HiveMind 提供三层工具调用防护机制，通过 `ToolGuardEngine` 和 `GuardedAgentTool` 实现：
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                      Tool Guard 决策流程                     │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  用户请求 → Agent 推理 → 工具调用                            │
-│                          │                                  │
-│                          ▼                                  │
-│              ┌───────────────────────┐                      │
-│              │  检查 denyPatterns    │                      │
-│              │  (无条件禁止)          │                      │
-│              └───────────┬───────────┘                      │
-│                          │ 命中                             │
-│                          ▼                                  │
-│                    直接阻断 ❌                               │
-│                                                             │
-│              ┌───────────────────────┐                      │
-│              │  检查 approvalRequired │                      │
-│              │  (需要审批)            │                      │
-│              └───────────┬───────────┘                      │
-│                          │ 命中规则                         │
-│                          ▼                                  │
-│              写入 pending_approval → 返回 ToolSuspendException│
-│                          │                                  │
-│                          ▼                                  │
-│              用户确认审批                                    │
-│                          │                                  │
-│                          ▼                                  │
-│              验证参数一致性 → 消费审批 → 允许执行 ✅          │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### 内置工具清单
-
-| 工具名称 | 分类 | 风险等级 | 描述 |
-|---------|------|---------|------|
-| `get_session_id` | BUILTIN | LOW | 获取当前会话 ID |
-| `get_history_preview` | BUILTIN | LOW | 获取历史对话预览 |
-| `search_memory` | BUILTIN | LOW | 搜索长期记忆（ReMe） |
-| `run_shell_command` | SANDBOX | HIGH | 执行 Shell 命令 |
-| `run_ipython_cell` | SANDBOX | HIGH | 执行 Python 代码 |
-| `fs_read_file` | SANDBOX | LOW | 读取文件内容 |
-| `fs_write_file` | SANDBOX | HIGH | 写入文件内容 |
-| `edit_file` | SANDBOX | HIGH | 编辑文件（查找替换） |
-| `move_file` | SANDBOX | MEDIUM | 移动或重命名文件 |
-| `list_directory` | SANDBOX | LOW | 列出目录内容 |
-| `search_files` | SANDBOX | LOW | 搜索文件 |
-| `browser_navigate` | BROWSER | HIGH | 导航到指定网页 |
-| `browser_snapshot` | BROWSER | LOW | 获取网页文本快照 |
-| `browser_click` | BROWSER | HIGH | 点击网页元素 |
-| `browser_type` | BROWSER | HIGH | 在网页输入框中输入文本 |
-| `browser_wait_for` | BROWSER | LOW | 等待页面元素加载 |
-| `browser_take_screenshot` | BROWSER | LOW | 截取网页截图 |
-
----
-
-## 🧪 测试
-
-```bash
-# 运行单元测试
-mvn test
-
-# 运行集成测试（需要 Docker）
-mvn verify
-
-# 前端测试
-cd website
-npm test
-```
-
----
-
-## 📄 配置说明
-
-### 核心配置文件
-
-| 文件 | 路径 | 描述 |
-|------|------|------|
-| `application-agentic.yaml` | `hivemind-agent-engine/src/main/resources/` | Agent 引擎配置 |
-| `application-backend.yaml` | `hivemind-backend/src/main/resources/` | 后端业务配置 |
-| `builtin_provider.json` | `hivemind-agent-engine/src/main/resources/provider/` | LLM 供应商配置 |
-| `profiles/` | `hivemind-agent-engine/src/main/resources/profiles/` | SOUL 人格定义 |
-| `skills/` | `hivemind-agent-engine/src/main/resources/skills/` | 内置技能定义 |
-| `.env` | `reme-server/` | ReMe Server 环境变量 |
-
-### Agent 引擎配置示例
-
-```yaml
-tdagent:
-  observability:
-    enabled: false
-    url: http://localhost:5174  # AgentScope Studio 地址
-  system-prompt:
-    product-name: HiveMindAgent
-    owner-name: HiveMind
-    max-history-preview: 12
-  model:
-    provider-id: dashscope
-    model-name: qwen-max
-    max-iters: 200
-    stream: true
-    enable-thinking: true
-  sandbox:
-    enabled: true
-    browser-enabled: true
-    filesystem-enabled: true
-    strict-startup: false
-  tool-guard:
-    enabled: true
-    strict-mode: true
-    pending-expire-minutes: 60
-  reme:
-    enabled: true
-    base-url: http://localhost:8002
-    timeout-seconds: 60
-    top-k: 5
-  compaction:
-    enabled: true
-    trigger-mode: TOKEN
-    context-window-size: 0
-    threshold-ratio: 0.85
-    output-reserve-tokens: 0
-    head-ratio: 0.10
-    min-messages-since-compaction: 3
-    trigger-message-count: 20
-    trigger-character-count: 24000
-    keep-recent-messages: 6
-    max-summary-characters: 2400
-  streaming:
-    enabled: true
-    incremental: true
-  skill:
-    enabled: true
-    builtin-location: classpath:skills
-    builtin-enabled-by-default: true
-    custom-enabled-by-default: true
-```
-
-### 配置项说明
-
-#### 模型配置 (model)
-- `provider-id`：LLM 供应商 ID（dashscope/openai/deepseek 等）
-- `model-name`：模型名称
-- `max-iters`：最大迭代次数（默认 200）
-- `stream`：是否启用流式输出
-- `enable-thinking`：是否启用思考模式
-
-#### 沙箱配置 (sandbox)
-- `enabled`：是否启用沙箱
-- `browser-enabled`：是否启用浏览器工具
-- `filesystem-enabled`：是否启用文件系统工具
-- `strict-startup`：是否严格启动模式
-
-#### 记忆压缩配置 (compaction)
-- `trigger-mode`：触发模式（TOKEN/MESSAGE_COUNT）
-- `threshold-ratio`：触发压缩的阈值比例（0.85 = 85%）
-- `keep-recent-messages`：保留最近消息数量
-- `max-summary-characters`：摘要最大字符数
-
-#### 流式输出配置 (streaming)
-- `enabled`：是否启用流式输出
-- `incremental`：是否增量输出
-
----
-
-## 🧠 记忆系统架构
-
-HiveMind 采用分层记忆架构，支持短期和长期记忆：
-
-### 记忆层次
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     记忆系统架构                              │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  ┌─────────────────┐    ┌─────────────────┐                │
-│  │ 短期记忆         │    │ 长期记忆         │                │
-│  │ (MongoDB)        │    │ (ReMe)          │                │
-│  │                  │    │                  │                │
-│  │ • 会话状态       │    │ • 跨会话记忆     │                │
-│  │ • 对话历史       │    │ • 知识检索       │                │
-│  │ • 工具上下文     │    │ • 经验积累       │                │
-│  └─────────────────┘    └─────────────────┘                │
-│                                                             │
-│              ┌───────────────────────┐                      │
-│              │ 记忆压缩机制           │                      │
-│              │ (Context Compressor)  │                      │
-│              │                       │                      │
-│              │ • 自动压缩长对话       │                      │
-│              │ • 保留关键信息         │                      │
-│              │ • 生成对话摘要         │                      │
-│              └───────────────────────┘                      │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### 记忆组件
-
-| 组件 | 职责 | 存储位置 |
-|------|------|----------|
-| **MongoConversationMemory** | 管理会话级对话历史 | MongoDB |
-| **MongoAgentSession** | 持久化 Agent 内部状态 | MongoDB |
-| **TdAgentMemoryManager** | 管理记忆压缩和清理 | MongoDB |
-| **TdAgentReMeService** | 集成 ReMe 长期记忆 | ReMe Server |
-| **ContextCompressor** | 执行对话压缩和摘要生成 | MongoDB |
-
-### 记忆压缩机制
-
-当对话消息数量超过阈值时，自动触发记忆压缩：
-
-1. **触发条件**：消息数量 > 20 条 或 字符数 > 24000
-2. **压缩策略**：保留最近 6 条消息，生成摘要
-3. **摘要限制**：最大 2400 字符
-4. **压缩比例**：阈值 85%，头部保留 10%
-
----
-
-## 📚 文档资源
-
-| 文档 | 描述 |
-|------|------|
-| [架构设计](docs/ARCHITECTURE.md) | Agent 引擎架构文档 |
-| [请求链路](docs/copaw/请求链路.md) | 请求处理流程 |
-| [Sandbox 指南](docs/agentscope/SandBox.md) | 沙箱镜像配置 |
-| [ReMe 认证](reme-server/AUTH.md) | API Key 认证配置 |
-| [ReMe 说明](reme-server/README.md) | ReMe Server 使用文档 |
-
----
-
-## 📝 SOUL 人格系统
-
-SOUL 系统是 HiveMind 的核心特性之一，通过 Markdown 文件定义 Agent 的人格和行为：
-
-### SOUL 文件结构
-
-```
-profiles/
-├── AGENT_TRIAGE/
-│   └── SOUL.md          # 分拣 Agent 人格定义
-├── AGENT_PLANNER/
-│   └── SOUL.md          # 规划 Agent 人格定义
-├── AGENT_REVIEWER/
-│   └── SOUL.md          # 审查 Agent 人格定义
-└── AGENT_EXECUTOR/
-    └── SOUL.md          # 执行 Agent 人格定义
-```
-
-### SOUL 加载机制
-
-通过 `SoulPromptLoader` 工具类加载 SOUL 文件：
-- 支持缓存机制，避免重复读取
-- 支持批量扫描所有 SOUL 配置
-- 支持动态更新（清除缓存后重新加载）
-
-### SOUL 文件示例
-
-```markdown
-# AGENT_TRIAGE - 消息分拣专家
-
-## 角色定义
-你是一名专业的消息分拣专家，负责识别用户消息的类型并路由到相应的处理器。
-
-## 核心职责
-1. 分析用户消息的意图
-2. 判断是任务请求还是闲聊对话
-3. 将任务路由到 Planner Agent
-4. 直接回复闲聊消息
-
-## 行为准则
-- 准确识别任务关键词
-- 保持回复简洁明了
-- 记录分拣决策原因
-```
-
----
-
-## 💻 前端控制台
-
-前端控制台基于 React + TypeScript + Ant Design 构建，提供以下功能：
-
-### 核心功能
-
-| 功能 | 描述 |
-|------|------|
-| **实时对话** | 与 AI 助理进行实时对话，支持流式输出 |
-| **任务管理** | 查看和管理任务状态，支持状态流转 |
-| **Agent 控制** | 启动/停止 Agent，查看 Agent 状态 |
-| **配置管理** | 配置 LLM 供应商、MCP 服务器等 |
-| **监控面板** | 查看 Token 使用情况、任务统计等 |
-
-### 状态流转
-
-```
-Inbox → Pending → Triage → Planner → Reviewer → Assigned → Doing → Review → Done
-                                                              ↓
-                                                           Blocked
-```
-
-### 技术栈
-
-- **前端框架**：React 18 + TypeScript
-- **UI 组件**：Ant Design 5
-- **状态管理**：Zustand
-- **构建工具**：Vite
-- **包管理**：npm/yarn
-
----
-
-## 🔧 常见问题
-
-### Q: 启动时提示 MongoDB 连接失败
-
-确保 MongoDB 已启动且连接字符串正确：
-```bash
-docker ps | grep mongodb
-# 检查 application-backend.yaml 中的 mongodb.uri 配置
-```
-
-### Q: Agent 无法调用工具
-
-检查以下配置：
-1. Tool Guard 是否禁用了该工具（检查 `denyPatterns`）
-2. MCP 客户端是否正确配置
-3. 模型是否支持 function calling
-4. 工具风险等级是否需要审批（检查 `approvalRequired`）
-
-### Q: ReMe Server 无法启动
-
-1. 检查 Python 版本（3.10-3.13）
-2. 确保 `.env` 文件中配置了必要的 API Key
-3. 检查端口 8002 是否被占用
-4. 检查 MongoDB 连接是否正常
-
-### Q: 记忆压缩不生效
-
-1. 检查 `compaction.enabled` 是否为 true
-2. 确认消息数量超过 `trigger-message-count`（默认 20）
-3. 检查字符数是否超过 `trigger-character-count`（默认 24000）
-4. 查看日志中的压缩触发信息
-
----
-
-## 🏛️ 架构设计原则
-
-### DDD 分层架构
-
-HiveMind 遵循领域驱动设计（DDD）的分层架构：
-
-```
-adapter → application → domain ← infrastructure
-                      ↑
-                   common
-```
-
-**依赖规则**：
-- Domain 层不依赖 Infrastructure 层
-- Application 层不直接依赖 Infrastructure 层
-- 无跨层调用（如 Adapter 直接调用 Infrastructure）
-
-### 模块职责
-
-| 层 | 职责 | 包路径 |
-|----|------|--------|
-| **Adapter** | REST 控制器、外部接口适配 | `adapter/controller/` |
-| **Application** | 业务服务实现、DTO 定义 | `application/` |
-| **Domain** | 领域模型、领域服务、枚举常量 | `domain/` |
-| **Infrastructure** | 数据访问、外部集成 | `infrastructure/` |
-| **Common** | 共享异常、工具类、配置 | `common/` |
+- Domain 层**不依赖** Infrastructure 层（依赖倒置）
+- Application 层**不直接调用** Infrastructure 层
+- 无跨层调用
 
 ### 核心设计模式
 
-1. **工厂模式**：`TdAgentFactory` 统一创建 Agent 实例
-2. **装饰器模式**：`GuardedAgentTool` 包装原始工具，添加安全防护
-3. **策略模式**：`ToolGuardEngine` 根据配置执行不同的安全策略
-4. **观察者模式**：Hook 机制（MemoryCompactionHook、ToolGuardHook）
-5. **责任链模式**：Tool Guard 三层防护机制
+| 模式 | 应用 |
+|------|------|
+| **工厂** | `TdAgentFactory` 统一创建 ReActAgent 实例 |
+| **装饰器** | `GuardedAgentTool` 包装原始工具，注入安全检查 |
+| **策略** | `ToolGuardEngine` 根据配置执行不同安全评估策略 |
+| **观察者** | Hook 机制（`MemoryCompactionHook`、`ToolGuardHook`） |
+| **责任链** | Tool Guard 三层防护：Deny → Approve → Allow |
+| **模板方法** | Profile 系统：SOUL.md + AGENTS.md + PROFILE.md 组合注入 |
 
 ---
 
-## 🚀 性能优化
+## 📖 API 概览
 
-### Agent 执行优化
+### Agent 引擎（`/api/v1/tdagent/`）
 
-- **最大迭代次数**：默认 200 轮，防止无限循环
-- **流式输出**：支持增量流式输出，实时展示思考过程
-- **记忆压缩**：自动压缩长对话，减少 Token 消耗
-- **工具缓存**：工具定义缓存，避免重复创建
+| 端点 | 方法 | 说明 |
+|------|------|------|
+| `/chat` | POST | 同步聊天 |
+| `/chat/stream` | POST | 流式聊天（SSE） |
+| `/chat/approve` | POST | 审批工具调用并恢复执行 |
+| `/chat/reject` | POST | 拒绝工具调用并恢复执行 |
+| `/chat/interrupt` | POST | 中断正在执行的 Agent |
+| `/sessions` | GET | 会话列表 |
+| `/sessions/{id}/history` | GET | 会话历史 |
+| `/profiles` | GET/PUT | 用户 Profile 管理 |
+| `/skills` | CRUD | 自定义 Skill 管理 |
+| `/token-usage` | GET | Token 用量统计 |
 
-### 数据库优化
+### 业务后端（`/api/`）
 
-- **MongoDB**：会话状态、对话历史、工具配置
-- **MySQL**：用户管理、任务管理、MCP 配置
-- **Caffeine**：本地缓存，减少数据库查询
-
-### 记忆优化
-
-- **分层记忆**：短期记忆（MongoDB）+ 长期记忆（ReMe）
-- **智能压缩**：基于 Token/消息数的自动压缩
-- **摘要生成**：保留关键信息，生成对话摘要
+| 端点 | 说明 |
+|------|------|
+| `/api/v1/auth/*` | 用户登录 / 注册（JWT） |
+| `/api/agent-tasks` | 任务管理（CRUD） |
+| `/api/sys-models` | LLM 模型配置 |
+| `/api/sys-mcp` | MCP 服务器配置 |
+| `/api/scheduled-jobs` | 定时任务管理 |
+| `/api/task-reports` | 任务报告 |
+| `/api/task-flow-logs` | 任务流转日志 |
 
 ---
 
-## 🤝 贡献指南
+## ⚙️ 配置
 
-欢迎贡献代码、文档或建议！
+Agent 引擎核心配置（`application-agentic.yaml`）：
 
-1. Fork 本项目
-2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 开启 Pull Request
+```yaml
+tdagent:
+  model:
+    provider-id: dashscope              # LLM 供应商（dashscope / deepseek / openai）
+    model-name: qwen-max                # 模型名称
+    max-iters: 200                      # 最大推理轮次
+    stream: true                        # 流式输出
+    enable-thinking: true               # 思考模式
+  sandbox:
+    enabled: true                       # 沙箱总开关
+    browser-enabled: true               # 浏览器工具
+    filesystem-enabled: true            # 文件系统工具
+  tool-guard:
+    enabled: true                       # Tool Guard 开关
+    strict-mode: true                   # 严格模式（敏感路径拦截）
+    pending-expire-minutes: 60          # 审批请求过期时间（分钟）
+  reme:
+    enabled: true                       # ReMe 长期记忆
+    base-url: http://localhost:8002     # ReMe Server 地址
+    top-k: 5                           # 检索 Top-K
+  compaction:
+    trigger-message-count: 20           # 消息数触发阈值
+    trigger-character-count: 24000      # 字符数触发阈值
+    keep-recent-messages: 6             # 压缩时保留最近消息数
+    max-summary-characters: 2400        # 摘要最大字符数
+  streaming:
+    enabled: true
+    incremental: true                   # 增量流式
+  skill:
+    enabled: true
+    builtin-location: classpath:skills  # 内置 Skill 路径
+```
 
-### 开发规范
+供应商定义：`hivemind-agent-engine/src/main/resources/provider/builtin_provider.json`
 
-- **代码风格**：遵循 Java 编码规范，使用 Lombok 简化代码
-- **测试覆盖**：新功能需添加单元测试，关键路径需集成测试
-- **文档更新**：修改功能时同步更新 README 和相关文档
-- **提交信息**：使用语义化提交信息（如 `feat: 添加新功能`）
+| 供应商 | Provider ID | 模型示例 |
+|--------|------------|---------|
+| 阿里云百炼 | `dashscope` | qwen-max, qwen-plus, qwen-turbo |
+| DeepSeek | `deepseek` | deepseek-chat, deepseek-reasoner |
+| OpenAI Compatible | `openai` | gpt-4o, gpt-4o-mini |
 
 ---
 
 ## 📄 许可证
 
-本项目采用 Apache 2.0 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
-
----
-
-<div align="center">
-
-**HiveMind** - 让 AI 协作高效有序
-
-[⬆ 返回顶部](#hivemind)
-
-</div>
+[AGPL-3.0](LICENSE)
