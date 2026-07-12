@@ -54,7 +54,9 @@ cd website && npm install && npm run dev      # 前端 :5173
 
 ## 📐 系统架构
 
-![](.\docs\0.imgs\STRUCTURE.png)
+<p align="center">
+  <img src=".\docs\0.imgs\STRUCTURE.png" width="90%" alt="HiveMind Architecture" />
+</p>
 
 ---
 
@@ -68,7 +70,9 @@ cd website && npm install && npm run dev      # 前端 :5173
 
 自研的工具调用防护机制，确保 Agent 的每一次外部操作都在安全边界内：
 
-<img src=".\docs\0.imgs\ToolGuard.png" style="zoom:50%;" />
+<p align="center">
+  <img src=".\docs\0.imgs\ToolGuard.png" width="55%" alt="Tool Guard Flow" />
+</p>
 
 - **敏感路径自动拦截**：`.env`、`.git`、`id_rsa`、`pom.xml` 等关键文件受严格模式保护
 - **用户级工具配置**：每个用户可独立设置工具启用/禁用、拒绝模式、风险等级
