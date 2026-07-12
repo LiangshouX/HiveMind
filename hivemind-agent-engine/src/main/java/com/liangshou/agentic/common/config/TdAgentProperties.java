@@ -168,13 +168,43 @@ public class TdAgentProperties {
 
         private boolean enabled = true;
 
-        private String baseUrl = "http://localhost:8085";
+        private String baseUrl = "http://localhost:2333";
 
         private String apiKey;
 
         private int timeoutSeconds = 60;
 
         private int topK = 5;
+
+        private MCP mcp = new MCP();
+    }
+
+    /**
+     * ReMe MCP 相关配置。
+     */
+    @Getter
+    @Setter
+    public static class MCP {
+
+        /** 是否启用 MCP 模式。为 false 时使用 HTTP fallback。 */
+        private boolean enabled = false;
+
+        /** MCP 传输模式：sse, stdio */
+        private String transport = "sse";
+
+        /** SSE 配置 */
+        private SseConfig sse = new SseConfig();
+    }
+
+    /**
+     * SSE 传输配置。
+     */
+    @Getter
+    @Setter
+    public static class SseConfig {
+
+        /** ReMe MCP Server 的 SSE 端点 URL */
+        private String url = "http://localhost:2333/sse";
     }
 
     /**

@@ -7,9 +7,13 @@ import io.agentscope.core.message.Msg;
 import io.agentscope.core.message.MsgRole;
 import io.agentscope.core.message.ToolUseBlock;
 import jakarta.annotation.PreDestroy;
+import lombok.Getter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -22,6 +26,12 @@ import java.util.stream.Collectors;
  *     <li><b>语义检索</b>：根据查询内容从历史记忆中检索相关信息，支持 Top-K 排序</li>
  *     <li><b>会话压缩</b>：对长对话历史进行智能压缩，生成包含关键事实、任务状态和未完成事项的摘要</li>
  *     <li><b>Workspace 管理</b>：为用户和会话生成独立的 workspace ID，实现记忆的隔离和组织</li>
+ * </ul>
+ *
+ * <p>支持 MCP/HTTP 双模式：</p>
+ * <ul>
+ *     <li><b>MCP 模式</b>：通过 MCP SSE 协议与 ReMe Docker 容器通信（首选）</li>
+ *     <li><b>HTTP 模式</b>：通过 HTTP 直连 ReMe 服务（降级方案）</li>
  * </ul>
  *
  * <p>工作流程：</p>
@@ -40,8 +50,18 @@ import java.util.stream.Collectors;
 @Service
 public class TdAgentReMeService {
 
+    private static final Logger log = LoggerFactory.getLogger(TdAgentReMeService.class);
+
     private final TdAgentProperties properties;
-    private final ReMeClient reMeClient;
+    private final ReMeClient reMeClient;         // HTTP 客户端 (fallback)
+    private final McpReMeClient mcpReMeClient;   // MCP 客户端 (首选)
+    /**
+     * -- GETTER --
+     *  检查是否使用 MCP 模式。
+     *
+     */
+    @Getter
+    private final boolean useMcp;
 
     /**
      * 构造器
@@ -50,13 +70,38 @@ public class TdAgentReMeService {
      */
     public TdAgentReMeService(TdAgentProperties properties) {
         this.properties = properties;
-        // 使用带 timeout 的构造器
-        // 注意：API Key 认证通过系统属性或环境变量自动处理
-        // ReMeClient 会读取 REME_API_KEY 或 tdagent.reme.api-key 配置
-        this.reMeClient = new ReMeClient(
-                properties.getReme().getBaseUrl(),
-                java.time.Duration.ofSeconds(properties.getReme().getTimeoutSeconds())
+
+        // 尝试初始化 MCP 客户端
+        TdAgentProperties.MCP mcpConfig = properties.getReme().getMcp();
+        this.mcpReMeClient = new McpReMeClient(
+                mcpConfig.getSse().getUrl(),
+                properties.getReme().getTimeoutSeconds()
         );
+
+        log.info("ReMe MCP config: enabled={}, sseUrl={}", mcpConfig.isEnabled(), mcpConfig.getSse().getUrl());
+
+        if (mcpConfig.isEnabled()) {
+            boolean mcpReady = mcpReMeClient.initialize();
+            this.useMcp = mcpReady;
+            if (mcpReady) {
+                this.reMeClient = null;
+                log.info("ReMe: using MCP mode ({})", mcpConfig.getSse().getUrl());
+            } else {
+                log.warn("ReMe: MCP initialization failed, falling back to HTTP mode");
+                this.reMeClient = new ReMeClient(
+                        properties.getReme().getBaseUrl(),
+                        java.time.Duration.ofSeconds(properties.getReme().getTimeoutSeconds())
+                );
+                log.info("ReMe: using HTTP mode ({})", properties.getReme().getBaseUrl());
+            }
+        } else {
+            this.useMcp = false;
+            this.reMeClient = new ReMeClient(
+                    properties.getReme().getBaseUrl(),
+                    java.time.Duration.ofSeconds(properties.getReme().getTimeoutSeconds())
+            );
+            log.info("ReMe: using HTTP mode ({})", properties.getReme().getBaseUrl());
+        }
     }
 
     /**
@@ -73,12 +118,24 @@ public class TdAgentReMeService {
         if (remeMessages.isEmpty()) {
             return;
         }
-        ReMeAddRequest request =
-                ReMeAddRequest.builder()
-                        .workspaceId(workspaceId)
-                        .trajectories(List.of(ReMeTrajectory.builder().messages(remeMessages).build()))
-                        .build();
-        reMeClient.add(request).block();
+
+        if (useMcp) {
+            Map<String, Object> args = Map.of(
+                    "messages", remeMessages.stream()
+                            .map(m -> Map.of("role", m.getRole(), "content", m.getContent()))
+                            .toList(),
+                    "session_id", workspaceId
+            );
+            mcpReMeClient.callTool("auto_memory", args);
+        } else {
+            // HTTP fallback (现有逻辑)
+            ReMeAddRequest request =
+                    ReMeAddRequest.builder()
+                            .workspaceId(workspaceId)
+                            .trajectories(List.of(ReMeTrajectory.builder().messages(remeMessages).build()))
+                            .build();
+            reMeClient.add(request).block();
+        }
     }
 
     /**
@@ -92,24 +149,35 @@ public class TdAgentReMeService {
         if (!properties.getReme().isEnabled() || query == null || query.isBlank()) {
             return "";
         }
-        ReMeSearchResponse response =
-                reMeClient.search(
-                                ReMeSearchRequest.builder()
-                                        .workspaceId(workspaceId)
-                                        .query(query)
-                                        .topK(properties.getReme().getTopK())
-                                        .build())
-                        .block();
-        if (response == null) {
-            return "";
+
+        if (useMcp) {
+            Map<String, Object> args = Map.of(
+                    "query", query,
+                    "limit", properties.getReme().getTopK()
+            );
+            String result = mcpReMeClient.callToolText("search", args);
+            return truncate(result);
+        } else {
+            // HTTP fallback (现有逻辑)
+            ReMeSearchResponse response =
+                    reMeClient.search(
+                                    ReMeSearchRequest.builder()
+                                            .workspaceId(workspaceId)
+                                            .query(query)
+                                            .topK(properties.getReme().getTopK())
+                                            .build())
+                            .block();
+            if (response == null) {
+                return "";
+            }
+            if (response.getAnswer() != null && !response.getAnswer().isBlank()) {
+                return truncate(response.getAnswer());
+            }
+            return truncate(
+                    response.getMemories().stream()
+                            .filter(Objects::nonNull)
+                            .collect(Collectors.joining(System.lineSeparator())));
         }
-        if (response.getAnswer() != null && !response.getAnswer().isBlank()) {
-            return truncate(response.getAnswer());
-        }
-        return truncate(
-                response.getMemories().stream()
-                        .filter(Objects::nonNull)
-                        .collect(Collectors.joining(System.lineSeparator())));
     }
 
     /**
@@ -141,6 +209,20 @@ public class TdAgentReMeService {
     }
 
     /**
+     * 调用 MCP 工具（供 MemoryController 使用）。
+     *
+     * @param toolName  工具名称
+     * @param arguments 工具参数
+     * @return 工具调用结果的文本内容
+     */
+    public String callMcpTool(String toolName, Map<String, Object> arguments) {
+        if (!useMcp) {
+            throw new IllegalStateException("MCP mode is not enabled. Cannot call MCP tool: " + toolName);
+        }
+        return mcpReMeClient.callToolText(toolName, arguments);
+    }
+
+    /**
      * 返回用户 workspace 标识。
      *
      * @param context 会话上下文
@@ -158,6 +240,15 @@ public class TdAgentReMeService {
      */
     public String sessionWorkspaceId(ConversationSessionContext context) {
         return context.getUserId() + "::" + context.getSessionId();
+    }
+
+    /**
+     * 获取 MCP 客户端（如果可用）。
+     *
+     * @return MCP 客户端，如果未使用 MCP 模式则返回 null
+     */
+    public McpReMeClient getMcpReMeClient() {
+        return useMcp ? mcpReMeClient : null;
     }
 
     private List<ReMeMessage> toReMeMessages(List<Msg> messages) {
@@ -190,7 +281,11 @@ public class TdAgentReMeService {
 
     @PreDestroy
     void destroy() {
-        reMeClient.shutdown();
+        if (reMeClient != null) {
+            reMeClient.shutdown();
+        }
+        if (mcpReMeClient != null) {
+            mcpReMeClient.close();
+        }
     }
 }
-

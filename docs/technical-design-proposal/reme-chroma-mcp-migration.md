@@ -392,7 +392,7 @@ cp reme-server/.env.example reme-server/.env
 # 3. 确保 conda 环境已创建
 conda create -n reme-serve python=3.10
 conda activate reme-serve
-pip install reme-ai==0.3.1.2 chromadb
+pip install reme-ai==0.4.0.9 chromadb
 ```
 
 ### 5.2 启动服务

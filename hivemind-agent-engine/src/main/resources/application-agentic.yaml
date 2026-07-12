@@ -39,9 +39,14 @@ tdagent:
     pending-expire-minutes: 60
   reme:
     enabled: true
-    base-url: ${TDAGENT_REME_BASE_URL:http://localhost:8002}
+    base-url: ${TDAGENT_REME_BASE_URL:http://localhost:2333}
     timeout-seconds: 60
     top-k: 5
+    mcp:
+      enabled: ${REME_MCP_ENABLED:true}
+      transport: ${REME_MCP_TRANSPORT:sse}
+      sse:
+        url: ${REME_MCP_SSE_URL:http://localhost:2333/sse}
   compaction:
     enabled: true
     trigger-mode: TOKEN

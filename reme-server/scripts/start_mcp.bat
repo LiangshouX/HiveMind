@@ -1,6 +1,7 @@
 @echo off
-REM ReMe Production Startup Script (Windows)
-REM Usage: scripts\start_windows.bat [prod|dev] [prod|local]
+REM ReMe MCP Server Startup Script (Windows)
+REM Usage: scripts\start_mcp.bat [transport] [log_level]
+REM Example: scripts\start_mcp.bat sse INFO
 
 REM Set console to UTF-8 encoding to support Unicode characters
 chcp 65001 >nul
@@ -11,16 +12,15 @@ REM ===== Configuration Parameters =====
 set "SCRIPT_DIR=%~dp0"
 set "PROJECT_ROOT=%SCRIPT_DIR%.."
 set "ENV_FILE=%PROJECT_ROOT%\.env"
-set "CONFIG_DIR=%PROJECT_ROOT%\config"
 
 REM Default parameters
-set "ENV_PROFILE=%~1"
-if "%ENV_PROFILE%"=="" set "ENV_PROFILE=prod"
+set "MCP_TRANSPORT=%~1"
+if "%MCP_TRANSPORT%"=="" set "MCP_TRANSPORT=sse"
 
-set "CONFIG_PROFILE=%~2"
-if "%CONFIG_PROFILE%"=="" set "CONFIG_PROFILE=prod"
+set "LOG_LEVEL=%~2"
+if "%LOG_LEVEL%"=="" set "LOG_LEVEL=INFO"
 
-echo ReMe Production Startup Script (Windows)
+echo ReMe MCP Server Startup Script (Windows)
 echo ==========================================
 
 REM ===== Environment Check =====
@@ -36,19 +36,19 @@ echo Loading environment from %ENV_FILE%...
 python -c "import os; from dotenv import dotenv_values; [os.environ.setdefault(k,v) for k,v in dotenv_values(r'%ENV_FILE%').items() if v]"
 
 REM ===== Start Service =====
-echo Starting ReMe HTTP Service...
-echo    Profile: %ENV_PROFILE%
-echo    Config:  %CONFIG_PROFILE%.yaml
-echo    Port:    %HTTP_PORT:~0,4%
+echo Starting ReMe MCP Server...
+echo    Transport: %MCP_TRANSPORT%
+echo    Log Level: %LOG_LEVEL%
 echo.
 
 cd /d "%PROJECT_ROOT%"
 
-REM Start command (Windows paths use backslashes, Python auto-compatible)
+REM Start command with MCP backend
 reme ^
-    backend=http ^
-    log.level=%LOG_LEVEL:~0,5% ^
-    vector_store.default.backend=local
+    start ^
+    service.backend=mcp ^
+    mcp.transport=%MCP_TRANSPORT% ^
+    log.level=%LOG_LEVEL%
 
 if %errorlevel% neq 0 (
     echo Service exited with error

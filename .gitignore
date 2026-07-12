@@ -49,6 +49,7 @@ node_modules
 # ReMe Local data
 local_vector_store
 */local_vector_store
+.reme
 
 # Vibe Coding
 .qwen

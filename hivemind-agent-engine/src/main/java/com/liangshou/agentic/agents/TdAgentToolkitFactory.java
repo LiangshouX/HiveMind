@@ -3,6 +3,8 @@ package com.liangshou.agentic.agents;
 import com.liangshou.agentic.agents.guard.GuardedAgentTool;
 import com.liangshou.agentic.agents.guard.ToolGuardEngine;
 import com.liangshou.agentic.agents.guard.approval.ToolApprovalService;
+import com.liangshou.agentic.agents.memory.reme.McpReMeClient;
+import com.liangshou.agentic.agents.memory.reme.TdAgentReMeService;
 import com.liangshou.agentic.agents.sandbox.TdAgentSandboxManager;
 import com.liangshou.agentic.agents.tools.SystemToolRegistry;
 import com.liangshou.agentic.agents.tools.TdAgentBuiltinTools;
@@ -13,6 +15,7 @@ import com.liangshou.agentic.application.IConversationPersistenceService;
 import com.liangshou.agentic.common.util.ToolConfigProvider;
 import io.agentscope.core.tool.AgentTool;
 import io.agentscope.core.tool.Toolkit;
+import io.agentscope.core.tool.mcp.McpTool;
 import io.agentscope.runtime.engine.agents.agentscope.tools.ToolkitInit;
 import io.agentscope.runtime.sandbox.box.BaseSandbox;
 import io.agentscope.runtime.sandbox.box.BrowserSandbox;
@@ -52,6 +55,7 @@ public class TdAgentToolkitFactory {
     private final ToolGuardEngine toolGuardEngine;
     private final ToolApprovalService toolApprovalService;
     private final ToolConfigProvider toolConfigProvider;
+    private final TdAgentReMeService remeService;
 
     /**
      * 构造 Agent Toolkit 工厂实例。
@@ -62,6 +66,7 @@ public class TdAgentToolkitFactory {
      * @param toolGuardEngine     Tool Guard 引擎，提供工具调用的安全防护和风险评估
      * @param toolApprovalService 工具审批服务，处理需要用户确认的高风险工具调用
      * @param toolConfigProvider  工具配置提供者，用于获取用户的工具启用状态
+     * @param remeService         ReMe 记忆服务，用于注册 MCP 记忆工具
      */
     public TdAgentToolkitFactory(
             TdAgentProperties properties,
@@ -69,13 +74,15 @@ public class TdAgentToolkitFactory {
             TdAgentSandboxManager sandboxManager,
             ToolGuardEngine toolGuardEngine,
             ToolApprovalService toolApprovalService,
-            ToolConfigProvider toolConfigProvider) {
+            ToolConfigProvider toolConfigProvider,
+            TdAgentReMeService remeService) {
         this.properties = properties;
         this.persistenceService = persistenceService;
         this.sandboxManager = sandboxManager;
         this.toolGuardEngine = toolGuardEngine;
         this.toolApprovalService = toolApprovalService;
         this.toolConfigProvider = toolConfigProvider;
+        this.remeService = remeService;
     }
 
     /**
@@ -112,6 +119,10 @@ public class TdAgentToolkitFactory {
     public Toolkit createToolkit(ConversationSessionContext context) {
         Toolkit toolkit = new Toolkit();
         toolkit.registerTool(new TdAgentBuiltinTools(context, persistenceService));
+
+        // 注册 ReMe MCP 记忆工具（如果 MCP 模式已启用）
+        registerReMeMcpTools(toolkit, context);
+
         if (!properties.getSandbox().isEnabled()) {
             return toolkit;
         }
@@ -185,5 +196,39 @@ public class TdAgentToolkitFactory {
         }
 
         toolkit.registerTool(tool);
+    }
+
+    /**
+     * 注册 ReMe MCP 记忆工具到 Toolkit。
+     *
+     * <p>当 MCP 模式启用时，将 ReMe 暴露的 MCP 工具（search、read、write、edit 等）
+     * 转换为 {@link McpTool} 并注册到 Toolkit，使 Agent 可以直接调用这些工具
+     * 进行长期记忆操作，而不是使用沙箱的文件系统工具。</p>
+     *
+     * @param toolkit 目标 Toolkit 实例
+     * @param context 会话上下文
+     */
+    private void registerReMeMcpTools(Toolkit toolkit, ConversationSessionContext context) {
+        log.info("[Toolkit] 检查 ReMe MCP 工具注册条件 - useMcp: {}", remeService.isUseMcp());
+        if (!remeService.isUseMcp()) {
+            log.info("[Toolkit] MCP 模式未启用，跳过 ReMe MCP 工具注册");
+            return;
+        }
+        McpReMeClient mcpClient = remeService.getMcpReMeClient();
+        if (mcpClient == null || !mcpClient.isInitialized()) {
+            log.warn("[Toolkit] MCP 客户端未初始化，跳过 ReMe MCP 工具注册");
+            return;
+        }
+        try {
+            java.util.List<McpTool> mcpTools = mcpClient.toAgentTools();
+            log.info("[Toolkit] 从 ReMe MCP 获取到 {} 个工具", mcpTools.size());
+            for (McpTool mcpTool : mcpTools) {
+                registerTool(toolkit, context, mcpTool);
+                log.info("[Toolkit] 已注册 MCP 工具: {}", mcpTool.getName());
+            }
+            log.info("[Toolkit] 已注册 {} 个 ReMe MCP 记忆工具", mcpTools.size());
+        } catch (Exception e) {
+            log.error("[Toolkit] 注册 ReMe MCP 工具失败", e);
+        }
     }
 }

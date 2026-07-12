@@ -446,7 +446,7 @@ reme-server/
 ├── docker/
 │   ├── Dockerfile          # (空)
 │   └── docker-compose.yml  # (空)
-└── requirements.txt        # reme-ai==0.3.1.2, fastapi, uvicorn
+└── requirements.txt        # reme-ai==0.4.0.9, fastapi, uvicorn
 ```
 
 ### 11.2 MCP 模式部署

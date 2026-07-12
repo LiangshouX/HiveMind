@@ -200,13 +200,20 @@ public class TdAgentFactory {
         }
 
         if (properties.getReme().isEnabled()) {
-            builder.longTermMemory(
-                            ReMeLongTermMemory.builder()
-                                    .userId(reMeService.userWorkspaceId(context))
-                                    .apiBaseUrl(properties.getReme().getBaseUrl())
-                                    .build())
-                    .longTermMemoryMode(LongTermMemoryMode.BOTH);
-            log.info("[TdAgent Factory] ReMe 长期记忆已启用");
+            if (reMeService.isUseMcp()) {
+                // MCP 模式：记忆工具已通过 TdAgentToolkitFactory 注册为 MCP 工具
+                // 不需要 ReMeLongTermMemory（HTTP 模式），避免调用不存在的 API 端点
+                log.info("[TdAgent Factory] ReMe 长期记忆已启用 (MCP 模式，工具已注册)");
+            } else {
+                // HTTP 模式：使用 AgentScope 内置的 ReMeLongTermMemory
+                builder.longTermMemory(
+                                ReMeLongTermMemory.builder()
+                                        .userId(reMeService.userWorkspaceId(context))
+                                        .apiBaseUrl(properties.getReme().getBaseUrl())
+                                        .build())
+                        .longTermMemoryMode(LongTermMemoryMode.BOTH);
+                log.info("[TdAgent Factory] ReMe 长期记忆已启用 (HTTP 模式)");
+            }
         } else {
             log.debug("[TdAgent Factory] ReMe 长期记忆未启用");
         }

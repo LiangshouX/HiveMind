@@ -1,6 +1,7 @@
 package com.liangshou.agentic.application.impl;
 
 import com.liangshou.agentic.agents.ConversationSessionContext;
+import com.liangshou.agentic.agents.memory.TdAgentMemoryManager;
 import com.liangshou.agentic.agents.session.AgentSessionStateService;
 import com.liangshou.agentic.application.IConversationPersistenceService;
 import com.liangshou.agentic.application.dto.ChatResponse;
@@ -61,13 +62,16 @@ class ChatCommandServiceImplTest {
     @Mock
     private AgentSessionStateService agentSessionStateService;
 
+    @Mock
+    private TdAgentMemoryManager memoryManager;
+
     private ChatCommandServiceImpl chatCommandService;
 
     private ConversationSessionContext context;
 
     @BeforeEach
     void setUp() {
-        chatCommandService = new ChatCommandServiceImpl(persistenceService, agentSessionStateService);
+        chatCommandService = new ChatCommandServiceImpl(persistenceService, agentSessionStateService, memoryManager);
         context = ConversationSessionContext.builder()
                 .userId("u1")
                 .sessionId("s1")

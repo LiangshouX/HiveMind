@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  reme-server:
+    image: reme-server:latest
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: hivemind-reme
+    ports:
+      - "8002:8002"
+    volumes:
+      - reme-workspace:/workspace
+    env_file:
+      - ../.env
+    environment:
+      - REME_BACKEND=mcp
+      - MCP_TRANSPORT=sse
+      - HTTP_PORT=8002
+      - LOG_LEVEL=INFO
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/sse/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - hivemind-network
+
+networks:
+  hivemind-network:
+    driver: bridge
+
+volumes:
+  reme-workspace:
+    driver: local
