@@ -2,6 +2,8 @@ package com.liangshou.agentic.adapter.controller;
 
 import com.alibaba.fastjson2.JSONObject;
 import com.liangshou.agentic.agents.memory.reme.TdAgentReMeService;
+import com.liangshou.agentic.common.exceptions.BizException;
+import com.liangshou.agentic.common.exceptions.HmeErrorCode;
 import com.liangshou.agentic.application.dto.ReMeMemoryRequest;
 import com.liangshou.agentic.common.utils.Result;
 import jakarta.validation.Valid;
@@ -64,7 +66,7 @@ public class MemoryController {
             return Result.success(fileList);
         } catch (Exception e) {
             log.error("Failed to list memory files", e);
-            return Result.error(500, "Failed to list memory files: " + e.getMessage());
+            return Result.error(HmeErrorCode.MEMORY_LIST_ERROR.getCode(), "Failed to list memory files: " + e.getMessage());
         }
     }
 
@@ -141,7 +143,7 @@ public class MemoryController {
             return Result.success(content);
         } catch (Exception e) {
             log.error("Failed to read memory file", e);
-            return Result.error(500, "Failed to read memory file: " + e.getMessage());
+            return Result.error(HmeErrorCode.MEMORY_READ_ERROR.getCode(), "Failed to read memory file: " + e.getMessage());
         }
     }
 
@@ -211,7 +213,7 @@ public class MemoryController {
             return Result.success(true);
         } catch (Exception e) {
             log.error("Failed to edit memory file", e);
-            return Result.error(500, "Failed to edit memory file: " + e.getMessage());
+            return Result.error(HmeErrorCode.MEMORY_EDIT_ERROR.getCode(), "Failed to edit memory file: " + e.getMessage());
         }
     }
 
@@ -235,7 +237,7 @@ public class MemoryController {
             return Result.success(result);
         } catch (Exception e) {
             log.error("Failed to search memory", e);
-            return Result.error(500, "Failed to search memory: " + e.getMessage());
+            return Result.error(HmeErrorCode.MEMORY_SEARCH_ERROR.getCode(), "Failed to search memory: " + e.getMessage());
         }
     }
 
@@ -257,7 +259,7 @@ public class MemoryController {
      */
     private String currentUserId(Principal principal) {
         if (principal == null || principal.getName() == null || principal.getName().isBlank()) {
-            throw new IllegalArgumentException("未获取到当前登录用户");
+            throw new BizException(HmeErrorCode.AGENT_USER_NOT_FOUND);
         }
         return principal.getName();
     }

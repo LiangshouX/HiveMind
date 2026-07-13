@@ -1,6 +1,8 @@
 package com.liangshou.agentic.application.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.liangshou.agentic.common.exceptions.BizException;
+import com.liangshou.agentic.common.exceptions.HmeErrorCode;
 import com.liangshou.agentic.infrastructure.mysql.po.SkillMetaManagePO;
 import com.liangshou.agentic.infrastructure.mysql.support.SkillMetaManageSupport;
 import com.liangshou.agentic.infrastructure.mysql.support.dto.*;
@@ -51,7 +53,7 @@ public class SkillApplicationService {
         String skillName = request.getName();
         SkillMetaManagePO existing = skillMetaSupport.findByUserIdAndName(userId, skillName);
         if (existing != null) {
-            throw new IllegalArgumentException("同名 Skill 已存在: " + skillName);
+            throw new BizException(HmeErrorCode.SKILL_ALREADY_EXISTS, "同名 Skill 已存在: " + skillName);
         }
 
         // 2. 确定版本号
@@ -81,7 +83,7 @@ public class SkillApplicationService {
         } catch (Exception e) {
             log.error("Skill 创建失败，回滚元数据: userId={}, name={}", userId, skillName, e);
             skillMetaSupport.removeById(skill.getSkillId());
-            throw new RuntimeException("Skill 创建失败: " + e.getMessage(), e);
+            throw new BizException(HmeErrorCode.SKILL_CREATE_ERROR, e);
         }
     }
 
@@ -98,14 +100,14 @@ public class SkillApplicationService {
         // 1. 查询并校验权限
         SkillMetaManagePO skill = skillMetaSupport.getById(skillId);
         if (skill == null || !skill.getUserId().equals(userId)) {
-            throw new IllegalArgumentException("Skill 不存在或无权限");
+            throw new BizException(HmeErrorCode.SKILL_NOT_FOUND_OR_NO_PERMISSION);
         }
 
         String version = request.getVersion();
 
         // 2. 检查版本是否已存在
         if (fileStorageService.versionExists(userId, skillId, version)) {
-            throw new IllegalArgumentException("版本已存在: " + version);
+            throw new BizException(HmeErrorCode.SKILL_VERSION_ALREADY_EXISTS, "版本已存在: " + version);
         }
 
         try {
@@ -120,7 +122,7 @@ public class SkillApplicationService {
             return buildSkillResponse(skillMetaSupport.getById(skillId));
         } catch (Exception e) {
             log.error("Skill 更新失败: userId={}, skillId={}", userId, skillId, e);
-            throw new RuntimeException("Skill 更新失败: " + e.getMessage(), e);
+            throw new BizException(HmeErrorCode.SKILL_UPDATE_ERROR, e);
         }
     }
 
@@ -135,12 +137,12 @@ public class SkillApplicationService {
     public SkillResponse publishSkill(String userId, String skillId) {
         SkillMetaManagePO skill = skillMetaSupport.getById(skillId);
         if (skill == null || !skill.getUserId().equals(userId)) {
-            throw new IllegalArgumentException("Skill 不存在或无权限");
+            throw new BizException(HmeErrorCode.SKILL_NOT_FOUND_OR_NO_PERMISSION);
         }
 
         boolean success = skillMetaSupport.publishSkill(skillId, skill.getCurrentVersion());
         if (!success) {
-            throw new RuntimeException("发布失败");
+            throw new BizException(HmeErrorCode.SKILL_PUBLISH_ERROR);
         }
 
         log.info("Skill 发布成功: userId={}, skillId={}", userId, skillId);
@@ -157,7 +159,7 @@ public class SkillApplicationService {
     public void archiveSkill(String userId, String skillId) {
         SkillMetaManagePO skill = skillMetaSupport.getById(skillId);
         if (skill == null || !skill.getUserId().equals(userId)) {
-            throw new IllegalArgumentException("Skill 不存在或无权限");
+            throw new BizException(HmeErrorCode.SKILL_NOT_FOUND_OR_NO_PERMISSION);
         }
 
         skillMetaSupport.archiveSkill(skillId);
@@ -174,7 +176,7 @@ public class SkillApplicationService {
     public void deleteSkill(String userId, String skillId) {
         SkillMetaManagePO skill = skillMetaSupport.getById(skillId);
         if (skill == null || !skill.getUserId().equals(userId)) {
-            throw new IllegalArgumentException("Skill 不存在或无权限");
+            throw new BizException(HmeErrorCode.SKILL_NOT_FOUND_OR_NO_PERMISSION);
         }
 
         skillMetaSupport.removeById(skillId);
@@ -191,7 +193,7 @@ public class SkillApplicationService {
     public SkillResponse getSkill(String userId, String skillId) {
         SkillMetaManagePO skill = skillMetaSupport.getById(skillId);
         if (skill == null || !skill.getUserId().equals(userId)) {
-            throw new IllegalArgumentException("Skill 不存在或无权限");
+            throw new BizException(HmeErrorCode.SKILL_NOT_FOUND_OR_NO_PERMISSION);
         }
         return buildSkillResponse(skill);
     }
@@ -216,7 +218,7 @@ public class SkillApplicationService {
     public String getDownloadUrl(String userId, String skillId) {
         SkillMetaManagePO skill = skillMetaSupport.getById(skillId);
         if (skill == null || !skill.getUserId().equals(userId)) {
-            throw new IllegalArgumentException("Skill 不存在或无权限");
+            throw new BizException(HmeErrorCode.SKILL_NOT_FOUND_OR_NO_PERMISSION);
         }
 
         URL url = fileStorageService.generateDownloadUrl(userId, skillId, "v" + skill.getCurrentVersion());

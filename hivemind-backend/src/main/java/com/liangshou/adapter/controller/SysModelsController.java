@@ -3,7 +3,7 @@ package com.liangshou.adapter.controller;
 import com.liangshou.service.ISysModelsService;
 import com.liangshou.service.dto.SysModelsDTO;
 import com.liangshou.service.vo.SysModelsVO;
-import com.liangshou.common.utils.Result;
+import com.liangshou.agentic.common.utils.Result;
 import com.liangshou.common.utils.PageResult;
 import com.liangshou.common.utils.SecurityUtils;
 import org.springframework.web.bind.annotation.*;
@@ -13,7 +13,7 @@ import lombok.RequiredArgsConstructor;
 
 /**
  * SysModels 控制器
- *
+ * <p>
  * 提供 SysModels 相关的 RESTful API 接口
  */
 @Tag(name = "SysModels API", description = "SysModels 管理相关接口")

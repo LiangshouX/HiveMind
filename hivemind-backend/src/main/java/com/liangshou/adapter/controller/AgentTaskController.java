@@ -3,7 +3,7 @@ package com.liangshou.adapter.controller;
 import com.liangshou.service.IAgentTaskService;
 import com.liangshou.service.dto.AgentTaskDTO;
 import com.liangshou.service.vo.AgentTaskVO;
-import com.liangshou.common.utils.Result;
+import com.liangshou.agentic.common.utils.Result;
 import com.liangshou.common.utils.PageResult;
 import com.liangshou.common.utils.SecurityUtils;
 import org.springframework.web.bind.annotation.*;
@@ -13,7 +13,7 @@ import lombok.RequiredArgsConstructor;
 
 /**
  * AgentTask 控制器
- *
+ * <p>
  * 提供 AgentTask 相关的 RESTful API 接口
  */
 @Tag(name = "AgentTask API", description = "AgentTask 管理相关接口")

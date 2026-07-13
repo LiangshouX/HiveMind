@@ -2,6 +2,8 @@ package com.liangshou.agentic.application.impl;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.liangshou.agentic.common.exceptions.BizException;
+import com.liangshou.agentic.common.exceptions.HmeErrorCode;
 import com.liangshou.agentic.application.ITdAgentProfileService;
 import com.liangshou.agentic.domain.profile.enums.ProfileSource;
 import com.liangshou.agentic.domain.profile.model.AgentProfileDocument;
@@ -163,7 +165,7 @@ public class TdAgentProfileServiceImpl implements ITdAgentProfileService {
     @Transactional
     public int batchUpdateProfiles(String userId, List<String> filenames, List<String> contents, List<Boolean> enabled) {
         if (filenames.size() != contents.size() || filenames.size() != enabled.size()) {
-            throw new IllegalArgumentException("filenames, contents, enabled 列表大小不一致");
+            throw new BizException(HmeErrorCode.PROFILE_LIST_SIZE_MISMATCH);
         }
 
         log.info("批量更新 Profile 配置 - userId: {}, 数量: {}", userId, filenames.size());
@@ -194,7 +196,7 @@ public class TdAgentProfileServiceImpl implements ITdAgentProfileService {
         // 读取默认文件内容
         String defaultContent = loadDefaultFile(filename);
         if (defaultContent == null || defaultContent.isBlank()) {
-            throw new IllegalArgumentException("默认 Profile 文件不存在或为空: " + filename);
+            throw new BizException(HmeErrorCode.PROFILE_DEFAULT_NOT_FOUND, "默认 Profile 文件不存在或为空: " + filename);
         }
 
         // 更新 MongoDB
@@ -323,10 +325,10 @@ public class TdAgentProfileServiceImpl implements ITdAgentProfileService {
      */
     private void validateFilename(String filename) {
         if (filename == null || filename.isBlank()) {
-            throw new IllegalArgumentException("filename 不能为空");
+            throw new BizException(HmeErrorCode.PROFILE_FILENAME_EMPTY);
         }
         if (!DEFAULT_FILES.contains(filename)) {
-            throw new IllegalArgumentException("不合法的文件名: " + filename + "，只允许: " + DEFAULT_FILES);
+            throw new BizException(HmeErrorCode.PROFILE_FILENAME_INVALID, "不合法的文件名: " + filename + "，只允许: " + DEFAULT_FILES);
         }
     }
 }

@@ -2,6 +2,8 @@ package com.liangshou.agentic.common.util;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.liangshou.agentic.common.exceptions.BizException;
+import com.liangshou.agentic.common.exceptions.HmeErrorCode;
 import com.liangshou.agentic.domain.memory.model.StoredMessage;
 import com.liangshou.agentic.domain.memory.model.StoredMessageContent;
 import com.liangshou.agentic.domain.tool.model.ToolApprovalDocument;
@@ -363,7 +365,7 @@ public class MessageMapper {
         try {
             return objectMapper.writeValueAsString(value);
         } catch (JsonProcessingException ex) {
-            throw new IllegalStateException("Failed to serialize message content.", ex);
+            throw new BizException(HmeErrorCode.AGENT_SESSION_SERIALIZE_ERROR, ex);
         }
     }
 
@@ -401,7 +403,7 @@ public class MessageMapper {
         try {
             return objectMapper.readValue(json, Map.class);
         } catch (JsonProcessingException ex) {
-            throw new IllegalStateException("Failed to deserialize message metadata.", ex);
+            throw new BizException(HmeErrorCode.AGENT_SESSION_DESERIALIZE_ERROR, ex);
         }
     }
 

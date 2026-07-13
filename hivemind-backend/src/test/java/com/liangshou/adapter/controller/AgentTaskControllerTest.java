@@ -56,6 +56,6 @@ class AgentTaskControllerTest {
 
         mockMvc.perform(get("/api/agent-tasks/{taskId}", "test-id"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(200));
+                .andExpect(jsonPath("$.code").value("HME_SYSTEM_000"));
     }
 }

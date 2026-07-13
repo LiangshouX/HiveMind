@@ -3,6 +3,8 @@ package com.liangshou.agentic.agents.session;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.liangshou.agentic.common.exceptions.BizException;
+import com.liangshou.agentic.common.exceptions.HmeErrorCode;
 import com.liangshou.agentic.domain.session.model.AgentSessionStateDocument;
 import com.liangshou.agentic.infrastructure.mongo.repository.AgentSessionStateRepository;
 import io.agentscope.core.session.Session;
@@ -130,7 +132,7 @@ public class MongoAgentSession implements Session {
         try {
             return objectMapper.readValue(json, LinkedHashMap.class);
         } catch (JsonProcessingException ex) {
-            throw new IllegalStateException("Failed to deserialize session state.", ex);
+            throw new BizException(HmeErrorCode.AGENT_SESSION_DESERIALIZE_ERROR, ex);
         }
     }
 
@@ -138,7 +140,7 @@ public class MongoAgentSession implements Session {
         try {
             return objectMapper.writeValueAsString(payload);
         } catch (JsonProcessingException ex) {
-            throw new IllegalStateException("Failed to serialize session state.", ex);
+            throw new BizException(HmeErrorCode.AGENT_SESSION_SERIALIZE_ERROR, ex);
         }
     }
 }

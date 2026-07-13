@@ -1,6 +1,8 @@
 package com.liangshou.agentic.adapter.controller;
 
 import com.liangshou.agentic.application.ITdAgentProfileService;
+import com.liangshou.agentic.common.exceptions.BizException;
+import com.liangshou.agentic.common.exceptions.HmeErrorCode;
 import com.liangshou.agentic.application.dto.BatchUpdateRequest;
 import com.liangshou.agentic.application.dto.ProfileListResponse;
 import com.liangshou.agentic.application.dto.ProfileUpdateRequest;
@@ -249,7 +251,7 @@ public class TdAgentProfileController {
      */
     private String currentUserId(Principal principal) {
         if (principal == null || principal.getName() == null || principal.getName().isBlank()) {
-            throw new IllegalArgumentException("未获取到当前登录用户");
+            throw new BizException(HmeErrorCode.AGENT_USER_NOT_FOUND);
         }
         return principal.getName();
     }

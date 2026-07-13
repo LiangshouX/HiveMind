@@ -3,6 +3,8 @@ package com.liangshou.agentic.infrastructure.storage;
 import com.aliyun.oss.HttpMethod;
 import com.aliyun.oss.OSS;
 import com.aliyun.oss.OSSClientBuilder;
+import com.liangshou.agentic.common.exceptions.BizException;
+import com.liangshou.agentic.common.exceptions.HmeErrorCode;
 import com.aliyun.oss.model.GeneratePresignedUrlRequest;
 import com.aliyun.oss.model.ObjectMetadata;
 import jakarta.annotation.PostConstruct;
@@ -33,7 +35,7 @@ public class AliyunOssStorageService implements ObjectStorageService {
     @PostConstruct
     public void init() {
         if (ossProperties.getAccessKeyId() == null || ossProperties.getAccessKeySecret() == null) {
-            throw new IllegalStateException("OSS AccessKey ID 和 Secret 必须配置");
+            throw new BizException(HmeErrorCode.STORAGE_OSS_CONFIG_MISSING);
         }
         this.ossClient = new OSSClientBuilder().build(
                 ossProperties.getEndpoint(),
@@ -74,7 +76,7 @@ public class AliyunOssStorageService implements ObjectStorageService {
             log.debug("文件上传成功: {}", fullKey);
         } catch (Exception e) {
             log.error("文件上传失败: {}", fullKey, e);
-            throw new RuntimeException("文件上传失败: " + fullKey, e);
+            throw new BizException(HmeErrorCode.STORAGE_UPLOAD_ERROR, e);
         }
     }
 
@@ -85,7 +87,7 @@ public class AliyunOssStorageService implements ObjectStorageService {
             return ossClient.getObject(ossProperties.getBucketName(), fullKey).getObjectContent();
         } catch (Exception e) {
             log.error("文件下载失败: {}", fullKey, e);
-            throw new RuntimeException("文件下载失败: " + fullKey, e);
+            throw new BizException(HmeErrorCode.STORAGE_DOWNLOAD_ERROR, e);
         }
     }
 
@@ -97,7 +99,7 @@ public class AliyunOssStorageService implements ObjectStorageService {
             log.debug("文件删除成功: {}", fullKey);
         } catch (Exception e) {
             log.error("文件删除失败: {}", fullKey, e);
-            throw new RuntimeException("文件删除失败: " + fullKey, e);
+            throw new BizException(HmeErrorCode.STORAGE_DELETE_ERROR, e);
         }
     }
 
@@ -108,7 +110,7 @@ public class AliyunOssStorageService implements ObjectStorageService {
             return ossClient.doesObjectExist(ossProperties.getBucketName(), fullKey);
         } catch (Exception e) {
             log.error("检查文件存在失败: {}", fullKey, e);
-            throw new RuntimeException("检查文件存在失败: " + fullKey, e);
+            throw new BizException(HmeErrorCode.STORAGE_EXISTENCE_CHECK_ERROR, e);
         }
     }
 
@@ -142,7 +144,7 @@ public class AliyunOssStorageService implements ObjectStorageService {
             return url;
         } catch (Exception e) {
             log.error("生成预签名下载 URL 失败: {}", objectKey, e);
-            throw new RuntimeException("生成预签名下载 URL 失败: " + objectKey, e);
+            throw new BizException(HmeErrorCode.STORAGE_PRESIGN_DOWNLOAD_ERROR, e);
         }
     }
 
@@ -156,7 +158,7 @@ public class AliyunOssStorageService implements ObjectStorageService {
             return ossClient.generatePresignedUrl(request);
         } catch (Exception e) {
             log.error("生成预签名上传 URL 失败: {}", objectKey, e);
-            throw new RuntimeException("生成预签名上传 URL 失败: " + objectKey, e);
+            throw new BizException(HmeErrorCode.STORAGE_PRESIGN_UPLOAD_ERROR, e);
         }
     }
 

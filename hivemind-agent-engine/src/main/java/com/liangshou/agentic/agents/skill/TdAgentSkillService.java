@@ -1,6 +1,8 @@
 package com.liangshou.agentic.agents.skill;
 
 import com.liangshou.agentic.agents.ConversationSessionContext;
+import com.liangshou.agentic.common.exceptions.BizException;
+import com.liangshou.agentic.common.exceptions.HmeErrorCode;
 import com.liangshou.agentic.common.config.TdAgentProperties;
 import com.liangshou.agentic.common.enums.TdAgentSkillSource;
 import com.liangshou.agentic.domain.skill.model.AgentSkillDocument;
@@ -117,7 +119,7 @@ public class TdAgentSkillService {
     public TdAgentSkillInfo getSkill(String userId, String skillName) {
         SkillEntry entry = buildMergedSkillEntries(userId).get(skillName);
         if (entry == null) {
-            throw new IllegalArgumentException("Skill 不存在: " + skillName);
+            throw new BizException(HmeErrorCode.SKILL_NOT_FOUND, "Skill 不存在: " + skillName);
         }
         return toSkillInfo(entry);
     }
@@ -165,7 +167,7 @@ public class TdAgentSkillService {
     public TdAgentSkillInfo setSkillEnabled(String userId, String skillName, boolean enabled) {
         SkillEntry entry = buildMergedSkillEntries(userId).get(skillName);
         if (entry == null) {
-            throw new IllegalArgumentException("Skill 不存在: " + skillName);
+            throw new BizException(HmeErrorCode.SKILL_NOT_FOUND, "Skill 不存在: " + skillName);
         }
         upsertSkillState(userId, skillName, enabled);
         return getSkill(userId, skillName);
@@ -290,13 +292,13 @@ public class TdAgentSkillService {
         try (ClasspathSkillRepository repository = new ClasspathSkillRepository(classpathRoot)) {
             return new ArrayList<>(repository.getAllSkills());
         } catch (IOException ex) {
-            throw new IllegalStateException("加载内置 Skill 失败: " + classpathRoot, ex);
+            throw new BizException(HmeErrorCode.SKILL_BUILTIN_LOAD_ERROR, ex);
         }
     }
 
     private List<AgentSkill> loadFromFileSystem(Path location) {
         if (!Files.exists(location)) {
-            throw new IllegalStateException("Skill 目录不存在: " + location);
+            throw new BizException(HmeErrorCode.SKILL_DIRECTORY_NOT_FOUND, "Skill 目录不存在: " + location);
         }
         return SkillFileSystemHelper.getAllSkills(location, BUILTIN_SOURCE);
     }
@@ -330,11 +332,11 @@ public class TdAgentSkillService {
 
     private String normalizeResourcePath(String resourcePath) {
         if (resourcePath == null || resourcePath.isBlank()) {
-            throw new IllegalArgumentException("Skill 资源路径不能为空。");
+            throw new BizException(HmeErrorCode.SKILL_RESOURCE_PATH_EMPTY);
         }
         String normalized = resourcePath.replace('\\', '/').trim();
         if (normalized.startsWith("/") || normalized.contains("..")) {
-            throw new IllegalArgumentException("Skill 资源路径不允许越级或绝对路径。");
+            throw new BizException(HmeErrorCode.SKILL_RESOURCE_PATH_INVALID);
         }
         return normalized;
     }

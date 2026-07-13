@@ -43,6 +43,6 @@ class SysUserControllerTest {
         mockMvc.perform(get("/api/sys-users/{id}", 1L)
                         .with(user("admin").roles("USER", "ADMIN")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(200));
+                .andExpect(jsonPath("$.code").value("HME_SYSTEM_000"));
     }
 }

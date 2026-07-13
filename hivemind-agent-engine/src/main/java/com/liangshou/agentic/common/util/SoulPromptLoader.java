@@ -14,7 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static com.liangshou.agentic.common.exceptions.ErrorCodeEnum.SOUL_LOADER_ERROR;
+import static com.liangshou.agentic.common.exceptions.HmeErrorCode.AGENT_SOUL_LOAD_ERROR;
 
 /**
  * SOUL 提示词加载器 - 从类路径加载 Agent 的系统提示词文件。
@@ -81,7 +81,7 @@ public class SoulPromptLoader {
         try (InputStream inputStream = SoulPromptLoader.class.getClassLoader().getResourceAsStream(fileName)) {
             if (inputStream == null) {
                 LOGGER.error("找不到 SOUL 文件：{}", fileName);
-                throw new BizException(SOUL_LOADER_ERROR);
+                throw new BizException(AGENT_SOUL_LOAD_ERROR);
             }
 
             // 步骤 4: 读取并转换为字符串
@@ -91,7 +91,7 @@ public class SoulPromptLoader {
             return content;
         } catch (IOException exception) {
             LOGGER.error("加载 SOUL 文件失败：{}", fileName);
-            throw new BizException(SOUL_LOADER_ERROR, exception);
+            throw new BizException(AGENT_SOUL_LOAD_ERROR, exception);
         }
     }
 
@@ -150,7 +150,7 @@ public class SoulPromptLoader {
 
         } catch (IOException e) {
             LOGGER.error("扫描 SOUL 配置失败");
-            throw new BizException(SOUL_LOADER_ERROR, e);
+            throw new BizException(AGENT_SOUL_LOAD_ERROR, e);
         }
     }
 

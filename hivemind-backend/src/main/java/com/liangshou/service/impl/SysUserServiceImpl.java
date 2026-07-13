@@ -1,6 +1,8 @@
 package com.liangshou.service.impl;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.liangshou.agentic.common.exceptions.BizException;
+import com.liangshou.common.HmeBackendErrorCode;
 import com.liangshou.common.utils.PageResult;
 import com.liangshou.infrastructure.datasource.po.SysUserPO;
 import com.liangshou.infrastructure.datasource.support.ISysUserSupport;
@@ -49,7 +51,7 @@ public class SysUserServiceImpl implements ISysUserService {
     public SysUserVO register(SysUserDTO dto) {
         String userId = normalizeRequired(dto.getUserId(), "userId 不能为空");
         if (support.lambdaQuery().eq(SysUserPO::getUserId, userId).exists()) {
-            throw new IllegalArgumentException("userId 已存在");
+            throw new BizException(HmeBackendErrorCode.USER_ID_ALREADY_EXISTS);
         }
 
         SysUserPO po = new SysUserPO();
@@ -97,15 +99,15 @@ public class SysUserServiceImpl implements ISysUserService {
     @Transactional(rollbackFor = Exception.class)
     public boolean update(SysUserDTO dto) {
         if (dto.getId() == null) {
-            throw new IllegalArgumentException("id 不能为空");
+            throw new BizException(HmeBackendErrorCode.USER_ID_EMPTY);
         }
         SysUserPO current = support.getById(dto.getId());
         if (current == null) {
-            throw new IllegalArgumentException("用户不存在");
+            throw new BizException(HmeBackendErrorCode.USER_NOT_FOUND);
         }
         if (dto.getUserId() != null && !dto.getUserId().isBlank() && !dto.getUserId().equals(current.getUserId())) {
             if (support.lambdaQuery().eq(SysUserPO::getUserId, dto.getUserId().trim()).exists()) {
-                throw new IllegalArgumentException("userId 已存在");
+                throw new BizException(HmeBackendErrorCode.USER_ID_ALREADY_EXISTS);
             }
             current.setUserId(dto.getUserId().trim());
         }
@@ -132,7 +134,7 @@ public class SysUserServiceImpl implements ISysUserService {
                 .eq(SysUserPO::getUserId, normalizeRequired(userId, "userId 不能为空"))
                 .one();
         if (po == null) {
-            throw new IllegalArgumentException("用户不存在");
+            throw new BizException(HmeBackendErrorCode.USER_NOT_FOUND);
         }
         return po;
     }
@@ -153,7 +155,7 @@ public class SysUserServiceImpl implements ISysUserService {
 
     private String normalizeRequired(String value, String message) {
         if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException(message);
+            throw new BizException(HmeBackendErrorCode.USER_UPDATE_FAILED, message);
         }
         return value.trim();
     }

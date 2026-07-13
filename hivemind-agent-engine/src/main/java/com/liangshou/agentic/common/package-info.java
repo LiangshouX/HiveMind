@@ -6,7 +6,7 @@
  * <h2>子包说明</h2>
  * <ul>
  *   <li><b>config/</b> - Spring 配置类（JacksonConfig、MongoDbDiagnosticConfig）</li>
- *   <li><b>exception/</b> - 通用异常定义（BizException、ErrorCodeEnum、IErrorCode）</li>
+ *   <li><b>exception/</b> - 通用异常定义（BizException、HmeErrorCode、IErrorCode）</li>
  *   <li><b>util/</b> - 通用工具类（MessageMapper、SoulPromptLoader）</li>
  * </ul>
  *

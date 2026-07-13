@@ -1,5 +1,7 @@
 package com.liangshou.agentic.common.util;
 
+import com.liangshou.agentic.common.exceptions.BizException;
+import com.liangshou.agentic.common.exceptions.HmeErrorCode;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -25,7 +27,7 @@ public final class SecurityUtils {
     public static String getCurrentUserId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null) {
-            throw new IllegalStateException("未获取到当前认证用户信息");
+            throw new BizException(HmeErrorCode.AGENT_USER_NOT_FOUND);
         }
 
         Object principal = authentication.getPrincipal();
@@ -41,6 +43,6 @@ public final class SecurityUtils {
             return principal.toString();
         }
 
-        throw new IllegalStateException("无法从认证上下文中获取用户标识");
+        throw new BizException(HmeErrorCode.AGENT_USER_NOT_FOUND);
     }
 }

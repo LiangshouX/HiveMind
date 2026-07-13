@@ -1,7 +1,8 @@
 package com.liangshou.common.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.liangshou.common.utils.Result;
+import com.liangshou.agentic.common.utils.Result;
+import com.liangshou.common.HmeBackendErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -74,11 +75,10 @@ public class SecurityConfig {
      *
      * @param authConfig Spring Security 认证配置
      * @return 认证管理器对象
-     * @throws Exception 配置异常
      * @see AuthenticationManager
      */
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) {
         return authConfig.getAuthenticationManager();
     }
 
@@ -97,12 +97,11 @@ public class SecurityConfig {
      *
      * @param http HttpSecurity 配置对象
      * @return 构建完成的安全过滤器链
-     * @throws Exception 配置异常
      * @see SecurityFilterChain
      * @see SessionCreationPolicy#STATELESS
      */
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http) {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -112,14 +111,14 @@ public class SecurityConfig {
                             // 防止在响应已提交时再次写入
                             if (!response.isCommitted()) {
                                 LOGGER.warn("认证失败: {} - {}", request.getRequestURI(), authException.getMessage());
-                                writeErrorResponse(response, 401, Result.error(401, "未登录或登录已过期，请重新登录"));
+                                writeErrorResponse(response, 401, Result.error(HmeBackendErrorCode.AUTH_NOT_LOGGED_IN));
                             }
                         })
                         .accessDeniedHandler((request, response, accessDeniedException) -> {
                             // 防止在响应已提交时再次写入（特别是 SSE 流式响应场景）
                             if (!response.isCommitted()) {
                                 LOGGER.warn("访问被拒绝: " + request.getRequestURI() + " - " + accessDeniedException.getMessage());
-                                writeErrorResponse(response, 403, Result.error(403, "无权访问当前资源，请检查权限配置"));
+                                writeErrorResponse(response, 403, Result.error(HmeBackendErrorCode.AUTH_ACCESS_DENIED));
                             }
                         })
                 )
