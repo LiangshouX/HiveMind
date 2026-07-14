@@ -57,6 +57,6 @@ class TaskReportControllerTest {
 
         mockMvc.perform(get("/api/task-reports/{id}", 1L))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value("HME_SYSTEM_000"));
+                .andExpect(jsonPath("$.code").value("SUCCESS"));
     }
 }

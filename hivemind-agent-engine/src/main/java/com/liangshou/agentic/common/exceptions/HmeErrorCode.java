@@ -38,7 +38,7 @@ public enum HmeErrorCode implements IErrorCode {
     /**
      * 操作成功
      */
-    SUCCESS(200, "HME_SYSTEM_000", "操作成功"),
+    SUCCESS(200, "SUCCESS", "操作成功"),
     /**
      * 系统内部错误
      */

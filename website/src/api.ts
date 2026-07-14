@@ -133,7 +133,7 @@ request.interceptors.request.use(
 // 响应拦截器：错误码处理
 request.interceptors.response.use(
   (response) => {
-    // 假设后端返回 { code: 200, data: ..., message: ... }
+    // 后端返回 { code: "SUCCESS", data: ..., message: ... }
     const res = response.data;
     // 有些接口直接返回数据
     return res;

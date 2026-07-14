@@ -19,7 +19,7 @@ export interface TdAgentStreamEvent {
 }
 
 export interface ApiResult<T> {
-  code: number;
+  code: string;
   message: string;
   data: T;
 }

@@ -9,7 +9,7 @@ class ResultTest {
     @Test
     void testSuccess() {
         Result<String> result = Result.success("ok");
-        assertEquals("HME_SYSTEM_000", result.getCode());
+        assertEquals("SUCCESS", result.getCode());
         assertEquals("Success", result.getMessage());
         assertEquals("ok", result.getData());
 

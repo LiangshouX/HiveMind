@@ -21,7 +21,7 @@ public final class Result<T> implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /**
-     * 业务错误码（如 HME_SYSTEM_000 表示成功）。
+     * 业务错误码。成功时为 {@code "SUCCESS"}，错误时为 {@code HME_{域}_{编号}}。
      */
     private String code;
     /**
@@ -54,7 +54,7 @@ public final class Result<T> implements Serializable {
      */
     public static <T> Result<T> success(T data) {
         Result<T> result = new Result<>();
-        result.setCode("HME_SYSTEM_000");
+        result.setCode("SUCCESS");
         result.setMessage("Success");
         result.setData(data);
         return result;
