@@ -1,6 +1,8 @@
 package com.liangshou.agentic.agents.memory.reme;
 
 import com.liangshou.agentic.agents.ConversationSessionContext;
+import com.liangshou.agentic.common.exceptions.BizException;
+import com.liangshou.agentic.common.exceptions.HmeErrorCode;
 import com.liangshou.agentic.common.config.TdAgentProperties;
 import io.agentscope.core.memory.reme.*;
 import io.agentscope.core.message.Msg;
@@ -220,7 +222,7 @@ public class TdAgentReMeService {
      */
     public String callMcpTool(String toolName, Map<String, Object> arguments, String userId) {
         if (!useMcp) {
-            throw new IllegalStateException("MCP mode is not enabled. Cannot call MCP tool: " + toolName);
+            throw new BizException(HmeErrorCode.MCP_MODE_NOT_ENABLED, "MCP mode is not enabled. Cannot call MCP tool: " + toolName);
         }
         return mcpReMeClient.callToolTextForUser(toolName, arguments, userId);
     }

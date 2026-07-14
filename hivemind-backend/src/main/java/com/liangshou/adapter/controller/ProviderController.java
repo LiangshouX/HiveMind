@@ -1,7 +1,8 @@
 package com.liangshou.adapter.controller;
 
 import com.liangshou.common.utils.PageResult;
-import com.liangshou.common.utils.Result;
+import com.liangshou.agentic.common.utils.Result;
+import com.liangshou.common.HmeBackendErrorCode;
 import com.liangshou.service.IProviderService;
 import com.liangshou.service.dto.ConnectionTestResult;
 import com.liangshou.service.dto.ProviderDTO;
@@ -133,7 +134,7 @@ public class ProviderController {
     @PostMapping("/test-connection")
     public Result<ConnectionTestResult> testConnection(@RequestBody ProviderDTO dto) {
         if (dto.getBaseUrl() == null || dto.getBaseUrl().isBlank()) {
-            return Result.error(400, "缺少 baseUrl");
+            return Result.error(HmeBackendErrorCode.TASK_PROVIDER_BASE_URL_MISSING);
         }
         ConnectionTestResult result = providerService.testConnectionByParams(
                 dto.getModelProviderId(), dto.getBaseUrl(), dto.getApiKey());

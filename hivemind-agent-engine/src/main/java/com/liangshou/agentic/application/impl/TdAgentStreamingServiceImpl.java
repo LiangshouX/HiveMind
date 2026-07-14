@@ -3,6 +3,8 @@ package com.liangshou.agentic.application.impl;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.liangshou.agentic.agents.ConversationSessionContext;
+import com.liangshou.agentic.common.exceptions.BizException;
+import com.liangshou.agentic.common.exceptions.HmeErrorCode;
 import com.liangshou.agentic.agents.TdAgentFactory;
 import com.liangshou.agentic.agents.TdAgentModelFactory;
 import com.liangshou.agentic.agents.TdAgentToolkitFactory;
@@ -645,12 +647,12 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
             // 客户端断开连接是正常情况（如用户中断），使用 WARN 级别
             log.warn("[SSE发送] 客户端可能已断开 - type: {}, error: {}",
                     event.getType(), ex.getMessage());
-            throw new IllegalStateException("Failed to emit SSE event.", ex);
+            throw new BizException(HmeErrorCode.AGENT_SSE_EMIT_ERROR, ex);
         } catch (Exception ex) {
             // 其他异常使用 ERROR 级别
             log.error("[SSE发送] 发送 SSE 事件失败 - type: {}, error: {}",
                     event.getType(), ex.getMessage(), ex);
-            throw new IllegalStateException("Failed to emit SSE event.", ex);
+            throw new BizException(HmeErrorCode.AGENT_SSE_EMIT_ERROR, ex);
         }
     }
 

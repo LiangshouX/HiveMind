@@ -1,7 +1,7 @@
 package com.liangshou.adapter.controller;
 
 import com.liangshou.common.utils.JwtUtils;
-import com.liangshou.common.utils.Result;
+import com.liangshou.agentic.common.utils.Result;
 import com.liangshou.service.ISysUserService;
 import com.liangshou.service.dto.SysUserDTO;
 import com.liangshou.service.vo.SysUserVO;

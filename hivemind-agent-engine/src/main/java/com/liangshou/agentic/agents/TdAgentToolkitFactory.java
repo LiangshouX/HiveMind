@@ -6,12 +6,12 @@ import com.liangshou.agentic.agents.guard.approval.ToolApprovalService;
 import com.liangshou.agentic.agents.memory.reme.McpReMeClient;
 import com.liangshou.agentic.agents.memory.reme.TdAgentReMeService;
 import com.liangshou.agentic.agents.sandbox.TdAgentSandboxManager;
-import com.liangshou.agentic.agents.tools.SystemToolRegistry;
 import com.liangshou.agentic.agents.tools.TdAgentBuiltinTools;
-import com.liangshou.agentic.application.IToolConfigService;
+import com.liangshou.agentic.application.IConversationPersistenceService;
 import com.liangshou.agentic.application.dto.ToolConfigDTO;
 import com.liangshou.agentic.common.config.TdAgentProperties;
-import com.liangshou.agentic.application.IConversationPersistenceService;
+import com.liangshou.agentic.common.exceptions.BizException;
+import com.liangshou.agentic.common.exceptions.HmeErrorCode;
 import com.liangshou.agentic.common.util.ToolConfigProvider;
 import io.agentscope.core.tool.AgentTool;
 import io.agentscope.core.tool.Toolkit;
@@ -149,7 +149,7 @@ public class TdAgentToolkitFactory {
             }
         } catch (Exception ex) {
             if (properties.getSandbox().isStrictStartup()) {
-                throw new IllegalStateException("Sandbox 工具初始化失败。", ex);
+                throw new BizException(HmeErrorCode.AGENT_SANDBOX_INIT_ERROR, ex);
             }
             log.warn("Sandbox 工具初始化失败，当前请求将退化为内置工具模式: {}", ex.getMessage());
         }

@@ -2,6 +2,7 @@ package com.liangshou.agentic.agents.provider;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.liangshou.agentic.common.config.TdAgentProperties;
+import com.liangshou.agentic.common.exceptions.BizException;
 import com.liangshou.agentic.domain.shared.enums.TdAgentProviderType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -77,7 +78,7 @@ class TdAgentProviderRegistryTest {
             TdAgentProviderRegistry registry = new TdAgentProviderRegistry(
                     properties, objectMapper, resourceLoader, null);
 
-            assertThrows(IllegalStateException.class, registry::initialize);
+            assertThrows(BizException.class, registry::initialize);
         }
 
         @Test
@@ -88,7 +89,7 @@ class TdAgentProviderRegistryTest {
             TdAgentProviderRegistry registry = new TdAgentProviderRegistry(
                     properties, objectMapper, resourceLoader, null);
 
-            assertThrows(IllegalStateException.class, registry::initialize);
+            assertThrows(BizException.class, registry::initialize);
         }
 
         @Test
@@ -108,7 +109,7 @@ class TdAgentProviderRegistryTest {
             TdAgentProviderRegistry registry = new TdAgentProviderRegistry(
                     properties, objectMapper, resourceLoader, null);
 
-            assertThrows(IllegalStateException.class, registry::initialize);
+            assertThrows(BizException.class, registry::initialize);
         }
 
         @Test
@@ -128,7 +129,7 @@ class TdAgentProviderRegistryTest {
             TdAgentProviderRegistry registry = new TdAgentProviderRegistry(
                     properties, objectMapper, resourceLoader, null);
 
-            assertThrows(IllegalStateException.class, registry::initialize);
+            assertThrows(BizException.class, registry::initialize);
         }
 
         @Test
@@ -156,7 +157,7 @@ class TdAgentProviderRegistryTest {
             TdAgentProviderRegistry registry = new TdAgentProviderRegistry(
                     properties, objectMapper, resourceLoader, null);
 
-            assertThrows(IllegalStateException.class, registry::initialize);
+            assertThrows(BizException.class, registry::initialize);
         }
 
         @Test
@@ -177,7 +178,7 @@ class TdAgentProviderRegistryTest {
             TdAgentProviderRegistry registry = new TdAgentProviderRegistry(
                     properties, objectMapper, resourceLoader, null);
 
-            assertThrows(IllegalArgumentException.class, registry::initialize);
+            assertThrows(BizException.class, registry::initialize);
         }
     }
 
@@ -245,7 +246,7 @@ class TdAgentProviderRegistryTest {
                     properties, objectMapper, resourceLoader, null);
             registry.initialize();
 
-            assertThrows(IllegalStateException.class, registry::resolveConfiguredModel);
+            assertThrows(BizException.class, registry::resolveConfiguredModel);
         }
 
         @Test
@@ -273,7 +274,7 @@ class TdAgentProviderRegistryTest {
                     properties, objectMapper, resourceLoader, null);
             registry.initialize();
 
-            assertThrows(IllegalStateException.class, registry::resolveConfiguredModel);
+            assertThrows(BizException.class, registry::resolveConfiguredModel);
         }
 
         @Test
@@ -302,7 +303,7 @@ class TdAgentProviderRegistryTest {
                     properties, objectMapper, resourceLoader, null);
             registry.initialize();
 
-            assertThrows(IllegalStateException.class, registry::resolveConfiguredModel);
+            assertThrows(BizException.class, registry::resolveConfiguredModel);
         }
 
         @Test
@@ -325,7 +326,7 @@ class TdAgentProviderRegistryTest {
                     properties, objectMapper, resourceLoader, null);
             registry.initialize();
 
-            assertThrows(IllegalStateException.class, registry::resolveConfiguredModel);
+            assertThrows(BizException.class, registry::resolveConfiguredModel);
         }
 
         @Test
@@ -699,7 +700,7 @@ class TdAgentProviderRegistryTest {
                     properties, objectMapper, resourceLoader, null);
             registry.initialize();
 
-            assertThrows(IllegalStateException.class, registry::resolveConfiguredModel);
+            assertThrows(BizException.class, registry::resolveConfiguredModel);
 
             Thread.sleep(20L);
             Files.writeString(
@@ -909,7 +910,7 @@ class TdAgentProviderRegistryTest {
 
             // 环境变量 DASHSCOPE_API_KEY 未设置时，占位符解析为 null，
             // resolveConfiguredModel() 应抛出 API Key 未配置的异常
-            assertThrows(IllegalStateException.class, registry::resolveConfiguredModel);
+            assertThrows(BizException.class, registry::resolveConfiguredModel);
         }
     }
 

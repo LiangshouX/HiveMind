@@ -3,7 +3,7 @@ package com.liangshou.adapter.controller;
 import com.liangshou.service.ISysUserService;
 import com.liangshou.service.dto.SysUserDTO;
 import com.liangshou.service.vo.SysUserVO;
-import com.liangshou.common.utils.Result;
+import com.liangshou.agentic.common.utils.Result;
 import com.liangshou.common.utils.PageResult;
 import org.springframework.web.bind.annotation.*;
 import io.swagger.v3.oas.annotations.Operation;
@@ -12,7 +12,7 @@ import lombok.RequiredArgsConstructor;
 
 /**
  * SysUser 控制器
- *
+ * <p>
  * 提供 SysUser 相关的 RESTful API 接口
  */
 @Tag(name = "SysUser API", description = "SysUser 管理相关接口")

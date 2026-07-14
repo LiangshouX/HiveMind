@@ -31,12 +31,6 @@ RUN mkdir -p /workspace/session /workspace/daily /workspace/digest /workspace/me
 # Expose port
 EXPOSE 8002
 
-# Environment variable defaults
-ENV HTTP_PORT=8002
-ENV LOG_LEVEL=INFO
-ENV REME_BACKEND=mcp
-ENV MCP_TRANSPORT=sse
-
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=40s \
     CMD curl -sf http://localhost:8002/ || exit 1

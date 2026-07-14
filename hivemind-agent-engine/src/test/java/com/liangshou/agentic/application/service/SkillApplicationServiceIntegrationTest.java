@@ -1,5 +1,6 @@
 package com.liangshou.agentic.application.service;
 
+import com.liangshou.agentic.common.exceptions.BizException;
 import com.liangshou.agentic.infrastructure.mysql.po.SkillMetaManagePO;
 import com.liangshou.agentic.infrastructure.mysql.support.SkillMetaManageSupport;
 import com.liangshou.agentic.infrastructure.mysql.support.dto.SkillCreateRequest;
@@ -110,7 +111,7 @@ class SkillApplicationServiceIntegrationTest {
                 .thenReturn(new SkillMetaManagePO());
 
         // When / Then
-        assertThrows(IllegalArgumentException.class, () -> {
+        assertThrows(BizException.class, () -> {
             skillAppService.createSkill(userId, request);
         });
     }
@@ -164,7 +165,7 @@ class SkillApplicationServiceIntegrationTest {
         when(fileStorageService.versionExists(userId, skillId, "1.0.0")).thenReturn(true);
 
         // When / Then
-        assertThrows(IllegalArgumentException.class, () -> {
+        assertThrows(BizException.class, () -> {
             skillAppService.updateSkill(userId, skillId, request);
         });
     }
@@ -264,7 +265,7 @@ class SkillApplicationServiceIntegrationTest {
         when(skillMetaSupport.getById(skillId)).thenReturn(null);
 
         // When / Then
-        assertThrows(IllegalArgumentException.class, () -> {
+        assertThrows(BizException.class, () -> {
             skillAppService.getSkill(userId, skillId);
         });
     }
@@ -282,7 +283,7 @@ class SkillApplicationServiceIntegrationTest {
         when(skillMetaSupport.getById(skillId)).thenReturn(existingSkill);
 
         // When / Then
-        assertThrows(IllegalArgumentException.class, () -> {
+        assertThrows(BizException.class, () -> {
             skillAppService.getSkill(userId, skillId);
         });
     }

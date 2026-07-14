@@ -57,6 +57,6 @@ class SysModelsControllerTest {
 
         mockMvc.perform(get("/api/sys-modelss/{id}", 1L))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(200));
+                .andExpect(jsonPath("$.code").value("HME_SYSTEM_000"));
     }
 }

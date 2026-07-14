@@ -2,6 +2,8 @@ package com.liangshou.agentic.agents.provider;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.liangshou.agentic.common.exceptions.BizException;
+import com.liangshou.agentic.common.exceptions.HmeErrorCode;
 import com.liangshou.agentic.common.config.TdAgentProperties;
 import com.liangshou.agentic.domain.shared.enums.TdAgentProviderType;
 import com.liangshou.agentic.infrastructure.provider.DbProviderConfigLoader;
@@ -103,14 +105,14 @@ public class TdAgentProviderRegistry {
         String providerId = normalize(modelProperties.getProviderId(), "dashscope");
         TdAgentProviderDescriptor provider = snapshot.providersById().get(providerId);
         if (provider == null) {
-            throw new IllegalStateException("未找到内置模型供应商: " + providerId);
+            throw new BizException(HmeErrorCode.PROVIDER_BUILTIN_NOT_FOUND, "未找到内置模型供应商: " + providerId);
         }
         String configuredModelId =
                 firstNonBlank(modelProperties.getModelId(), modelProperties.getModelName());
         TdAgentModelDescriptor model = resolveModel(provider, configuredModelId);
         String apiKey = firstNonBlank(modelProperties.getApiKey(), provider.getApiKey());
         if (apiKey == null || apiKey.isBlank()) {
-            throw new IllegalStateException("模型 API Key 未配置，当前供应商: " + provider.getId());
+            throw new BizException(HmeErrorCode.PROVIDER_API_KEY_MISSING, "模型 API Key 未配置，当前供应商: " + provider.getId());
         }
         return TdAgentResolvedModelConfig.builder()
                 .providerId(provider.getId())
@@ -155,7 +157,7 @@ public class TdAgentProviderRegistry {
 
         TdAgentProviderDescriptor provider = snapshot.providersById().get(resolvedProviderId);
         if (provider == null) {
-            throw new IllegalStateException("未找到内置模型供应商: " + resolvedProviderId);
+            throw new BizException(HmeErrorCode.PROVIDER_BUILTIN_NOT_FOUND, "未找到内置模型供应商: " + resolvedProviderId);
         }
 
         // 使用指定的 modelId，或回退到全局配置
@@ -165,7 +167,7 @@ public class TdAgentProviderRegistry {
         // 使用供应商自身的凭证
         String apiKey = firstNonBlank(provider.getApiKey());
         if (apiKey == null || apiKey.isBlank()) {
-            throw new IllegalStateException("模型 API Key 未配置，当前供应商: " + provider.getId());
+            throw new BizException(HmeErrorCode.PROVIDER_API_KEY_MISSING, "模型 API Key 未配置，当前供应商: " + provider.getId());
         }
 
         return TdAgentResolvedModelConfig.builder()
@@ -206,7 +208,7 @@ public class TdAgentProviderRegistry {
         // 1. 从 DB 加载供应商描述符
         TdAgentProviderDescriptor provider = loadProviderFromDb(userId, providerId);
         if (provider == null) {
-            throw new IllegalStateException("用户未配置任何激活的模型供应商，请先在 /model-config 页面配置");
+            throw new BizException(HmeErrorCode.PROVIDER_NO_ACTIVE);
         }
 
         // 2. 解析模型
@@ -217,7 +219,7 @@ public class TdAgentProviderRegistry {
         // 3. 验证 API Key
         String apiKey = provider.getApiKey();
         if (apiKey == null || apiKey.isBlank()) {
-            throw new IllegalStateException("供应商 API Key 未配置: " + provider.getId());
+            throw new BizException(HmeErrorCode.PROVIDER_API_KEY_NOT_CONFIGURED, "供应商 API Key 未配置: " + provider.getId());
         }
 
         // 4. 从全局 YAML 配置读取行为参数（非供应商凭证类）
@@ -300,7 +302,7 @@ public class TdAgentProviderRegistry {
         Resource resource =
                 resourceLoader.getResource(properties.getModel().getProviderConfigLocation());
         if (!resource.exists()) {
-            throw new IllegalStateException(
+            throw new BizException(HmeErrorCode.PROVIDER_BUILTIN_NOT_FOUND,
                     "内置模型目录文件不存在: " + properties.getModel().getProviderConfigLocation());
         }
         try (InputStream inputStream = resource.getInputStream()) {
@@ -309,14 +311,14 @@ public class TdAgentProviderRegistry {
                             .map(this::resolvePlaceholders)
                             .toList();
             if (providers.isEmpty()) {
-                throw new IllegalStateException("内置模型目录中未配置任何供应商。");
+                throw new BizException(HmeErrorCode.PROVIDER_BUILTIN_EMPTY);
             }
             Map<String, TdAgentProviderDescriptor> providersById = new LinkedHashMap<>();
             for (TdAgentProviderDescriptor provider : providers) {
                 validateProvider(provider);
                 String providerId = normalize(provider.getId(), null);
                 if (providersById.putIfAbsent(providerId, provider) != null) {
-                    throw new IllegalStateException("内置模型目录中存在重复的供应商 id: " + providerId);
+                    throw new BizException(HmeErrorCode.PROVIDER_BUILTIN_DUPLICATE, "内置模型目录中存在重复的供应商 id: " + providerId);
                 }
             }
             ProviderCatalogSnapshot snapshot =
@@ -328,14 +330,14 @@ public class TdAgentProviderRegistry {
             snapshotRef.set(snapshot);
             return snapshot;
         } catch (IOException ex) {
-            throw new IllegalStateException("加载内置模型目录失败。", ex);
+            throw new BizException(HmeErrorCode.PROVIDER_BUILTIN_LOAD_ERROR, ex);
         }
     }
 
     private TdAgentModelDescriptor resolveModel(
             TdAgentProviderDescriptor provider, String configuredModelId) {
         if (provider.getModels() == null || provider.getModels().isEmpty()) {
-            throw new IllegalStateException("供应商未配置任何模型: " + provider.getId());
+            throw new BizException(HmeErrorCode.PROVIDER_NO_MODELS, "供应商未配置任何模型: " + provider.getId());
         }
         if (configuredModelId == null || configuredModelId.isBlank()) {
             return provider.getModels().get(0);
@@ -345,7 +347,7 @@ public class TdAgentProviderRegistry {
                 .findFirst()
                 .orElseThrow(
                         () ->
-                                new IllegalStateException(
+                                new BizException(HmeErrorCode.PROVIDER_NO_MODELS,
                                         "供应商 "
                                                 + provider.getId()
                                                 + " 未配置模型: "
@@ -387,10 +389,10 @@ public class TdAgentProviderRegistry {
 
     private void validateProvider(TdAgentProviderDescriptor provider) {
         if (provider.getId() == null || provider.getId().isBlank()) {
-            throw new IllegalStateException("内置模型目录存在缺少 id 的供应商配置。");
+            throw new BizException(HmeErrorCode.PROVIDER_BUILTIN_MISSING_ID);
         }
         if (provider.getProviderType() == null || provider.getProviderType().isBlank()) {
-            throw new IllegalStateException("供应商未配置 providerType: " + provider.getId());
+            throw new BizException(HmeErrorCode.PROVIDER_BUILTIN_MISSING_TYPE, "供应商未配置 providerType: " + provider.getId());
         }
         TdAgentProviderType.fromValue(provider.getProviderType());
     }

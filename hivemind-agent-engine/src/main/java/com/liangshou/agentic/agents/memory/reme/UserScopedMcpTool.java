@@ -1,5 +1,7 @@
 package com.liangshou.agentic.agents.memory.reme;
 
+import com.liangshou.agentic.common.exceptions.BizException;
+import com.liangshou.agentic.common.exceptions.HmeErrorCode;
 import io.agentscope.core.message.ContentBlock;
 import io.agentscope.core.message.TextBlock;
 import io.agentscope.core.message.ToolResultBlock;
@@ -26,14 +28,18 @@ public class UserScopedMcpTool extends McpTool {
 
     private static final Logger log = LoggerFactory.getLogger(UserScopedMcpTool.class);
 
-    /** 需要添加用户路径前缀的文件操作工具 */
+    /**
+     * 需要添加用户路径前缀的文件操作工具
+     */
     private static final Set<String> FILE_PATH_TOOLS = Set.of(
             "read", "write", "edit", "list", "move", "delete",
             "read_image", "daily_write", "daily_list",
             "frontmatter_read", "frontmatter_update", "frontmatter_delete"
     );
 
-    /** 需要过滤搜索结果的工具 */
+    /**
+     * 需要过滤搜索结果的工具
+     */
     private static final Set<String> SEARCH_TOOLS = Set.of("search", "node_search");
 
     private final String userId;
@@ -196,13 +202,13 @@ public class UserScopedMcpTool extends McpTool {
 
     /**
      * 从文本结果中过滤出属于当前用户的内容。
-     *
+     * <p>
      * ReMe 搜索结果格式通常包含文件路径，如：
      * ```
      * [score=0.1234] daily/2025-07-12.md
      * 内容摘要...
      * ```
-     *
+     * <p>
      * 我们需要过滤掉不包含用户目录前缀的结果。
      */
     private String filterTextByUser(String text, String userPrefix) {
@@ -243,7 +249,7 @@ public class UserScopedMcpTool extends McpTool {
             field.setAccessible(true);
             return (McpClientWrapper) field.get(tool);
         } catch (Exception e) {
-            throw new RuntimeException("Failed to get clientWrapper from McpTool", e);
+            throw new BizException(HmeErrorCode.MCP_TOOL_CALL_ERROR, e);
         }
     }
 }

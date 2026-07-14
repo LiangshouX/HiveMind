@@ -43,6 +43,6 @@ class TaskFlowLogControllerTest {
         mockMvc.perform(get("/api/task-flow-logs/{id}", 1L)
                         .with(user("admin").roles("USER", "ADMIN")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(200));
+                .andExpect(jsonPath("$.code").value("HME_SYSTEM_000"));
     }
 }

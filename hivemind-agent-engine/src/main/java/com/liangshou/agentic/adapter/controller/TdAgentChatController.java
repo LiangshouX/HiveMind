@@ -4,23 +4,24 @@ import com.liangshou.agentic.agents.guard.approval.ToolApprovalService;
 import com.liangshou.agentic.agents.provider.TdAgentModelDescriptor;
 import com.liangshou.agentic.agents.provider.TdAgentProviderDescriptor;
 import com.liangshou.agentic.agents.provider.TdAgentProviderRegistry;
-import com.liangshou.agentic.application.ITdAgentStreamingService;
-import com.liangshou.agentic.domain.memory.model.ConversationViewDocument;
 import com.liangshou.agentic.application.ITdAgentChatService;
+import com.liangshou.agentic.application.ITdAgentStreamingService;
 import com.liangshou.agentic.application.dto.*;
+import com.liangshou.agentic.common.exceptions.BizException;
+import com.liangshou.agentic.common.exceptions.HmeErrorCode;
 import com.liangshou.agentic.common.utils.Result;
+import com.liangshou.agentic.domain.memory.model.ConversationViewDocument;
 import com.liangshou.agentic.infrastructure.provider.DbProviderConfigLoader;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.security.Principal;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -152,7 +153,7 @@ public class TdAgentChatController {
         if (title != null) {
             return Result.success(title);
         }
-        return Result.error(500, "标题生成失败");
+        return Result.error(HmeErrorCode.AGENT_TITLE_GENERATE_ERROR);
     }
 
     /**
@@ -223,7 +224,7 @@ public class TdAgentChatController {
 
     private String currentUserId(Principal principal) {
         if (principal == null || principal.getName() == null || principal.getName().isBlank()) {
-            throw new IllegalArgumentException("未获取到当前登录用户");
+            throw new BizException(HmeErrorCode.AGENT_USER_NOT_FOUND);
         }
         return principal.getName();
     }

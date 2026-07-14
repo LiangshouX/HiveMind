@@ -1,5 +1,7 @@
 package com.liangshou.agentic.agents.memory.reme;
 
+import com.liangshou.agentic.common.exceptions.BizException;
+import com.liangshou.agentic.common.exceptions.HmeErrorCode;
 import io.agentscope.core.tool.mcp.McpClientBuilder;
 import io.agentscope.core.tool.mcp.McpSyncClientWrapper;
 import io.agentscope.core.tool.mcp.McpTool;
@@ -241,7 +243,7 @@ public class McpReMeClient {
 
     private void ensureInitialized() {
         if (!initialized) {
-            throw new IllegalStateException("ReMe MCP client not initialized");
+            throw new BizException(HmeErrorCode.MCP_CLIENT_NOT_INITIALIZED);
         }
     }
 

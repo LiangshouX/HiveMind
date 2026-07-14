@@ -1,8 +1,9 @@
 package com.liangshou.service.impl;
 
 import cn.hutool.crypto.symmetric.AES;
-import cn.hutool.crypto.symmetric.SymmetricAlgorithm;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.liangshou.agentic.common.exceptions.BizException;
+import com.liangshou.common.HmeBackendErrorCode;
 import com.liangshou.common.utils.PageResult;
 import com.liangshou.infrastructure.datasource.po.SysModelsPO;
 import com.liangshou.infrastructure.datasource.support.ISysModelsSupport;
@@ -16,7 +17,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
-import java.util.Base64;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -94,7 +94,7 @@ public class SysModelsServiceImpl implements ISysModelsService {
                 .eq(SysModelsPO::getUserId, userId)
                 .one();
         if (po == null) {
-            throw new RuntimeException("记录不存在或无权限修改");
+            throw new BizException(HmeBackendErrorCode.TASK_RECORD_NOT_FOUND_UPDATE);
         }
         if (dto.getProviderName() != null) po.setProviderName(dto.getProviderName());
         if (dto.getBaseUrl() != null) po.setBaseUrl(dto.getBaseUrl());
@@ -123,7 +123,7 @@ public class SysModelsServiceImpl implements ISysModelsService {
                 .eq(SysModelsPO::getUserId, userId)
                 .one();
         if (po == null) {
-            throw new RuntimeException("记录不存在或无权限修改");
+            throw new BizException(HmeBackendErrorCode.TASK_RECORD_NOT_FOUND_UPDATE);
         }
         po.setIsProviderActivated(activated ? 1 : 0);
         return support.updateById(po);
@@ -137,7 +137,7 @@ public class SysModelsServiceImpl implements ISysModelsService {
                 .eq(SysModelsPO::getUserId, userId)
                 .one();
         if (po == null) {
-            throw new RuntimeException("记录不存在或无权限修改");
+            throw new BizException(HmeBackendErrorCode.TASK_RECORD_NOT_FOUND_UPDATE);
         }
         po.setModelId(modelId);
         po.setModelName(modelName);
@@ -154,10 +154,10 @@ public class SysModelsServiceImpl implements ISysModelsService {
                 .eq(SysModelsPO::getUserId, userId)
                 .one();
         if (po == null) {
-            throw new RuntimeException("记录不存在或无权限删除");
+            throw new BizException(HmeBackendErrorCode.TASK_RECORD_NOT_FOUND_DELETE);
         }
         if (po.getIsSystemBuiltIn() != null && po.getIsSystemBuiltIn() == 1) {
-            throw new RuntimeException("系统内置 Provider 不可删除");
+            throw new BizException(HmeBackendErrorCode.TASK_PROVIDER_BUILTIN_NOT_DELETABLE);
         }
         return support.removeById(id);
     }
@@ -215,7 +215,7 @@ public class SysModelsServiceImpl implements ISysModelsService {
             AES aes = getAES();
             return aes.encryptBase64(plainKey);
         } catch (Exception e) {
-            throw new RuntimeException("API Key 加密失败", e);
+            throw new BizException(HmeBackendErrorCode.TASK_API_KEY_ENCRYPT_ERROR, e);
         }
     }
 
@@ -225,7 +225,7 @@ public class SysModelsServiceImpl implements ISysModelsService {
             AES aes = getAES();
             return aes.decryptStr(encryptedKey);
         } catch (Exception e) {
-            throw new RuntimeException("API Key 解密失败", e);
+            throw new BizException(HmeBackendErrorCode.TASK_API_KEY_DECRYPT_ERROR, e);
         }
     }
 

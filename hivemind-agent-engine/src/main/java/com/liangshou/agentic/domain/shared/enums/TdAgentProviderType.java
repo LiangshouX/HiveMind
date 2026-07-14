@@ -1,5 +1,7 @@
 package com.liangshou.agentic.domain.shared.enums;
 
+import com.liangshou.agentic.common.exceptions.BizException;
+import com.liangshou.agentic.common.exceptions.HmeErrorCode;
 import java.util.Locale;
 
 /**
@@ -28,12 +30,12 @@ public enum TdAgentProviderType {
      */
     public static TdAgentProviderType fromValue(String value) {
         if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException("模型供应商类型不能为空。");
+            throw new BizException(HmeErrorCode.PARAM_ERROR, "模型供应商类型不能为空。");
         }
         return switch (value.trim().toLowerCase(Locale.ROOT)) {
             case "dashscope" -> DASHSCOPE;
             case "openai", "openai-compatible", "openai_compatible" -> OPENAI;
-            default -> throw new IllegalArgumentException("不支持的模型供应商类型: " + value);
+            default -> throw new BizException(HmeErrorCode.PROVIDER_UNSUPPORTED_TYPE, "不支持的模型供应商类型: " + value);
         };
     }
 }

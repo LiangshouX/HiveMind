@@ -1,6 +1,8 @@
 package com.liangshou.service.impl;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.liangshou.agentic.common.exceptions.BizException;
+import com.liangshou.common.HmeBackendErrorCode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.liangshou.common.utils.PageResult;
 import com.liangshou.common.utils.SecurityUtils;
@@ -64,7 +66,7 @@ public class ProviderServiceImpl implements IProviderService {
         String userId = SecurityUtils.getCurrentUserId();
         com.liangshou.service.vo.SysModelsVO vo = sysModelsService.getById(userId, id);
         if (vo == null) {
-            throw new IllegalArgumentException("Provider 不存在或无权限访问");
+            throw new BizException(HmeBackendErrorCode.TASK_PROVIDER_NOT_FOUND);
         }
         return toProviderVO(vo);
     }
@@ -122,7 +124,7 @@ public class ProviderServiceImpl implements IProviderService {
                 .eq(SysModelsPO::getIsProviderActivated, 1)
                 .count();
         if (activatedCount <= 1) {
-            throw new IllegalStateException("至少需要保留一个激活的 Provider，无法停用最后一个");
+            throw new BizException(HmeBackendErrorCode.TASK_PROVIDER_LAST_ACTIVE);
         }
 
         return sysModelsService.deactivate(userId, id);
@@ -212,7 +214,7 @@ public class ProviderServiceImpl implements IProviderService {
             }
         } catch (Exception e) {
             log.error("内置 Provider 初始化失败 - userId: {}, error: {}", userId, e.getMessage(), e);
-            throw new RuntimeException("内置 Provider 初始化失败: " + e.getMessage(), e);
+            throw new BizException(HmeBackendErrorCode.TASK_PROVIDER_BUILTIN_INIT_ERROR, e);
         }
 
         return result;

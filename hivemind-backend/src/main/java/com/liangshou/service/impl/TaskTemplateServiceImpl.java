@@ -1,6 +1,8 @@
 package com.liangshou.service.impl;
 
 import com.liangshou.agentic.application.ITdAgentChatService;
+import com.liangshou.agentic.common.exceptions.BizException;
+import com.liangshou.common.HmeBackendErrorCode;
 import com.liangshou.agentic.application.dto.ChatRequest;
 import com.liangshou.agentic.application.dto.ChatResponse;
 import com.liangshou.service.ITaskTemplateService;
@@ -55,12 +57,12 @@ public class TaskTemplateServiceImpl implements ITaskTemplateService {
     @Override
     public TaskTemplateDTO getTemplate(String templateId, String userId) {
         TaskTemplateDocument doc = templateRepository.findByTemplateId(templateId)
-                .orElseThrow(() -> new IllegalArgumentException("模板不存在: " + templateId));
+                .orElseThrow(() -> new BizException(HmeBackendErrorCode.TASK_TEMPLATE_NOT_FOUND));
 
         // 用户自建模板需要校验权限
         if (doc.getType() == TemplateType.USER) {
             if (userId == null || !userId.equals(doc.getUserId())) {
-                throw new IllegalArgumentException("无权访问该模板");
+                throw new BizException(HmeBackendErrorCode.TASK_TEMPLATE_ACCESS_DENIED);
             }
         }
 
@@ -96,14 +98,14 @@ public class TaskTemplateServiceImpl implements ITaskTemplateService {
     @Override
     public TaskTemplateDTO updateTemplate(String templateId, String userId, TaskTemplateUpdateCommand command) {
         TaskTemplateDocument doc = templateRepository.findByTemplateId(templateId)
-                .orElseThrow(() -> new IllegalArgumentException("模板不存在: " + templateId));
+                .orElseThrow(() -> new BizException(HmeBackendErrorCode.TASK_TEMPLATE_NOT_FOUND));
 
         // 只能更新用户自建模板
         if (doc.getType() == TemplateType.SYSTEM) {
-            throw new IllegalStateException("系统内置模板不可编辑");
+            throw new BizException(HmeBackendErrorCode.TASK_TEMPLATE_BUILTIN_NOT_EDITABLE);
         }
         if (userId == null || !userId.equals(doc.getUserId())) {
-            throw new IllegalArgumentException("无权编辑该模板");
+            throw new BizException(HmeBackendErrorCode.TASK_TEMPLATE_EDIT_DENIED);
         }
 
         // 更新字段
@@ -126,13 +128,13 @@ public class TaskTemplateServiceImpl implements ITaskTemplateService {
     @Override
     public void deleteTemplate(String templateId, String userId) {
         TaskTemplateDocument doc = templateRepository.findByTemplateId(templateId)
-                .orElseThrow(() -> new IllegalArgumentException("模板不存在: " + templateId));
+                .orElseThrow(() -> new BizException(HmeBackendErrorCode.TASK_TEMPLATE_NOT_FOUND));
 
         if (doc.getType() == TemplateType.SYSTEM) {
-            throw new IllegalStateException("系统内置模板不可删除");
+            throw new BizException(HmeBackendErrorCode.TASK_TEMPLATE_BUILTIN_NOT_DELETABLE);
         }
         if (userId == null || !userId.equals(doc.getUserId())) {
-            throw new IllegalArgumentException("无权删除该模板");
+            throw new BizException(HmeBackendErrorCode.TASK_TEMPLATE_DELETE_DENIED);
         }
 
         templateRepository.delete(doc);
@@ -143,12 +145,12 @@ public class TaskTemplateServiceImpl implements ITaskTemplateService {
     public TaskExecuteResult executeTemplate(String templateId, String userId, TaskExecuteCommand command) {
         // 1. 获取模板
         TaskTemplateDocument doc = templateRepository.findByTemplateId(templateId)
-                .orElseThrow(() -> new IllegalArgumentException("模板不存在: " + templateId));
+                .orElseThrow(() -> new BizException(HmeBackendErrorCode.TASK_TEMPLATE_NOT_FOUND));
 
         // 2. 替换参数，生成最终命令
         String finalCommand = buildCommand(doc, command.getParams());
         if (finalCommand.isBlank()) {
-            throw new IllegalArgumentException("参数替换后命令为空");
+            throw new BizException(HmeBackendErrorCode.TASK_TEMPLATE_PARAM_EMPTY);
         }
 
         // 3. 生成 session ID
@@ -171,7 +173,7 @@ public class TaskTemplateServiceImpl implements ITaskTemplateService {
             return new TaskExecuteResult(resultSessionId, chatRequest.getTitle(), "任务已下达");
         } catch (Exception e) {
             log.error("下旨失败: {}", e.getMessage(), e);
-            throw new RuntimeException("下旨失败: " + e.getMessage(), e);
+            throw new BizException(HmeBackendErrorCode.TASK_EXECUTION_FAILED, e);
         }
     }
 
@@ -187,7 +189,7 @@ public class TaskTemplateServiceImpl implements ITaskTemplateService {
                     value = p.getDefaultValue();
                 }
                 if (p.isRequired() && (value == null || value.isBlank())) {
-                    throw new IllegalArgumentException("缺少必填参数: " + p.getLabel());
+                    throw new BizException(HmeBackendErrorCode.TASK_TEMPLATE_PARAM_MISSING, "缺少必填参数: " + p.getLabel());
                 }
                 cmd = cmd.replace("{" + p.getKey() + "}", value != null ? value : "");
             }

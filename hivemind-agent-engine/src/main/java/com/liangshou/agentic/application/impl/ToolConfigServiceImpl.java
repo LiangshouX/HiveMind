@@ -4,14 +4,21 @@ import com.liangshou.agentic.agents.tools.SystemToolRegistry;
 import com.liangshou.agentic.agents.tools.SystemToolRegistry.SystemToolDefinition;
 import com.liangshou.agentic.application.IToolConfigService;
 import com.liangshou.agentic.application.dto.ToolConfigDTO;
+import com.liangshou.agentic.common.exceptions.BizException;
+import com.liangshou.agentic.common.exceptions.HmeErrorCode;
+import com.liangshou.agentic.common.util.ToolConfigProvider;
 import com.liangshou.agentic.domain.tool.model.ToolConfigDocument;
 import com.liangshou.agentic.domain.tool.model.ToolConfigUpdateCommand;
 import com.liangshou.agentic.infrastructure.mongo.repository.ToolConfigRepository;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -25,18 +32,16 @@ public class ToolConfigServiceImpl implements IToolConfigService {
 
     private final ToolConfigRepository repository;
     private final SystemToolRegistry systemRegistry;
-    private com.liangshou.agentic.common.util.ToolConfigProvider configProvider;
+    /**
+     * -- SETTER --
+     *  注入配置提供者（用于缓存刷新）。
+     */
+    @Setter
+    private ToolConfigProvider configProvider;
 
     public ToolConfigServiceImpl(ToolConfigRepository repository, SystemToolRegistry systemRegistry) {
         this.repository = repository;
         this.systemRegistry = systemRegistry;
-    }
-
-    /**
-     * 注入配置提供者（用于缓存刷新）。
-     */
-    public void setConfigProvider(com.liangshou.agentic.common.util.ToolConfigProvider configProvider) {
-        this.configProvider = configProvider;
     }
 
     @Override
@@ -213,7 +218,7 @@ public class ToolConfigServiceImpl implements IToolConfigService {
     private ToolConfigDocument createFromSystemDefault(String userId, String toolName) {
         SystemToolDefinition sysTool = systemRegistry.getTool(toolName);
         if (sysTool == null) {
-            throw new IllegalArgumentException("未知系统工具: " + toolName);
+            throw new BizException(HmeErrorCode.AGENT_UNKNOWN_TOOL, "未知系统工具: " + toolName);
         }
         return createFromSystemDefinition(userId, sysTool);
     }

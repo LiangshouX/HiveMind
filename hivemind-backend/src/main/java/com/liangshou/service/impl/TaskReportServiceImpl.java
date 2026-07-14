@@ -1,16 +1,18 @@
 package com.liangshou.service.impl;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.liangshou.agentic.common.exceptions.BizException;
+import com.liangshou.common.HmeBackendErrorCode;
+import com.liangshou.common.utils.PageResult;
+import com.liangshou.infrastructure.datasource.po.TaskReportPO;
+import com.liangshou.infrastructure.datasource.support.ITaskReportSupport;
 import com.liangshou.service.ITaskReportService;
 import com.liangshou.service.dto.TaskReportDTO;
 import com.liangshou.service.vo.TaskReportVO;
-import com.liangshou.infrastructure.datasource.po.TaskReportPO;
-import com.liangshou.infrastructure.datasource.support.ITaskReportSupport;
-import com.liangshou.common.utils.PageResult;
-import com.liangshou.common.utils.SecurityUtils;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import lombok.RequiredArgsConstructor;
+
 import java.util.stream.Collectors;
 
 @Service
@@ -37,14 +39,14 @@ public class TaskReportServiceImpl implements ITaskReportService {
                 .eq(TaskReportPO::getUserId, Long.valueOf(userId))
                 .page(new Page<>(current, size));
         return PageResult.of(
-            page.getTotal(),
-            page.getRecords().stream().map(po -> {
-                TaskReportVO vo = new TaskReportVO();
-                vo.setId(po.getId());
-                return vo;
-            }).collect(Collectors.toList()),
-            page.getCurrent(),
-            page.getSize()
+                page.getTotal(),
+                page.getRecords().stream().map(po -> {
+                    TaskReportVO vo = new TaskReportVO();
+                    vo.setId(po.getId());
+                    return vo;
+                }).collect(Collectors.toList()),
+                page.getCurrent(),
+                page.getSize()
         );
     }
 
@@ -65,7 +67,7 @@ public class TaskReportServiceImpl implements ITaskReportService {
                 .eq(TaskReportPO::getUserId, Long.valueOf(userId))
                 .one();
         if (po == null) {
-            throw new RuntimeException("记录不存在或无权限修改");
+            throw new BizException(HmeBackendErrorCode.TASK_RECORD_NOT_FOUND_UPDATE);
         }
         po.setId(dto.getId());
         return support.updateById(po);
@@ -79,7 +81,7 @@ public class TaskReportServiceImpl implements ITaskReportService {
                 .eq(TaskReportPO::getUserId, Long.valueOf(userId))
                 .one();
         if (po == null) {
-            throw new RuntimeException("记录不存在或无权限删除");
+            throw new BizException(HmeBackendErrorCode.TASK_RECORD_NOT_FOUND_DELETE);
         }
         return support.removeById(id);
     }

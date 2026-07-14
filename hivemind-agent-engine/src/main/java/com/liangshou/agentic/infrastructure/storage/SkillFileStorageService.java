@@ -1,5 +1,7 @@
 package com.liangshou.agentic.infrastructure.storage;
 
+import com.liangshou.agentic.common.exceptions.BizException;
+import com.liangshou.agentic.common.exceptions.HmeErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
@@ -57,7 +59,7 @@ public class SkillFileStorageService {
             return objectKey;
         } catch (Exception e) {
             log.error("Skill 版本上传失败: userId={}, skillId={}, version={}", userId, skillId, version, e);
-            throw new RuntimeException("Skill 版本上传失败", e);
+            throw new BizException(HmeErrorCode.SKILL_VERSION_UPLOAD_ERROR, e);
         }
     }
 
@@ -72,13 +74,13 @@ public class SkillFileStorageService {
     public SkillVersionContent downloadSkillVersion(String userId, String skillId, String version) {
         String objectKey = buildVersionPath(userId, skillId, version);
         if (!storageService.exists(objectKey)) {
-            throw new RuntimeException("Skill 版本不存在: " + objectKey);
+            throw new BizException(HmeErrorCode.SKILL_VERSION_NOT_FOUND, "Skill 版本不存在: " + objectKey);
         }
         try (var inputStream = storageService.download(objectKey)) {
             return extractTarGz(inputStream);
         } catch (IOException e) {
             log.error("Skill 版本下载/解压失败: {}", objectKey, e);
-            throw new RuntimeException("Skill 版本下载/解压失败", e);
+            throw new BizException(HmeErrorCode.SKILL_VERSION_DOWNLOAD_ERROR, e);
         }
     }
 
@@ -186,7 +188,7 @@ public class SkillFileStorageService {
              TarArchiveInputStream tais = new TarArchiveInputStream(gzis)) {
 
             TarArchiveEntry entry;
-            while ((entry = (TarArchiveEntry) tais.getNextEntry()) != null) {
+            while ((entry = tais.getNextEntry()) != null) {
                 if (entry.isDirectory()) {
                     continue;
                 }
@@ -203,7 +205,7 @@ public class SkillFileStorageService {
         }
 
         if (skillMarkdown == null) {
-            throw new RuntimeException("Skill 包缺少 SKILL.md 文件");
+            throw new BizException(HmeErrorCode.SKILL_MISSING_MANIFEST);
         }
 
         return new SkillVersionContent(skillMarkdown, resources);

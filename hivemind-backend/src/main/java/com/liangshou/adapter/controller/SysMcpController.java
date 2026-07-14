@@ -3,7 +3,7 @@ package com.liangshou.adapter.controller;
 import com.liangshou.service.ISysMcpService;
 import com.liangshou.service.dto.SysMcpDTO;
 import com.liangshou.service.vo.SysMcpVO;
-import com.liangshou.common.utils.Result;
+import com.liangshou.agentic.common.utils.Result;
 import com.liangshou.common.utils.PageResult;
 import com.liangshou.common.utils.SecurityUtils;
 import org.springframework.web.bind.annotation.*;
@@ -13,7 +13,7 @@ import lombok.RequiredArgsConstructor;
 
 /**
  * SysMcp 控制器
- *
+ * <p>
  * 提供 SysMcp 相关的 RESTful API 接口
  */
 @Tag(name = "SysMcp API", description = "SysMcp 管理相关接口")

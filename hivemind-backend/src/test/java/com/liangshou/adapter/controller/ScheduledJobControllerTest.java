@@ -57,6 +57,6 @@ class ScheduledJobControllerTest {
 
         mockMvc.perform(get("/api/scheduled-jobs/{id}", 1L))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(200));
+                .andExpect(jsonPath("$.code").value("HME_SYSTEM_000"));
     }
 }
