@@ -215,16 +215,35 @@ public class TdAgentReMeService {
     /**
      * 调用 MCP 工具（供 MemoryController 使用，带用户隔离）。
      *
+     * <p>返回 answer 文本内容。当 MCP 返回 JSON envelope 时自动解包提取 answer 字段。</p>
+     *
      * @param toolName  工具名称
      * @param arguments 工具参数
      * @param userId    用户 ID，用于 workspace 隔离
-     * @return 工具调用结果的文本内容
+     * @return 工具调用结果的 answer 文本内容
      */
     public String callMcpTool(String toolName, Map<String, Object> arguments, String userId) {
         if (!useMcp) {
             throw new BizException(HmeErrorCode.MCP_MODE_NOT_ENABLED, "MCP mode is not enabled. Cannot call MCP tool: " + toolName);
         }
         return mcpReMeClient.callToolTextForUser(toolName, arguments, userId);
+    }
+
+    /**
+     * 调用 MCP 工具并返回原始响应文本（不做 JSON envelope 解包）。
+     *
+     * <p>当调用方需要访问 metadata（如 list 工具的文件列表）时使用此方法。</p>
+     *
+     * @param toolName  工具名称
+     * @param arguments 工具参数
+     * @param userId    用户 ID，用于 workspace 隔离
+     * @return MCP 工具返回的原始文本（可能包含 answer 和 metadata 的 JSON envelope）
+     */
+    public String callMcpToolRaw(String toolName, Map<String, Object> arguments, String userId) {
+        if (!useMcp) {
+            throw new BizException(HmeErrorCode.MCP_MODE_NOT_ENABLED, "MCP mode is not enabled. Cannot call MCP tool: " + toolName);
+        }
+        return mcpReMeClient.callToolRawTextForUser(toolName, arguments, userId);
     }
 
     /**

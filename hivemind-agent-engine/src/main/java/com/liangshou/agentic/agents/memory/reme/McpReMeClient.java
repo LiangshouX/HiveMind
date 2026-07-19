@@ -251,10 +251,62 @@ public class McpReMeClient {
         if (result.content() == null) return "";
         for (McpSchema.Content block : result.content()) {
             if (block instanceof McpSchema.TextContent tc) {
+                return unwrapAnswer(tc.text());
+            }
+        }
+        return result.content().toString();
+    }
+
+    /**
+     * 提取 MCP 工具返回的原始文本（不做 JSON envelope 解包）。
+     *
+     * <p>当调用方需要访问 metadata（如 list 的文件列表）时使用此方法。</p>
+     *
+     * @param toolName  工具名称
+     * @param arguments 工具参数
+     * @param userId    用户 ID
+     * @return MCP 工具返回的原始文本
+     */
+    public String callToolRawTextForUser(String toolName, Map<String, Object> arguments, String userId) {
+        McpSchema.CallToolResult result = callToolForUser(toolName, arguments, userId);
+        if (result.content() == null) return "";
+        for (McpSchema.Content block : result.content()) {
+            if (block instanceof McpSchema.TextContent tc) {
                 return tc.text();
             }
         }
         return result.content().toString();
+    }
+
+    /**
+     * 从 MCP 工具返回的 JSON envelope 中提取 answer 字段。
+     *
+     * <p>ReMe MCP Service 在 metadata 非空时返回 JSON 格式：
+     * <pre>{"answer": "...", "metadata": {...}}</pre>
+     * 本方法提取 answer 字段，使调用方获取到的是人类可读的文本内容。</p>
+     *
+     * <p>如果输入不是 JSON envelope 格式（纯文本 answer），原样返回。</p>
+     *
+     * @param text MCP 工具返回的原始文本
+     * @return answer 字段内容，或原始文本
+     */
+    private static String unwrapAnswer(String text) {
+        if (text == null || text.isBlank()) {
+            return text;
+        }
+        String trimmed = text.stripLeading();
+        if (!trimmed.startsWith("{")) {
+            return text;
+        }
+        try {
+            com.alibaba.fastjson2.JSONObject obj = com.alibaba.fastjson2.JSONObject.parseObject(trimmed);
+            if (obj.containsKey("answer") && obj.containsKey("metadata")) {
+                return obj.getString("answer");
+            }
+        } catch (Exception ignored) {
+            // Not valid JSON — return as-is
+        }
+        return text;
     }
 
     @PreDestroy
