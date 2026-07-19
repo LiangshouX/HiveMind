@@ -36,7 +36,7 @@ export async function parseApiResult<T>(response: Response): Promise<T> {
 
   // 检查是否是标准的 ApiResult 格式
   if ('code' in payload && 'data' in payload) {
-    if (payload.code !== 200) {
+    if (payload.code !== "SUCCESS") {
       throw new Error(payload.message || "请求失败");
     }
     return payload.data;

@@ -57,6 +57,6 @@ class SysTokenUsageControllerTest {
 
         mockMvc.perform(get("/api/sys-token-usages/{id}", 1L))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value("HME_SYSTEM_000"));
+                .andExpect(jsonPath("$.code").value("SUCCESS"));
     }
 }

@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 
 import java.util.*;
+import java.util.regex.Pattern;
 
 /**
  * 带用户隔离的 MCP 工具包装器。
@@ -27,6 +28,9 @@ import java.util.*;
 public class UserScopedMcpTool extends McpTool {
 
     private static final Logger log = LoggerFactory.getLogger(UserScopedMcpTool.class);
+
+    /** 路径遍历检测：匹配 .. 段（独立的 .. 或以 /.. 或 ../ 开头/结尾） */
+    private static final Pattern PATH_TRAVERSAL = Pattern.compile("(^|[/\\\\])\\.\\.($|[/\\\\])");
 
     /**
      * 需要添加用户路径前缀的文件操作工具
@@ -47,15 +51,18 @@ public class UserScopedMcpTool extends McpTool {
     /**
      * 构造用户隔离的 MCP 工具。
      *
-     * @param original 原始 MCP 工具
-     * @param userId   用户 ID，用作 workspace 隔离前缀
+     * <p>使用传入的 clientWrapper 而非反射获取，避免依赖 SDK 内部实现细节。</p>
+     *
+     * @param original     原始 MCP 工具
+     * @param userId       用户 ID，用作 workspace 隔离前缀
+     * @param clientWrapper MCP 客户端包装器，从原始工具所在的 McpReMeClient 传入
      */
-    public UserScopedMcpTool(McpTool original, String userId) {
+    public UserScopedMcpTool(McpTool original, String userId, McpClientWrapper clientWrapper) {
         super(
                 original.getName(),
                 original.getDescription(),
                 original.getParameters(),
-                getClientWrapper(original),
+                clientWrapper,
                 original.getPresetArguments()
         );
         this.userId = userId;
@@ -118,6 +125,8 @@ public class UserScopedMcpTool extends McpTool {
      *
      * <p>当 path 为空时，设置为 userId/（用户的根目录）。
      * 当 path 不为空且不包含用户前缀时，添加 userId/ 前缀。</p>
+     *
+     * @throws BizException 如果路径包含遍历攻击（.. 段）
      */
     private ToolCallParam applyFilePathScope(ToolCallParam param) {
         Map<String, Object> input = param.getInput();
@@ -133,6 +142,13 @@ public class UserScopedMcpTool extends McpTool {
 
         // 统一路径分隔符为 Unix 格式
         String normalizedPath = path.replace("\\", "/");
+
+        // 安全检查：拒绝路径遍历攻击
+        if (PATH_TRAVERSAL.matcher(normalizedPath).find()) {
+            log.warn("[UserScoped] Path traversal rejected: userId={}, path='{}'", userId, path);
+            throw new BizException(HmeErrorCode.MCP_TOOL_CALL_ERROR,
+                    "Path traversal not allowed: " + path);
+        }
 
         // 如果 path 已经包含用户前缀，直接返回
         if (normalizedPath.startsWith(userId + "/") || normalizedPath.startsWith(userId + "\\")) {
@@ -202,38 +218,54 @@ public class UserScopedMcpTool extends McpTool {
 
     /**
      * 从文本结果中过滤出属于当前用户的内容。
-     * <p>
-     * ReMe 搜索结果格式通常包含文件路径，如：
-     * ```
-     * [score=0.1234] daily/2025-07-12.md
-     * 内容摘要...
-     * ```
-     * <p>
-     * 我们需要过滤掉不包含用户目录前缀的结果。
+     *
+     * <p>ReMe 搜索结果以 {@code ============} 分隔各个结果块，每个块的首行
+     * 包含文件路径（如 {@code daily/2026-07-12/session-a.md:12-28 [score=0.0317]}）。
+     * 本方法按块解析，仅保留路径以 userPrefix 开头的结果块。</p>
+     *
+     * <p>对于非标准格式（不含分隔符的纯文本），回退为逐行匹配 userPrefix。</p>
      */
     private String filterTextByUser(String text, String userPrefix) {
         if (text == null || text.isBlank()) {
             return "";
         }
 
-        String[] lines = text.split("\n");
-        StringBuilder result = new StringBuilder();
-        boolean inUserBlock = false;
+        // ReMe 搜索结果以 "=" 分隔符划分结果块
+        if (text.contains("==========")) {
+            return filterByResultBlocks(text, userPrefix);
+        }
 
-        for (String line : lines) {
-            // 检查是否是新的结果块开始（通常包含文件路径）
-            if (line.contains(userPrefix)) {
-                inUserBlock = true;
-                result.append(line).append("\n");
-            } else if (inUserBlock && !line.isBlank()) {
-                // 继续添加当前块的内容
-                result.append(line).append("\n");
-            } else if (line.isBlank()) {
-                // 空行可能是块分隔符
-                if (inUserBlock) {
+        // 回退：逐行匹配（适用于非标准格式或简短结果）
+        return filterByLineMatch(text, userPrefix);
+    }
+
+    /**
+     * 按 ReMe 搜索结果的 "=" 分隔符分块过滤。
+     *
+     * <p>每个结果块形如：
+     * <pre>
+     * ========== path/to/file.md:12-28 [score=0.0317] ==========
+     * ... 正文内容 ...
+     *   outlinks (2):
+     *     -> ...
+     * </pre>
+     * 仅保留首行路径以 userPrefix 开头的块。</p>
+     */
+    private String filterByResultBlocks(String text, String userPrefix) {
+        String[] blocks = text.split("(?=^={10,})", -1);
+        StringBuilder result = new StringBuilder();
+
+        for (String block : blocks) {
+            if (block.isBlank()) {
+                continue;
+            }
+            // 提取分隔符行中的路径部分
+            String headerLine = block.lines().findFirst().orElse("");
+            if (headerLine.contains("==========") && headerLine.contains(userPrefix)) {
+                result.append(block);
+                if (!block.endsWith("\n")) {
                     result.append("\n");
                 }
-                inUserBlock = false;
             }
         }
 
@@ -241,15 +273,47 @@ public class UserScopedMcpTool extends McpTool {
     }
 
     /**
-     * 从 McpTool 实例中获取 McpClientWrapper。
+     * 逐行匹配过滤（回退方案）。
+     *
+     * <p>识别包含 userPrefix 的行作为"用户块"的开始，持续收集后续非空行，
+     * 直到遇到下一个包含路径模式的行或文件结束。</p>
      */
-    private static McpClientWrapper getClientWrapper(McpTool tool) {
-        try {
-            var field = McpTool.class.getDeclaredField("clientWrapper");
-            field.setAccessible(true);
-            return (McpClientWrapper) field.get(tool);
-        } catch (Exception e) {
-            throw new BizException(HmeErrorCode.MCP_TOOL_CALL_ERROR, e);
+    private String filterByLineMatch(String text, String userPrefix) {
+        String[] lines = text.split("\n");
+        StringBuilder result = new StringBuilder();
+        boolean inUserBlock = false;
+
+        for (int i = 0; i < lines.length; i++) {
+            String line = lines[i];
+
+            if (line.contains(userPrefix)) {
+                // 命中用户路径：开始新块
+                inUserBlock = true;
+                result.append(line).append("\n");
+            } else if (inUserBlock) {
+                // 当前块的延续行
+                // 如果遇到看起来是新结果块开始的行（包含路径模式），结束当前块
+                if (isLikelyResultHeader(line)) {
+                    inUserBlock = false;
+                } else {
+                    result.append(line).append("\n");
+                }
+            }
         }
+
+        return result.toString().trim();
+    }
+
+    /**
+     * 判断一行是否看起来像新的搜索结果块的标题行。
+     *
+     * <p>特征：以 "=" 开头，或包含 ".md" 路径后缀 + 分数模式。</p>
+     */
+    private boolean isLikelyResultHeader(String line) {
+        if (line.startsWith("==========")) {
+            return true;
+        }
+        // 匹配类似 "path/file.md:12-28 [score=0.0317]" 的模式
+        return line.contains(".md") && line.contains("[score=");
     }
 }

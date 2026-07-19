@@ -169,6 +169,10 @@ npm run preview    # Preview production build locally
 ### Environment Configuration
 Copy `.env.example` to `.env`. Key variable: `VITE_BACKEND_API_ROOT` (defaults to `/api/v1`).
 
+## Read-Only Paths
+
+- `.lib-repo/` — Vendored third-party libraries (e.g. ReMe). **All code files under this path are READ-ONLY.** Do NOT modify any file in this directory. If a fix requires changes to vendored code, implement a workaround on the HiveMind side instead (e.g. adapter/wrapper/fallback), or document the required upstream change.
+
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:

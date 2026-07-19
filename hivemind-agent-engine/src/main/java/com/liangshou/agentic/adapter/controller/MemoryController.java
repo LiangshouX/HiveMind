@@ -55,9 +55,9 @@ public class MemoryController {
             args.put("path", path);
             args.put("recursive", true);
 
-            // 调用 MCP 工具
-            String resultText = remeService.callMcpTool("list", args, userId);
-            log.debug("MCP list result: {}", resultText);
+            // 调用 MCP 工具（使用 raw 方法获取完整 JSON envelope，含 metadata 中的文件列表）
+            String resultText = remeService.callMcpToolRaw("list", args, userId);
+            log.debug("MCP list raw result: {}", resultText);
 
             // 解析 JSON 响应，提取文件列表
             List<String> fileList = parseFileListFromJson(resultText, userId);
@@ -71,16 +71,19 @@ public class MemoryController {
     }
 
     /**
-     * 从 MCP list 工具的 JSON 响应中解析文件列表。
+     * 从 MCP list 工具的响应中解析文件列表。
      *
-     * <p>MCP 返回格式：</p>
+     * <p>MCP 返回格式（当 metadata 非空时为 JSON envelope）：</p>
      * <pre>
-     * {"items": ["user-001\daily\2026-07-12\文件.md", ...], "count": 2, "path": "user-001/"}
+     * {"answer": "Listed 4 file(s) under user-001/", "metadata": {"items": [...], "count": 4}}
      * </pre>
+     *
+     * <p>当 metadata 为空时，MCP 直接返回 answer 字符串（如 "Listed 4 file(s) under user-001/"），
+     * 此时无法提取文件列表，返回空列表。</p>
      *
      * <p>解析后返回相对于用户根目录的文件名列表。</p>
      *
-     * @param json   MCP 返回的 JSON 字符串
+     * @param json   MCP 返回的文本内容
      * @param userId 用户 ID（用于去除路径前缀）
      * @return 文件名列表
      */
@@ -91,36 +94,60 @@ public class MemoryController {
 
         try {
             JSONObject obj = JSONObject.parseObject(json);
-            if (!obj.containsKey("items")) {
-                return List.of();
+
+            // 新格式：MCP 返回 JSON envelope {"answer": "...", "metadata": {...}}
+            if (obj.containsKey("metadata") && obj.containsKey("answer")) {
+                JSONObject metadata = obj.getJSONObject("metadata");
+                if (metadata == null || !metadata.containsKey("items")) {
+                    return List.of();
+                }
+                return extractFileList(metadata.getJSONArray("items"), userId);
             }
 
-            var items = obj.getJSONArray("items");
-            if (items == null) {
-                return List.of();
+            // 兼容旧格式：直接包含 items 的 JSON（理论上不再出现）
+            if (obj.containsKey("items")) {
+                return extractFileList(obj.getJSONArray("items"), userId);
             }
 
-            String userPrefix = userId + "\\";
-            String userPrefixUnix = userId + "/";
-
-            return items.toJavaList(String.class).stream()
-                    .map(item -> {
-                        // 去除用户前缀（支持 Windows 和 Unix 路径分隔符）
-                        if (item.startsWith(userPrefix)) {
-                            return item.substring(userPrefix.length());
-                        }
-                        if (item.startsWith(userPrefixUnix)) {
-                            return item.substring(userPrefixUnix.length());
-                        }
-                        return item;
-                    })
-                    // 统一使用 Unix 路径分隔符
-                    .map(item -> item.replace("\\", "/"))
-                    .toList();
+            // 无法解析的格式（answer 字符串等）
+            log.debug("MCP list response has no file list data: {}", json);
+            return List.of();
         } catch (Exception e) {
-            log.warn("Failed to parse file list JSON: {}", json, e);
+            // JSON 解析失败说明返回的是纯文本 answer（如 "Listed 4 file(s)..."）
+            log.debug("MCP list response is not JSON (plain text answer): {}", json);
             return List.of();
         }
+    }
+
+    /**
+     * 从 JSONArray 中提取文件列表，去除用户路径前缀。
+     *
+     * @param items  文件路径 JSONArray
+     * @param userId 用户 ID
+     * @return 去除用户前缀后的文件名列表
+     */
+    private List<String> extractFileList(com.alibaba.fastjson2.JSONArray items, String userId) {
+        if (items == null) {
+            return List.of();
+        }
+
+        String userPrefix = userId + "\\";
+        String userPrefixUnix = userId + "/";
+
+        return items.toJavaList(String.class).stream()
+                .map(item -> {
+                    // 去除用户前缀（支持 Windows 和 Unix 路径分隔符）
+                    if (item.startsWith(userPrefix)) {
+                        return item.substring(userPrefix.length());
+                    }
+                    if (item.startsWith(userPrefixUnix)) {
+                        return item.substring(userPrefixUnix.length());
+                    }
+                    return item;
+                })
+                // 统一使用 Unix 路径分隔符
+                .map(item -> item.replace("\\", "/"))
+                .toList();
     }
 
 

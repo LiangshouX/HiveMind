@@ -3,6 +3,7 @@ package com.liangshou.agentic.agents.memory.reme;
 import com.liangshou.agentic.common.exceptions.BizException;
 import com.liangshou.agentic.common.exceptions.HmeErrorCode;
 import io.agentscope.core.tool.mcp.McpClientBuilder;
+import io.agentscope.core.tool.mcp.McpClientWrapper;
 import io.agentscope.core.tool.mcp.McpSyncClientWrapper;
 import io.agentscope.core.tool.mcp.McpTool;
 import io.modelcontextprotocol.spec.McpSchema;
@@ -13,6 +14,8 @@ import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -33,6 +36,9 @@ public class McpReMeClient {
 
     private static final Logger log = LoggerFactory.getLogger(McpReMeClient.class);
 
+    /** 路径遍历检测：匹配 .. 段（独立的 .. 或以 /.. 或 ../ 开头/结尾） */
+    private static final Pattern PATH_TRAVERSAL = Pattern.compile("(^|[/\\\\])\\.\\.($|[/\\\\])");
+
     /** 需要添加用户路径前缀的文件操作工具 */
     private static final Set<String> FILE_PATH_TOOLS = Set.of(
             "read", "write", "edit", "list", "move", "delete",
@@ -48,7 +54,7 @@ public class McpReMeClient {
     @Getter
     private final String sseUrl;
     private final Duration timeout;
-    private McpSyncClientWrapper clientWrapper;
+    private McpClientWrapper clientWrapper;
     /**
      * -- GETTER --
      *  检查客户端是否已初始化。
@@ -56,6 +62,10 @@ public class McpReMeClient {
      */
     @Getter
     private boolean initialized = false;
+
+    /** 缓存的 MCP 工具列表，避免每次 toAgentTools() 都 RPC */
+    private volatile List<McpSchema.Tool> cachedTools;
+    private final ReentrantReadWriteLock toolsCacheLock = new ReentrantReadWriteLock();
 
     /**
      * 构造 MCP 客户端。
@@ -76,10 +86,21 @@ public class McpReMeClient {
     public synchronized boolean initialize() {
         if (initialized) return true;
         try {
-            clientWrapper = (McpSyncClientWrapper) McpClientBuilder.create("reme-memory")
+            McpClientWrapper wrapper = McpClientBuilder.create("reme-memory")
                     .sseTransport(sseUrl)
                     .timeout(timeout)
                     .buildSync();
+
+            // 安全类型检查：确保返回的是 McpSyncClientWrapper
+            if (wrapper instanceof McpSyncClientWrapper syncWrapper) {
+                this.clientWrapper = syncWrapper;
+            } else {
+                // 非预期类型，使用基类引用（仍可正常调用接口方法）
+                log.warn("MCP client returned unexpected type: {}, using base wrapper",
+                        wrapper.getClass().getSimpleName());
+                this.clientWrapper = wrapper;
+            }
+
             clientWrapper.initialize().block();
             initialized = true;
             log.info("ReMe MCP client initialized: {}", sseUrl);
@@ -92,13 +113,58 @@ public class McpReMeClient {
     }
 
     /**
-     * 列出 ReMe 暴露的所有 MCP 工具。
+     * 列出 ReMe 暴露的所有 MCP 工具（带缓存）。
+     *
+     * <p>首次调用时通过 RPC 获取工具列表，后续调用返回缓存。
+     * 调用 {@link #refreshToolCache()} 可手动刷新。</p>
      *
      * @return 工具列表
      */
     public List<McpSchema.Tool> listTools() {
         ensureInitialized();
-        return clientWrapper.listTools().block();
+
+        // 快速读路径：缓存命中
+        toolsCacheLock.readLock().lock();
+        try {
+            if (cachedTools != null) {
+                return cachedTools;
+            }
+        } finally {
+            toolsCacheLock.readLock().unlock();
+        }
+
+        // 慢速写路径：缓存未命中，RPC 获取
+        toolsCacheLock.writeLock().lock();
+        try {
+            // 双重检查：另一个线程可能已经填充了缓存
+            if (cachedTools != null) {
+                return cachedTools;
+            }
+            List<McpSchema.Tool> tools = clientWrapper.listTools().block();
+            cachedTools = tools != null ? List.copyOf(tools) : List.of();
+            log.info("Cached {} MCP tools from ReMe server", cachedTools.size());
+            return cachedTools;
+        } finally {
+            toolsCacheLock.writeLock().unlock();
+        }
+    }
+
+    /**
+     * 刷新工具列表缓存。
+     *
+     * <p>当 ReMe 服务端新增或移除工具后，调用此方法更新本地缓存。</p>
+     */
+    public void refreshToolCache() {
+        ensureInitialized();
+        toolsCacheLock.writeLock().lock();
+        try {
+            cachedTools = null;
+            List<McpSchema.Tool> tools = clientWrapper.listTools().block();
+            cachedTools = tools != null ? List.copyOf(tools) : List.of();
+            log.info("Refreshed MCP tool cache: {} tools", cachedTools.size());
+        } finally {
+            toolsCacheLock.writeLock().unlock();
+        }
     }
 
     /**
@@ -132,9 +198,9 @@ public class McpReMeClient {
                             tool.inputSchema() != null ? McpTool.convertMcpSchemaToParameters(tool.inputSchema(), null) : Map.of(),
                             clientWrapper
                     );
-                    // 如果指定了 userId，包装为用户隔离的工具
+                    // 如果指定了 userId，包装为用户隔离的工具（传入 clientWrapper 避免反射）
                     if (userId != null && !userId.isBlank()) {
-                        return (McpTool) new UserScopedMcpTool(mcpTool, userId);
+                        return (McpTool) new UserScopedMcpTool(mcpTool, userId, clientWrapper);
                     }
                     return mcpTool;
                 })
@@ -222,6 +288,14 @@ public class McpReMeClient {
         // 统一路径分隔符为 Unix 格式
         String normalizedPath = path.replace("\\", "/");
 
+        // 安全检查：拒绝路径遍历攻击
+        if (PATH_TRAVERSAL.matcher(normalizedPath).find()) {
+            log.warn("[UserScope] Path traversal rejected: tool={}, userId={}, path='{}'",
+                    toolName, userId, path);
+            throw new BizException(HmeErrorCode.MCP_TOOL_CALL_ERROR,
+                    "Path traversal not allowed: " + path);
+        }
+
         // 构建用户隔离路径
         String userPath;
         if (normalizedPath.isBlank()) {
@@ -251,10 +325,62 @@ public class McpReMeClient {
         if (result.content() == null) return "";
         for (McpSchema.Content block : result.content()) {
             if (block instanceof McpSchema.TextContent tc) {
+                return unwrapAnswer(tc.text());
+            }
+        }
+        return result.content().toString();
+    }
+
+    /**
+     * 提取 MCP 工具返回的原始文本（不做 JSON envelope 解包）。
+     *
+     * <p>当调用方需要访问 metadata（如 list 的文件列表）时使用此方法。</p>
+     *
+     * @param toolName  工具名称
+     * @param arguments 工具参数
+     * @param userId    用户 ID
+     * @return MCP 工具返回的原始文本
+     */
+    public String callToolRawTextForUser(String toolName, Map<String, Object> arguments, String userId) {
+        McpSchema.CallToolResult result = callToolForUser(toolName, arguments, userId);
+        if (result.content() == null) return "";
+        for (McpSchema.Content block : result.content()) {
+            if (block instanceof McpSchema.TextContent tc) {
                 return tc.text();
             }
         }
         return result.content().toString();
+    }
+
+    /**
+     * 从 MCP 工具返回的 JSON envelope 中提取 answer 字段。
+     *
+     * <p>ReMe MCP Service 在 metadata 非空时返回 JSON 格式：
+     * <pre>{"answer": "...", "metadata": {...}}</pre>
+     * 本方法提取 answer 字段，使调用方获取到的是人类可读的文本内容。</p>
+     *
+     * <p>如果输入不是 JSON envelope 格式（纯文本 answer），原样返回。</p>
+     *
+     * @param text MCP 工具返回的原始文本
+     * @return answer 字段内容，或原始文本
+     */
+    private static String unwrapAnswer(String text) {
+        if (text == null || text.isBlank()) {
+            return text;
+        }
+        String trimmed = text.stripLeading();
+        if (!trimmed.startsWith("{")) {
+            return text;
+        }
+        try {
+            com.alibaba.fastjson2.JSONObject obj = com.alibaba.fastjson2.JSONObject.parseObject(trimmed);
+            if (obj.containsKey("answer") && obj.containsKey("metadata")) {
+                return obj.getString("answer");
+            }
+        } catch (Exception ignored) {
+            // Not valid JSON — return as-is
+        }
+        return text;
     }
 
     @PreDestroy
