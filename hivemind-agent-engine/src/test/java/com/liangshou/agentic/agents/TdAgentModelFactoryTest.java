@@ -3,8 +3,8 @@ package com.liangshou.agentic.agents;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.liangshou.agentic.agents.provider.TdAgentProviderRegistry;
 import com.liangshou.agentic.common.config.TdAgentProperties;
-import io.agentscope.core.model.DashScopeChatModel;
-import io.agentscope.core.model.OpenAIChatModel;
+import io.agentscope.extensions.model.dashscope.DashScopeChatModel;
+import io.agentscope.extensions.model.openai.OpenAIChatModel;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -23,8 +23,8 @@ import static org.junit.jupiter.api.Assertions.*;
  *
  * <p><strong>核心测试场景：</strong></p>
  * <ul>
- *     <li>DashScope 供应商创建 {@link io.agentscope.core.model.DashScopeChatModel}</li>
- *     <li>OpenAI Compatible 供应商创建 {@link io.agentscope.core.model.OpenAIChatModel}</li>
+ *     <li>DashScope 供应商创建 {@link io.agentscope.extensions.model.dashscope.DashScopeChatModel}</li>
+ *     <li>OpenAI Compatible 供应商创建 {@link io.agentscope.extensions.model.openai.OpenAIChatModel}</li>
  *     <li>DeepSeek 等第三方服务通过 OpenAI 兼容模式接入</li>
  *     <li>模型配置的动态解析与应用（API Key、Base URL、模型ID等）</li>
  * </ul>
@@ -38,8 +38,8 @@ import static org.junit.jupiter.api.Assertions.*;
  * @author LiangshouX
  * @see TdAgentModelFactory
  * @see com.liangshou.agentic.agents.provider.TdAgentProviderRegistry
- * @see io.agentscope.core.model.DashScopeChatModel
- * @see io.agentscope.core.model.OpenAIChatModel
+ * @see io.agentscope.extensions.model.dashscope.DashScopeChatModel
+ * @see io.agentscope.extensions.model.openai.OpenAIChatModel
  */
 @SuppressWarnings("deprecation")
 class TdAgentModelFactoryTest {
@@ -63,7 +63,7 @@ class TdAgentModelFactoryTest {
      *
      * <p><strong>验证点：</strong></p>
      * <ul>
-     *     <li>返回的对象类型是 {@link io.agentscope.core.model.DashScopeChatModel}</li>
+     *     <li>返回的对象类型是 {@link io.agentscope.extensions.model.dashscope.DashScopeChatModel}</li>
      *     <li>模型已正确配置 API Key 和模型名称</li>
      *     <li>可以使用 DashScope 特有的功能（如 enableThinking）</li>
      * </ul>
@@ -96,7 +96,7 @@ class TdAgentModelFactoryTest {
      *
      * <p><strong>验证点：</strong></p>
      * <ul>
-     *     <li>返回的对象类型是 {@link io.agentscope.core.model.OpenAIChatModel}</li>
+     *     <li>返回的对象类型是 {@link io.agentscope.extensions.model.openai.OpenAIChatModel}</li>
      *     <li>使用了正确的 Base URL 指向 DeepSeek API</li>
      *     <li>应用了 DeepSeek 专用的 Formatter</li>
      * </ul>

@@ -25,10 +25,9 @@ import com.liangshou.agentic.application.dto.ChatRequest;
 import com.liangshou.agentic.application.dto.ChatResponse;
 import com.liangshou.agentic.application.dto.ToolApprovalActionRequest;
 import io.agentscope.core.ReActAgent;
-import io.agentscope.core.agent.Event;
-import io.agentscope.core.agent.EventType;
-import io.agentscope.core.agent.StreamOptions;
+import io.agentscope.core.event.*;
 import io.agentscope.core.message.*;
+import io.agentscope.core.state.AgentState;
 import io.agentscope.core.tool.AgentTool;
 import io.agentscope.core.tool.ToolCallParam;
 import io.agentscope.core.tool.Toolkit;
@@ -47,22 +46,9 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Agent 流式响应服务，提供基于 SSE（Server-Sent Events）的实时流式对话能力。
- * <p>
- * 主要功能包括：
- * <ul>
- *   <li>启动流式聊天请求，实时推送 Agent 的推理和工具调用过程</li>
- *   <li>支持工具调用审批流程，允许用户批准后继续执行</li>
- *   <li>支持工具调用拒绝流程，向 Agent 返回拒绝信息并继续执行</li>
- *   <li>提供会话中断功能，允许用户随时停止正在执行的 Agent 任务</li>
- *   <li>管理活动会话注册表，跟踪正在执行的流式会话</li>
- *   <li>处理各种事件类型（推理、工具结果、最终结果、错误等）</li>
- *   <li>自动保存会话状态，支持暂停和恢复</li>
- * </ul>
- * </p>
- * <p>
- * 该服务与同步聊天服务不同，它通过 Flux 响应式流和 SSE 技术实现实时推送，
- * 为用户提供更好的交互体验，特别是在长时间运行的任务中。
- * </p>
+ *
+ * <p>使用 AgentScope 2.0 的 {@code streamEvents()} API 和 {@link AgentEvent} 事件体系，
+ * 提供细粒度的流式事件推送。</p>
  *
  * @author LiangshouX
  */
@@ -85,22 +71,6 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
     private final ObjectMapper objectMapper;
     private final IConversationPersistenceService conversationPersistenceService;
 
-    /**
-     * 构造器
-     *
-     * @param agentFactory                   Agent 工厂
-     * @param chatService                    聊天服务
-     * @param IChatCommandService            命令服务
-     * @param agentSessionStateService       会话状态服务
-     * @param toolApprovalService            工具审批服务
-     * @param activeSessionRegistry          活动会话注册表
-     * @param properties                     外部化配置
-     * @param modelFactory                   模型工厂
-     * @param tokenUsageRecordService        Token 使用量记录服务
-     * @param toolkitFactory                 工具箱工厂
-     * @param objectMapper                   ObjectMapper
-     * @param conversationPersistenceService 对话持久化服务
-     */
     public TdAgentStreamingServiceImpl(
             TdAgentFactory agentFactory,
             ITdAgentChatService chatService,
@@ -128,61 +98,35 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
         this.conversationPersistenceService = conversationPersistenceService;
     }
 
-    /**
-     * 启动流式请求。
-     *
-     * @param request {@link ChatRequest}请求对象
-     * @return 返回结果
-     */
     @Override
     public SseEmitter stream(ChatRequest request) {
         log.info("[Streaming Service] 开始处理流式请求 - userId: {}, sessionId: {}",
                 request.getUserId(), request.getSessionId());
         ConversationSessionContext context = chatService.buildContext(request);
-        log.debug("[Streaming Service] 会话上下文已构建 - context: {}", context);
 
         ChatResponse commandResponse = IChatCommandService.handleCommand(context, request.getMessage());
         if (commandResponse != null) {
-            log.info("[Streaming Service] 检测到命令请求，直接返回 - command: {}", request.getMessage());
             return singleResponseEmitter(context, commandResponse);
         }
 
-        log.info("[Streaming Service] 创建 ReActAgent 实例");
-
-        long startTime = System.nanoTime();
         ReActAgent agent = agentFactory.createAgent(context);
-        long duration = System.nanoTime() - startTime;
-        log.info("[Streaming Service] ReActAgent 创建成功 - agentName: {}, 耗时: {} ms",
-                agent.getName(), String.format("%.3f", duration / 1_000_000.0));
 
-        log.debug("[Streaming Service] 恢复会话状态");
-        agentSessionStateService.restore(context, agent);
-
+        // AgentScope 2.0: 状态由 AgentStateStore 自动管理
         Msg userMessage = Msg.builder()
                 .name(request.getUserName() == null ? "user" : request.getUserName())
                 .role(MsgRole.USER)
                 .textContent(request.getMessage())
                 .build();
-        log.info("[Streaming Service] 用户消息已构建 - messageId: {}, content length: {}",
-                userMessage.getId(),
-                request.getMessage().length());
 
-        log.info("[Streaming Service] 开始执行流式调用");
         return execute(
                 context,
                 agent,
-                agent.stream(userMessage, streamOptions()),
+                agent.streamEvents(userMessage),
                 true,
                 request.getProviderId(),
                 request.getModelId());
     }
 
-    /**
-     * 在批准后继续执行。
-     *
-     * @param request {@link ToolApprovalActionRequest}请求对象
-     * @return 返回结果
-     */
     @Override
     public SseEmitter approveAndResume(ToolApprovalActionRequest request) {
         log.info("[Streaming Service-批准] 开始处理批准恢复 - userId: {}, sessionId: {}",
@@ -191,18 +135,11 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
                 chatService.buildContext(request.getUserId(), request.getSessionId(), request.getTitle());
         List<ToolApprovalDocument> approvals =
                 toolApprovalService.approve(request.getApprovalIds(), request.getComment());
-        log.info("[Streaming Service-批准] 工具审批已通过 - approvalIds: {}, count: {}",
-                request.getApprovalIds(), approvals.size());
 
-        // 将审批记录写入对话消息历史，确保刷新后能正确展示审批状态
         conversationPersistenceService.appendApprovalMessages(context, approvals);
 
-        // 创建新 Agent（MongoConversationMemory 自动从 MongoDB 加载对话历史）
-        // 不调用 agentSessionStateService.restore()，因为会话状态中的 pendingToolCalls
-        // 与 MongoConversationMemory 中的消息历史不一致，会导致 "Pending tool calls" 错误
         ReActAgent agent = agentFactory.createAgent(context);
 
-        // 真正执行已批准的工具，将实际输出返回给 Agent
         List<ContentBlock> toolResults = approvals.stream()
                 .map(approval -> executeApprovedTool(context, approval))
                 .toList();
@@ -211,16 +148,9 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
                 .role(MsgRole.TOOL)
                 .content(toolResults)
                 .build();
-        log.info("[Streaming Service-批准] 工具已执行完成，继续推理 - results: {}", toolResults.size());
-        return execute(context, agent, agent.stream(toolResponse, streamOptions()), false, null, null);
+        return execute(context, agent, agent.streamEvents(toolResponse), false, null, null);
     }
 
-    /**
-     * 在拒绝后继续执行。
-     *
-     * @param request 请求对象
-     * @return 返回结果
-     */
     @Override
     public SseEmitter rejectAndResume(ToolApprovalActionRequest request) {
         log.info("[Streaming Service-拒绝] 开始处理拒绝恢复 - userId: {}, sessionId: {}",
@@ -229,14 +159,9 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
                 chatService.buildContext(request.getUserId(), request.getSessionId(), request.getTitle());
         List<ToolApprovalDocument> approvals =
                 toolApprovalService.reject(request.getApprovalIds(), request.getComment());
-        log.info("[Streaming Service-拒绝] 工具审批已拒绝 - approvalIds: {}, count: {}",
-                request.getApprovalIds(), approvals.size());
 
-        // 将审批记录写入对话消息历史，确保刷新后能正确展示审批状态
         conversationPersistenceService.appendApprovalMessages(context, approvals);
 
-        // 创建新 Agent（MongoConversationMemory 自动从 MongoDB 加载对话历史）
-        // 不调用 agentSessionStateService.restore()，避免会话状态与消息历史不一致
         ReActAgent agent = agentFactory.createAgent(context);
 
         Msg toolResponse =
@@ -258,166 +183,169 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
                                                                         .build()))
                                         .toList())
                         .build();
-        log.info("[Streaming Service-拒绝] 构建拒绝响应消息，继续执行");
-        return execute(context, agent, agent.stream(toolResponse, streamOptions()), false, null, null);
+        return execute(context, agent, agent.streamEvents(toolResponse), false, null, null);
     }
 
-    /**
-     * 中断当前执行。
-     *
-     * @param userId    用户标识
-     * @param sessionId 会话标识
-     * @return 返回结果
-     */
     @Override
     public boolean interrupt(String userId, String sessionId) {
         String key = key(userId, sessionId);
         log.info("[Streaming Service-中断] 尝试中断会话 - key: {}", key);
         boolean result = activeSessionRegistry.interrupt(key);
-        log.info("[Streaming Service-中断] 中断结果 - key: {}, success: {}", key, result);
         return result;
     }
 
+    /**
+     * 执行流式调用，处理 AgentEvent 事件流。
+     */
     private SseEmitter execute(
             ConversationSessionContext context,
             ReActAgent agent,
-            Flux<Event> eventFlux,
+            Flux<AgentEvent> eventFlux,
             boolean registerActive,
             String providerId,
             String modelId) {
         String sessionKey = key(context);
-        log.info("[流式执行] 开始执行 - sessionKey: {}, registerActive: {}, providerId: {}, modelId: {}",
-                sessionKey, registerActive, providerId, modelId);
 
         SseEmitter emitter = new SseEmitter(0L);
         AtomicReference<Msg> finalMessage = new AtomicReference<>();
-        // 缓存最近的 ToolUseBlock 信息，用于在 TOOL_RESULT 事件时填充 metadata
-        AtomicReference<ToolUseBlock> lastToolUseBlock = new AtomicReference<>();
+        // 缓存最近的 ToolCallStartEvent 信息，用于在 TOOL_RESULT 事件时填充 metadata
+        AtomicReference<ToolCallStartEvent> lastToolCallStart = new AtomicReference<>();
+        // 缓存 ThinkingBlock 文本
+        StringBuilder thinkingBuffer = new StringBuilder();
+        // 缓存 TextBlock 文本
+        StringBuilder textBuffer = new StringBuilder();
 
         if (registerActive) {
             activeSessionRegistry.register(sessionKey, agent, providerId, modelId);
-            log.info("[流式执行] 会话已注册到活动列表 - sessionKey: {}", sessionKey);
         }
 
-        log.info("[流式执行] 开始订阅事件流");
         eventFlux.subscribe(
                 event -> {
-                    log.debug("[流式执行-事件] 收到事件 - type: {}, isLast: {}, messageId: {}",
-                            event.getType(),
-                            event.isLast(),
-                            event.getMessage() != null ? event.getMessage().getId() : "null");
-
-                    if (event.getType() == EventType.AGENT_RESULT && event.getMessage() != null) {
-                        finalMessage.set(event.getMessage());
-                        log.info("[流式执行-事件] 收到最终结果 - content length: {}",
-                                event.getMessage().getTextContent().length());
-
-                        // 记录 Token 使用量
-                        recordTokenUsage(context, event.getMessage());
+                    // 处理 AgentResultEvent — 最终结果
+                    if (event instanceof AgentResultEvent resultEvent) {
+                        finalMessage.set(resultEvent.getResult());
+                        recordTokenUsage(context, resultEvent.getResult());
+                        send(emitter, toStreamEvent(context, TdAgentStreamEventType.RESULT,
+                                resultEvent.getResult(), true, Map.of()));
+                        return;
                     }
 
-                    TdAgentStreamEventType streamEventType = event.getType() == EventType.AGENT_RESULT
-                            ? TdAgentStreamEventType.RESULT
-                            : event.getType() == EventType.REASONING
-                              ? TdAgentStreamEventType.REASONING
-                              : event.getType() == EventType.TOOL_RESULT
-                                ? TdAgentStreamEventType.TOOL_RESULT
-                                : TdAgentStreamEventType.MESSAGE;
-
-                    // 对于 REASONING 事件，提取 ToolUseBlock 并缓存
-                    if (streamEventType == TdAgentStreamEventType.REASONING && event.getMessage() != null) {
-                        extractAndCacheToolUseBlock(event.getMessage(), lastToolUseBlock);
+                    // 处理 ThinkingBlockDeltaEvent — 推理过程（流式增量）
+                    if (event instanceof ThinkingBlockDeltaEvent thinkingDelta) {
+                        thinkingBuffer.append(thinkingDelta.getDelta());
+                        send(emitter, toStreamEvent(context, TdAgentStreamEventType.REASONING,
+                                null, false, Map.of("delta", thinkingDelta.getDelta())));
+                        return;
                     }
 
-                    // 对于 TOOL_RESULT 事件，从缓存中获取 ToolUseBlock 信息并附加到 metadata
-                    Map<String, Object> eventMetadata = new LinkedHashMap<>();
-                    eventMetadata.put("eventType", event.getType().name());
-                    if (streamEventType == TdAgentStreamEventType.TOOL_RESULT) {
-                        ToolUseBlock cachedToolUse = lastToolUseBlock.getAndSet(null);
-                        if (cachedToolUse != null) {
-                            populateToolUseMetadata(cachedToolUse, eventMetadata);
-                            log.debug("[流式执行-事件] TOOL_RESULT 元数据(从缓存) - toolName: {}, toolInput: {}",
-                                    eventMetadata.get("toolName"), eventMetadata.get("toolInput"));
+                    // 处理 ThinkingBlockEndEvent — 推理过程结束
+                    if (event instanceof ThinkingBlockEndEvent) {
+                        String thinking = thinkingBuffer.toString();
+                        thinkingBuffer.setLength(0);
+                        if (!thinking.isEmpty()) {
+                            send(emitter, toStreamEvent(context, TdAgentStreamEventType.REASONING,
+                                    null, true, Map.of("thinking", thinking)));
                         }
+                        return;
                     }
 
-                    TdAgentStreamEvent streamEvent = toStreamEvent(
-                            context,
-                            streamEventType,
-                            event.getMessage(),
-                            event.isLast(),
-                            eventMetadata);
+                    // 处理 ToolCallStartEvent — 工具调用开始
+                    if (event instanceof ToolCallStartEvent toolCallStart) {
+                        lastToolCallStart.set(toolCallStart);
+                        send(emitter, toStreamEvent(context, TdAgentStreamEventType.MESSAGE,
+                                null, false, Map.of(
+                                        "toolCallId", toolCallStart.getToolCallId(),
+                                        "toolName", toolCallStart.getToolCallName(),
+                                        "phase", "TOOL_CALL_START")));
+                        return;
+                    }
 
-                    log.debug("[流式执行-事件] 准备发送 SSE 事件 - type: {}, last: {}",
-                            streamEventType, event.isLast());
-                    send(emitter, streamEvent);
-                    log.debug("[流式执行-事件] SSE 事件已发送");
+                    // 处理 ToolResultEndEvent — 工具执行结果
+                    if (event instanceof ToolResultEndEvent toolResultEnd) {
+                        ToolCallStartEvent cachedStart = lastToolCallStart.getAndSet(null);
+                        Map<String, Object> metadata = new LinkedHashMap<>();
+                        metadata.put("toolCallId", toolResultEnd.getToolCallId());
+                        metadata.put("toolName", toolResultEnd.getToolCallName());
+                        if (cachedStart != null) {
+                            metadata.put("toolCallName", cachedStart.getToolCallName());
+                        }
+                        send(emitter, toStreamEvent(context, TdAgentStreamEventType.TOOL_RESULT,
+                                null, true, metadata));
+                        return;
+                    }
+
+                    // 处理 TextBlockDeltaEvent — 文本增量（最终回复）
+                    if (event instanceof TextBlockDeltaEvent textDelta) {
+                        textBuffer.append(textDelta.getDelta());
+                        return;
+                    }
+
+                    // 处理 TextBlockEndEvent — 文本块结束
+                    if (event instanceof TextBlockEndEvent) {
+                        textBuffer.setLength(0);
+                        return;
+                    }
+
+                    // 处理 RequireUserConfirmEvent — 需要用户确认（HITL）
+                    if (event instanceof RequireUserConfirmEvent confirmEvent) {
+                        send(emitter, TdAgentStreamEvent.builder()
+                                .type(TdAgentStreamEventType.APPROVAL_REQUIRED)
+                                .sessionId(context.getSessionId())
+                                .userId(context.getUserId())
+                                .content("检测到高风险工具调用，需要审批")
+                                .last(true)
+                                .metadata(Map.of("event", "REQUIRE_USER_CONFIRM"))
+                                .build());
+                        return;
+                    }
                 },
                 throwable -> {
                     log.error("[流式执行-错误] 事件流发生异常 - sessionKey: {}, error: {}",
-                            sessionKey,
-                            throwable.getMessage(),
-                            throwable);
+                            sessionKey, throwable.getMessage(), throwable);
                     try {
-                        send(
-                                emitter,
-                                TdAgentStreamEvent.builder()
-                                        .type(TdAgentStreamEventType.ERROR)
-                                        .sessionId(context.getSessionId())
-                                        .userId(context.getUserId())
-                                        .content(throwable.getMessage())
-                                        .last(true)
-                                        .metadata(Map.of("timestamp", Instant.now().toString()))
-                                        .build());
+                        send(emitter, TdAgentStreamEvent.builder()
+                                .type(TdAgentStreamEventType.ERROR)
+                                .sessionId(context.getSessionId())
+                                .userId(context.getUserId())
+                                .content(throwable.getMessage())
+                                .last(true)
+                                .metadata(Map.of("timestamp", Instant.now().toString()))
+                                .build());
                     } finally {
                         cleanup(context, agent, finalMessage.get(), false, emitter);
                     }
                 },
                 () -> {
-                    log.info("[流式执行-完成] 事件流已完成 - sessionKey: {}", sessionKey);
                     Msg result = finalMessage.get();
                     boolean paused = isPaused(result) || agentSessionStateService.isPaused(context);
-                    log.info("[流式执行-完成] 检查暂停状态 - paused: {}", paused);
 
                     if (paused) {
-                        log.info("[流式执行-完成] 检测到需要审批的工具调用，发送 APPROVAL_REQUIRED 事件");
-                        send(
-                                emitter,
-                                TdAgentStreamEvent.builder()
-                                        .type(TdAgentStreamEventType.APPROVAL_REQUIRED)
-                                        .sessionId(context.getSessionId())
-                                        .userId(context.getUserId())
-                                        .content("检测到高风险工具调用，当前会话已暂停，等待审批。")
-                                        .last(true)
-                                        .metadata(
-                                                Map.of(
-                                                        "pendingApprovals",
-                                                        toolApprovalService.listPending(
-                                                                context.getUserId(),
-                                                                context.getSessionId())))
-                                        .build());
+                        send(emitter, TdAgentStreamEvent.builder()
+                                .type(TdAgentStreamEventType.APPROVAL_REQUIRED)
+                                .sessionId(context.getSessionId())
+                                .userId(context.getUserId())
+                                .content("检测到高风险工具调用，当前会话已暂停，等待审批。")
+                                .last(true)
+                                .metadata(Map.of(
+                                        "pendingApprovals",
+                                        toolApprovalService.listPending(
+                                                context.getUserId(),
+                                                context.getSessionId())))
+                                .build());
                     }
 
-                    log.info("[流式执行-完成] 发送 DONE 事件");
-                    send(
-                            emitter,
-                            TdAgentStreamEvent.builder()
-                                    .type(TdAgentStreamEventType.DONE)
-                                    .sessionId(context.getSessionId())
-                                    .userId(context.getUserId())
-                                    .content("done")
-                                    .last(true)
-                                    .metadata(
-                                            Map.of(
-                                                    "paused", paused,
-                                                    "timestamp", Instant.now().toString()))
-                                    .build());
+                    send(emitter, TdAgentStreamEvent.builder()
+                            .type(TdAgentStreamEventType.DONE)
+                            .sessionId(context.getSessionId())
+                            .userId(context.getUserId())
+                            .content("done")
+                            .last(true)
+                            .metadata(Map.of("paused", paused, "timestamp", Instant.now().toString()))
+                            .build());
 
                     cleanup(context, agent, result, paused, emitter);
-                    log.info("[流式执行-完成] 清理工作已完成");
                 });
 
-        log.info("[流式执行] 事件订阅已完成，返回 Emitter");
         return emitter;
     }
 
@@ -428,32 +356,41 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
             boolean paused,
             SseEmitter emitter) {
         String sessionKey = key(context);
-        log.info("[流式清理] 开始清理工作 - sessionKey: {}, paused: {}", sessionKey, paused);
 
         try {
-            // 保存会话状态（必须在 unregister 之前执行）
             agentSessionStateService.save(context, agent, paused);
-            log.debug("[流式清理] 会话状态已保存");
         } catch (Exception e) {
             log.error("[流式清理] 保存会话状态失败 - error: {}", e.getMessage(), e);
         }
 
-        // 注销活动会话（恢复执行，避免内存泄漏）
+        // 将 Agent 的对话上下文持久化到 ConversationMemoryDocument，
+        // 确保前端会话列表和标题生成能读取到最新消息
+        try {
+            AgentState agentState = agent.getAgentState();
+            if (agentState != null) {
+                List<Msg> messages = agentState.getContext();
+                if (messages != null && !messages.isEmpty()) {
+                    conversationPersistenceService.replaceMessages(
+                            context, messages, "", null, false);
+                    log.debug("[流式清理] 对话消息已持久化 - sessionId: {}, messageCount: {}",
+                            context.getSessionId(), messages.size());
+                }
+            }
+        } catch (Exception e) {
+            log.error("[流式清理] 持久化对话消息失败 - error: {}", e.getMessage(), e);
+        }
+
         try {
             activeSessionRegistry.unregister(sessionKey);
-            log.debug("[流式清理] 会话已从活动列表注销");
         } catch (Exception e) {
             log.warn("[流式清理] 注销会话时发生异常 - error: {}", e.getMessage());
         }
 
         try {
             emitter.complete();
-            log.info("[流式清理] SSE Emitter 已完成");
         } catch (Exception e) {
             log.warn("[流式清理] 完成 Emitter 时发生异常 - error: {}", e.getMessage());
         }
-
-        log.info("[流式清理] 清理工作已完成 - sessionKey: {}", sessionKey);
     }
 
     private TdAgentStreamEvent toStreamEvent(
@@ -464,25 +401,7 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
             Map<String, Object> metadata) {
         String content = "";
         if (msg != null) {
-            if (type == TdAgentStreamEventType.REASONING) {
-                // REASONING 事件的 Msg 只包含 ThinkingBlock，需要从 ThinkingBlock 中提取内容
-                content = msg.getContent().stream()
-                        .filter(ThinkingBlock.class::isInstance)
-                        .map(ThinkingBlock.class::cast)
-                        .map(ThinkingBlock::getThinking)
-                        .reduce((a, b) -> a + "\n" + b)
-                        .orElse("");
-            } else if (type == TdAgentStreamEventType.TOOL_RESULT) {
-                // TOOL_RESULT 事件的 Msg 只包含 ToolResultBlock，需要从 ToolResultBlock 中提取内容
-                content = msg.getContent().stream()
-                        .filter(ToolResultBlock.class::isInstance)
-                        .map(ToolResultBlock.class::cast)
-                        .map(this::extractToolResultText)
-                        .reduce((a, b) -> a + "\n" + b)
-                        .orElse("");
-            } else {
-                content = msg.getTextContent();
-            }
+            content = msg.getTextContent();
         }
         return TdAgentStreamEvent.builder()
                 .type(type)
@@ -495,131 +414,25 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
                 .build();
     }
 
-    /**
-     * 从 ToolResultBlock 中提取工具执行的输出文本。
-     *
-     * @param toolResultBlock 工具结果块
-     * @return 提取的文本内容
-     */
-    private String extractToolResultText(ToolResultBlock toolResultBlock) {
-        return toolResultBlock.getOutput().stream()
-                .filter(TextBlock.class::isInstance)
-                .map(TextBlock.class::cast)
-                .map(TextBlock::getText)
-                .reduce((left, right) -> left + System.lineSeparator() + right)
-                .orElse(toJson(toolResultBlock.getOutput()));
-    }
-
-    private String toJson(Object value) {
-        if (value == null) {
-            return "";
-        }
-        try {
-            return objectMapper.writeValueAsString(value);
-        } catch (Exception e) {
-            return String.valueOf(value);
-        }
-    }
-
-    /**
-     * 从 Msg 内容中提取 ToolUseBlock 信息，添加到事件 metadata 中。
-     * <p>
-     * AgentScope 的流式事件没有 TOOL_USE 类型，工具调用信息需要从 Msg 的 content blocks 中提取。
-     * 当 TOOL_RESULT 事件触发时，对应的 ToolUseBlock 通常也在同一个 Msg 中，
-     * 通过提取其 name、input 和 id，前端可以在流式阶段正确展示工具调用信息。
-     *
-     * @param msg      包含 ToolUseBlock 的消息对象
-     * @param metadata 要填充的 metadata map
-     */
-    private void extractToolUseMetadata(Msg msg, Map<String, Object> metadata) {
-        if (msg == null || msg.getContent() == null) {
-            return;
-        }
-        for (ContentBlock block : msg.getContent()) {
-            if (block instanceof ToolUseBlock toolUseBlock) {
-                metadata.put("toolName", toolUseBlock.getName());
-                metadata.put("toolUseId", toolUseBlock.getId());
-                try {
-                    metadata.put("toolInput", objectMapper.writeValueAsString(toolUseBlock.getInput()));
-                } catch (Exception e) {
-                    metadata.put("toolInput", toolUseBlock.getInput() != null ? toolUseBlock.getInput().toString() : "");
-                }
-                // 只取第一个 ToolUseBlock
-                break;
-            }
-        }
-    }
-
-    /**
-     * 从 REASONING 事件的 Msg 中提取 ToolUseBlock 并缓存。
-     * <p>
-     * AgentScope 的 REASONING 事件 Msg 可能包含 ToolUseBlock（工具调用请求），
-     * 而 TOOL_RESULT 事件的 Msg 只包含 ToolResultBlock。
-     * 通过缓存 REASONING 事件中的 ToolUseBlock，可以在 TOOL_RESULT 事件时获取工具调用信息。
-     *
-     * @param msg              包含 ToolUseBlock 的消息对象
-     * @param lastToolUseBlock 缓存引用
-     */
-    private void extractAndCacheToolUseBlock(Msg msg, AtomicReference<ToolUseBlock> lastToolUseBlock) {
-        if (msg == null || msg.getContent() == null) {
-            return;
-        }
-        for (ContentBlock block : msg.getContent()) {
-            if (block instanceof ToolUseBlock toolUseBlock) {
-                lastToolUseBlock.set(toolUseBlock);
-                log.debug("[流式执行] 缓存 ToolUseBlock - name: {}, id: {}",
-                        toolUseBlock.getName(), toolUseBlock.getId());
-                break;
-            }
-        }
-    }
-
-    /**
-     * 将 ToolUseBlock 信息填充到 metadata 中。
-     *
-     * @param toolUseBlock 工具调用块
-     * @param metadata     要填充的 metadata map
-     */
-    private void populateToolUseMetadata(ToolUseBlock toolUseBlock, Map<String, Object> metadata) {
-        metadata.put("toolName", toolUseBlock.getName());
-        metadata.put("toolUseId", toolUseBlock.getId());
-        try {
-            metadata.put("toolInput", objectMapper.writeValueAsString(toolUseBlock.getInput()));
-        } catch (Exception e) {
-            metadata.put("toolInput", toolUseBlock.getInput() != null ? toolUseBlock.getInput().toString() : "");
-        }
-    }
-
-    private StreamOptions streamOptions() {
-        return StreamOptions.builder()
-                .eventTypes(EventType.ALL)
-                .incremental(properties.getStreaming().isIncremental())
-                .build();
-    }
-
     private SseEmitter singleResponseEmitter(
             ConversationSessionContext context, ChatResponse response) {
         SseEmitter emitter = new SseEmitter(0L);
-        send(
-                emitter,
-                TdAgentStreamEvent.builder()
-                        .type(TdAgentStreamEventType.RESULT)
-                        .sessionId(context.getSessionId())
-                        .userId(context.getUserId())
-                        .content(response.getMessage())
-                        .last(true)
-                        .metadata(response.getMetadata())
-                        .build());
-        send(
-                emitter,
-                TdAgentStreamEvent.builder()
-                        .type(TdAgentStreamEventType.DONE)
-                        .sessionId(context.getSessionId())
-                        .userId(context.getUserId())
-                        .content("done")
-                        .last(true)
-                        .metadata(Map.of("commandHandled", true))
-                        .build());
+        send(emitter, TdAgentStreamEvent.builder()
+                .type(TdAgentStreamEventType.RESULT)
+                .sessionId(context.getSessionId())
+                .userId(context.getUserId())
+                .content(response.getMessage())
+                .last(true)
+                .metadata(response.getMetadata())
+                .build());
+        send(emitter, TdAgentStreamEvent.builder()
+                .type(TdAgentStreamEventType.DONE)
+                .sessionId(context.getSessionId())
+                .userId(context.getUserId())
+                .content("done")
+                .last(true)
+                .metadata(Map.of("commandHandled", true))
+                .build());
         emitter.complete();
         return emitter;
     }
@@ -634,22 +447,15 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
 
     private void send(SseEmitter emitter, TdAgentStreamEvent event) {
         try {
-            log.trace("[SSE发送] 发送事件 - type: {}, sessionId: {}, content length: {}",
-                    event.getType(),
-                    event.getSessionId(),
-                    event.getContent() != null ? event.getContent().length() : 0);
             emitter.send(
                     SseEmitter.event()
                             .name(event.getType().name().toLowerCase())
                             .data(event));
-            log.trace("[SSE发送] 事件发送成功 - type: {}", event.getType());
         } catch (IOException ex) {
-            // 客户端断开连接是正常情况（如用户中断），使用 WARN 级别
             log.warn("[SSE发送] 客户端可能已断开 - type: {}, error: {}",
                     event.getType(), ex.getMessage());
             throw new BizException(HmeErrorCode.AGENT_SSE_EMIT_ERROR, ex);
         } catch (Exception ex) {
-            // 其他异常使用 ERROR 级别
             log.error("[SSE发送] 发送 SSE 事件失败 - type: {}, error: {}",
                     event.getType(), ex.getMessage(), ex);
             throw new BizException(HmeErrorCode.AGENT_SSE_EMIT_ERROR, ex);
@@ -664,41 +470,21 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
         return userId + ":" + sessionId;
     }
 
-    /**
-     * 执行单个已批准的工具调用，返回真实的工具执行结果。
-     *
-     * <p>流程：</p>
-     * <ol>
-     *     <li>创建 Toolkit（包含 GuardedAgentTool 包装）</li>
-     *     <li>按工具名查找对应的 AgentTool</li>
-     *     <li>构建 ToolCallParam（携带原始 toolCallId）</li>
-     *     <li>调用 tool.callAsync() — GuardedAgentTool 检查 isApproved()=true，真正执行</li>
-     * </ol>
-     *
-     * @param context  会话上下文
-     * @param approval 审批记录
-     * @return 工具执行结果 ContentBlock
-     */
     private ContentBlock executeApprovedTool(ConversationSessionContext context, ToolApprovalDocument approval) {
         String toolName = approval.getToolName();
         String toolCallId = approval.getToolCallId();
-        log.info("[审批执行] 开始执行已批准工具 - toolName: {}, toolCallId: {}", toolName, toolCallId);
 
         try {
-            // 创建 Toolkit（包含 GuardedAgentTool，isApproved=true 会真正执行）
             Toolkit toolkit = toolkitFactory.createToolkit(context);
             AgentTool tool = toolkit.getTool(toolName);
             if (tool == null) {
-                log.warn("[审批执行] 工具未找到 - toolName: {}", toolName);
                 return new ToolResultBlock(
                         toolCallId, toolName,
                         TextBlock.builder().text("工具执行失败：工具 " + toolName + " 未找到").build());
             }
 
-            // 解析原始输入参数
             Map<String, Object> inputMap = parseToolInput(approval.getToolInputJson());
 
-            // 构建 ToolCallParam，携带原始 toolCallId
             ToolUseBlock toolUseBlock = ToolUseBlock.builder()
                     .id(toolCallId)
                     .name(toolName)
@@ -708,9 +494,7 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
                     .toolUseBlock(toolUseBlock)
                     .build();
 
-            // 同步执行工具（GuardedAgentTool 检查 isApproved=true → 委托执行）
             ToolResultBlock result = tool.callAsync(param).block();
-            log.info("[审批执行] 工具执行完成 - toolName: {}, hasResult: {}", toolName, result != null);
 
             if (result == null) {
                 return new ToolResultBlock(
@@ -718,8 +502,6 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
                         TextBlock.builder().text("工具执行完成，无输出").build());
             }
 
-            // 原始工具返回的 ToolResultBlock 可能没有设置 toolUseId，
-            // 必须用原始 toolCallId 重建，否则 ReActAgent.validateAndAddToolResults 会拒绝
             List<ContentBlock> output = result.getOutput();
             return new ToolResultBlock(toolCallId, toolName, output);
         } catch (Exception e) {
@@ -730,9 +512,6 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
         }
     }
 
-    /**
-     * 解析工具输入参数 JSON。
-     */
     private Map<String, Object> parseToolInput(String toolInputJson) {
         if (toolInputJson == null || toolInputJson.isBlank()) {
             return Map.of();
@@ -746,30 +525,20 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
         }
     }
 
-    /**
-     * 记录 Token 使用量。
-     *
-     * @param context 会话上下文
-     * @param message 最终结果消息
-     */
     @SuppressWarnings("deprecation")
     private void recordTokenUsage(ConversationSessionContext context, Msg message) {
         try {
-            // 优先使用会话上下文中已解析的模型配置（从 DB 加载，与实际对话一致）
             TdAgentResolvedModelConfig modelConfig = context.getResolvedModelConfig();
             if (modelConfig == null) {
-                log.warn("[流式执行-Token记录] 上下文无模型配置快照，回退到全局默认配置");
                 modelConfig = modelFactory.currentConfig();
             }
 
-            // 构建模型配置 JSON（用于 Service 解析）
             String modelConfigJson = String.format(
                     "{\"provider\":\"%s\",\"modelName\":\"%s\"}",
                     modelConfig.getProviderId(),
                     modelConfig.getModelId()
             );
 
-            // 调用记录服务
             tokenUsageRecordService.record(
                     context.getUserId(),
                     context.getSessionId(),
@@ -778,7 +547,6 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
                     message.getMetadata()
             );
         } catch (Exception e) {
-            // 记录失败不影响主流程
             log.warn("[流式执行-Token记录] Token 使用量记录失败 - userId: {}, sessionId: {}, error: {}",
                     context.getUserId(), context.getSessionId(), e.getMessage());
         }

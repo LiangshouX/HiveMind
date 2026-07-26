@@ -18,8 +18,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <agentscope.core.version>1.0.12</agentscope.core.version>
-        <agentscope.runtime.version>1.0.2</agentscope.runtime.version>
+        <agentscope.core.version>2.0.0</agentscope.core.version>
         <maven.compiler.release>17</maven.compiler.release>
     </properties>
 
@@ -62,14 +61,13 @@
         </dependency>
         <dependency>
             <groupId>io.agentscope</groupId>
-            <artifactId>agentscope-runtime-agentscope</artifactId>
-            <version>${agentscope.runtime.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>io.agentscope</groupId>
-                    <artifactId>agentscope-core</artifactId>
-                </exclusion>
-            </exclusions>
+            <artifactId>agentscope-extensions-model-dashscope</artifactId>
+            <version>${agentscope.core.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.agentscope</groupId>
+            <artifactId>agentscope-extensions-model-openai</artifactId>
+            <version>${agentscope.core.version}</version>
         </dependency>
         <dependency>
             <groupId>io.agentscope</groupId>
@@ -83,7 +81,7 @@
         </dependency>
         <dependency>
             <groupId>io.agentscope</groupId>
-            <artifactId>agentscope-extensions-autocontext-memory</artifactId>
+            <artifactId>agentscope-harness</artifactId>
             <version>${agentscope.core.version}</version>
         </dependency>
 

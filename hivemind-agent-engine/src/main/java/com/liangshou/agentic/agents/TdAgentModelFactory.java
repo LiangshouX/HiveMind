@@ -2,13 +2,13 @@ package com.liangshou.agentic.agents;
 
 import com.liangshou.agentic.agents.provider.TdAgentProviderRegistry;
 import com.liangshou.agentic.agents.provider.TdAgentResolvedModelConfig;
-import io.agentscope.core.formatter.dashscope.DashScopeChatFormatter;
-import io.agentscope.core.formatter.openai.DeepSeekFormatter;
-import io.agentscope.core.formatter.openai.OpenAIChatFormatter;
-import io.agentscope.core.model.DashScopeChatModel;
 import io.agentscope.core.model.GenerateOptions;
 import io.agentscope.core.model.Model;
-import io.agentscope.core.model.OpenAIChatModel;
+import io.agentscope.extensions.model.dashscope.DashScopeChatModel;
+import io.agentscope.extensions.model.dashscope.formatter.DashScopeChatFormatter;
+import io.agentscope.extensions.model.openai.OpenAIChatModel;
+import io.agentscope.extensions.model.openai.formatter.DeepSeekFormatter;
+import io.agentscope.extensions.model.openai.formatter.OpenAIChatFormatter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -64,7 +64,7 @@ public class TdAgentModelFactory {
      *
      * <p><strong>支持的模型类型：</strong></p>
      * <ul>
-     *     <li><b>DashScope</b>：阿里云通义千问系列模型，使用 {@link DashScopeChatModel}</li>
+     *     <li><b>DashScope</b>：阿里云通义千问系列模型，使用 {@link io.agentscope.extensions.model.dashscope.DashScopeChatModel}</li>
      *     <li><b>OpenAI Compatible</b>：兼容 OpenAI API 格式的模型（包括 OpenAI、DeepSeek 等），使用 {@link OpenAIChatModel}</li>
      * </ul>
      *

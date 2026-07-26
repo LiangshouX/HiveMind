@@ -26,7 +26,7 @@ import java.time.Instant;
  *     <li>复合唯一索引 (userId, session_id) 确保每个用户的每个会话只有一条状态记录</li>
  * </ul>
  *
- * <p>该文档由 {@link com.liangshou.agentic.agents.session.MongoAgentSession} 读写，
+ * <p>该文档由 {@link com.liangshou.agentic.agents.session.MongoAgentStateStore} 读写，
  * 支持 Agent 状态的跨请求持久化和恢复。</p>
  *
  * @author LiangshouX

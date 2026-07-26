@@ -22,6 +22,7 @@ import io.agentscope.core.message.Msg;
 import io.agentscope.core.message.MsgRole;
 import io.agentscope.core.message.TextBlock;
 import io.agentscope.core.model.Model;
+import io.agentscope.core.state.AgentState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -103,7 +104,7 @@ public class TdAgentChatServiceImpl implements ITdAgentChatService {
             return commandResponse;
         }
         ReActAgent agent = agentFactory.createAgent(context);
-        agentSessionStateService.restore(context, agent);
+        // AgentScope 2.0: 状态由 AgentStateStore 自动管理，无需手动 restore
         Msg userMessage = Msg.builder()
                 .name(request.getUserName() == null ? "user" : request.getUserName())
                 .role(MsgRole.USER)
@@ -112,6 +113,20 @@ public class TdAgentChatServiceImpl implements ITdAgentChatService {
         Msg response = agent.call(userMessage).block();
         boolean paused = isPaused(response);
         agentSessionStateService.save(context, agent, paused);
+
+        // 将对话消息持久化到 ConversationMemoryDocument
+        try {
+            AgentState agentState = agent.getAgentState();
+            if (agentState != null) {
+                List<Msg> messages = agentState.getContext();
+                if (messages != null && !messages.isEmpty()) {
+                    persistenceService.replaceMessages(context, messages, "", null, false);
+                }
+            }
+        } catch (Exception e) {
+            log.error("[Chat] 持久化对话消息失败 - error: {}", e.getMessage(), e);
+        }
+
         long messageCount = persistenceService.countMessages(context);
         ConversationViewDocument sessionView =
                 persistenceService
