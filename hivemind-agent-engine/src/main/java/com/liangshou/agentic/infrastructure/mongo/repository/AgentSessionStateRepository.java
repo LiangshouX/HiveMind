@@ -3,6 +3,7 @@ package com.liangshou.agentic.infrastructure.mongo.repository;
 import com.liangshou.agentic.domain.session.model.AgentSessionStateDocument;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -34,4 +35,12 @@ public interface AgentSessionStateRepository extends MongoRepository<AgentSessio
      * @return 包含会话状态文档的 Optional，若该会话不存在或已过期则返回 empty
      */
     Optional<AgentSessionStateDocument> findByUserIdAndSessionId(String userId, String sessionId);
+
+    /**
+     * 根据用户ID查询该用户的所有 Agent 会话状态。
+     *
+     * @param userId 用户唯一标识
+     * return 该用户的所有会话状态文档列表
+     */
+    List<AgentSessionStateDocument> findByUserId(String userId);
 }

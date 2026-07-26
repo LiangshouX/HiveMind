@@ -8,7 +8,7 @@ spring:
 
 tdagent:
   observability:
-    enabled: true
+    enabled: false
     url: http://localhost:3000
     startup-command: "as_studio"
     startup-timeout-seconds: 30
