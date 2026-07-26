@@ -78,7 +78,7 @@ adapter → application → domain ← infrastructure
 ## Key Technology Stack
 
 - **Java 17**, **Spring Boot 4.0.3**
-- **AI Agent SDK**: AgentScope-Java 1.0.12 (agentscope-core, agentscope-runtime)
+- **AI Agent SDK**: AgentScope-Java 2.0.0 (agentscope-core, agentscope-extensions-model-dashscope, agentscope-extensions-model-openai, agentscope-extensions-reme, agentscope-extensions-studio, agentscope-harness)
 - **Databases**: MySQL 8.0 (via MyBatis-Plus 3.5.15) + MongoDB (Spring Data)
 - **Security**: Spring Security + JWT (java-jwt 4.4.0)
 - **Caching**: Caffeine 3.1.8
