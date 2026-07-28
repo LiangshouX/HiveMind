@@ -88,6 +88,7 @@ public interface ITdAgentChatService {
         }
         return response.getGenerateReason() == GenerateReason.REASONING_STOP_REQUESTED
                 || response.getGenerateReason() == GenerateReason.ACTING_STOP_REQUESTED
+                || response.getGenerateReason() == GenerateReason.MIDDLEWARE_STOP_REQUESTED
                 || response.getGenerateReason() == GenerateReason.TOOL_SUSPENDED;
     }
 }

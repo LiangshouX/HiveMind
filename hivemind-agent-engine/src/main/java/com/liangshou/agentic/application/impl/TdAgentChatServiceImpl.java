@@ -9,7 +9,6 @@ import com.liangshou.agentic.agents.provider.TdAgentResolvedModelConfig;
 import com.liangshou.agentic.agents.session.AgentSessionStateService;
 import com.liangshou.agentic.domain.memory.model.ConversationMemoryDocument;
 import com.liangshou.agentic.domain.memory.model.ConversationViewDocument;
-import com.liangshou.agentic.domain.memory.model.StoredMessage;
 import com.liangshou.agentic.domain.memory.model.StoredMessageContent;
 import com.liangshou.agentic.application.IConversationPersistenceService;
 import com.liangshou.agentic.application.IChatCommandService;
@@ -18,6 +17,7 @@ import com.liangshou.agentic.application.dto.ChatRequest;
 import com.liangshou.agentic.application.dto.ChatResponse;
 import com.liangshou.agentic.application.dto.SessionHistoryResponse;
 import io.agentscope.core.ReActAgent;
+import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.message.Msg;
 import io.agentscope.core.message.MsgRole;
 import io.agentscope.core.message.TextBlock;
@@ -110,7 +110,7 @@ public class TdAgentChatServiceImpl implements ITdAgentChatService {
                 .role(MsgRole.USER)
                 .textContent(request.getMessage())
                 .build();
-        Msg response = agent.call(userMessage).block();
+        Msg response = agent.call(List.of(userMessage), runtimeContext(context)).block();
         boolean paused = isPaused(response);
         agentSessionStateService.save(context, agent, paused);
 
@@ -352,6 +352,20 @@ public class TdAgentChatServiceImpl implements ITdAgentChatService {
             // 供应商已被删除，降级到激活供应商
             return providerRegistry.resolveForUser(userId, null, null);
         }
+    }
+
+    /**
+     * 构建框架 RuntimeContext，携带 (userId, sessionId) 用于 AgentStateStore 寻址。
+     *
+     * <p>必须与 {@link com.liangshou.agentic.agents.session.MongoAgentStateStore} 及
+     * {@link com.liangshou.agentic.agents.session.AgentSessionStateService} 使用的
+     * (userId, sessionId) 保持一致，否则框架自动保存的状态与业务侧读写的状态文档会分裂为两份。</p>
+     */
+    private RuntimeContext runtimeContext(ConversationSessionContext context) {
+        return RuntimeContext.builder()
+                .userId(context.getUserId())
+                .sessionId(context.getSessionId())
+                .build();
     }
 
 }

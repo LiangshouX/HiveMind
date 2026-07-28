@@ -34,16 +34,30 @@ public class SandboxDashboardService {
      * 列出所有活跃沙箱。
      */
     public List<SandboxInfoDTO> listActiveSandboxes() {
-        // AgentScope 2.0 harness 模块的沙箱通过 TdAgentSandboxManager 管理
-        // 当前返回基础信息，后续可扩展为查询活跃容器列表
-        return Collections.emptyList();
+        List<SandboxInfoDTO> result = new ArrayList<>();
+        sandboxManager.listActiveSandboxes().forEach((key, sandbox) -> result.add(toInfoDTO(key)));
+        return result;
     }
 
     /**
      * 获取单个沙箱详情。
+     *
+     * @param containerId 沙箱标识（{@code userId:sessionId} 会话键）
      */
     public SandboxInfoDTO getSandboxDetail(String containerId) {
-        return null;
+        if (containerId == null || !sandboxManager.listActiveSandboxes().containsKey(containerId)) {
+            return null;
+        }
+        return toInfoDTO(containerId);
+    }
+
+    private SandboxInfoDTO toInfoDTO(String sessionKey) {
+        return SandboxInfoDTO.builder()
+                .containerId(sessionKey)
+                .containerName(sessionKey)
+                .sandboxType("docker")
+                .status("running")
+                .build();
     }
 
     /**
@@ -75,37 +89,43 @@ public class SandboxDashboardService {
                     .build();
         }
 
+        int active = sandboxManager.listActiveSandboxes().size();
         return SandboxHealthDTO.builder()
                 .sandboxEnabled(true)
                 .dockerConnected(true)
-                .totalSandboxes(0)
-                .runningCount(0)
+                .totalSandboxes(active)
+                .runningCount(active)
                 .stoppedCount(0)
                 .build();
     }
 
     /**
      * 停止指定沙箱。
+     *
+     * @param containerId 沙箱标识（{@code userId:sessionId} 会话键）
      */
     public boolean stopSandbox(String containerId) {
         log.info("[SandboxDashboard] 停止沙箱: {}", containerId);
-        return false;
+        return sandboxManager.removeSandboxByKey(containerId);
     }
 
     /**
      * 删除指定沙箱。
+     *
+     * @param containerId 沙箱标识（{@code userId:sessionId} 会话键）
      */
     public boolean removeSandbox(String containerId) {
         log.info("[SandboxDashboard] 删除沙箱: {}", containerId);
-        return false;
+        return sandboxManager.removeSandboxByKey(containerId);
     }
 
     /**
      * 清理所有沙箱。
      */
     public int cleanupAll() {
-        log.info("[SandboxDashboard] 清理所有沙箱");
+        int count = sandboxManager.listActiveSandboxes().size();
+        log.info("[SandboxDashboard] 清理所有沙箱 - count: {}", count);
         sandboxManager.destroy();
-        return 0;
+        return count;
     }
 }

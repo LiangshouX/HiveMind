@@ -55,16 +55,12 @@ public class MongoAgentStateStore implements AgentStateStore {
 
     @Override
     public void save(String userId, String sessionId, String key, State value) {
-        Map<String, Object> payload = loadPayload(userId, sessionId);
-        payload.put(key, value);
-        persist(userId, sessionId, payload);
+        saveEntry(userId, sessionId, key, value);
     }
 
     @Override
     public void save(String userId, String sessionId, String key, List<? extends State> values) {
-        Map<String, Object> payload = loadPayload(userId, sessionId);
-        payload.put(key, values);
-        persist(userId, sessionId, payload);
+        saveEntry(userId, sessionId, key, values);
     }
 
     @Override
@@ -88,14 +84,14 @@ public class MongoAgentStateStore implements AgentStateStore {
 
     @Override
     public boolean exists(String userId, String sessionId) {
-        String docId = buildDocId(userId, sessionId);
-        return repository.findById(docId).isPresent();
+        // existsById 走轻量 count 查询，不传输/反序列化整个文档（stateJson 可能很大）。
+        // 该方法处于每次 createAgent 的热路径（prePopulateFromHistory）
+        return repository.existsById(buildDocId(userId, sessionId));
     }
 
     @Override
     public void delete(String userId, String sessionId) {
-        String docId = buildDocId(userId, sessionId);
-        repository.findById(docId).ifPresent(repository::delete);
+        repository.deleteById(buildDocId(userId, sessionId));
     }
 
     @Override
@@ -152,16 +148,23 @@ public class MongoAgentStateStore implements AgentStateStore {
                 userId, sessionId, historyMessages.size());
     }
 
-    private void persist(String userId, String sessionId, Map<String, Object> payload) {
+    /**
+     * 保存单个 state 条目：1 次读 + 1 次写（此前为 2 读 1 写）。
+     *
+     * <p>注意：读-改-写整体非原子，同会话并发保存（如正常保存与优雅停机保存交错）
+     * 理论上可能丢失更新；当前会话级调用串行化保证了常规场景的正确性。</p>
+     */
+    private void saveEntry(String userId, String sessionId, String key, Object value) {
         String docId = buildDocId(userId, sessionId);
-        String effectiveUserId = userId == null ? "" : userId;
         AgentSessionStateDocument document =
                 repository.findById(docId)
                         .orElseGet(() -> AgentSessionStateDocument.builder()
                                 .id(docId)
-                                .userId(effectiveUserId)
+                                .userId(effectiveUserId(userId))
                                 .sessionId(sessionId)
                                 .build());
+        Map<String, Object> payload = parsePayload(document.getStateJson());
+        payload.put(key, value);
         document.setStateJson(write(payload));
         document.setUpdatedAt(Instant.now());
         repository.save(document);
@@ -171,14 +174,23 @@ public class MongoAgentStateStore implements AgentStateStore {
         String docId = buildDocId(userId, sessionId);
         return repository.findById(docId)
                 .map(AgentSessionStateDocument::getStateJson)
-                .filter(json -> json != null && !json.isBlank())
-                .map(this::read)
+                .map(this::parsePayload)
                 .orElseGet(LinkedHashMap::new);
     }
 
+    private Map<String, Object> parsePayload(String stateJson) {
+        if (stateJson == null || stateJson.isBlank()) {
+            return new LinkedHashMap<>();
+        }
+        return read(stateJson);
+    }
+
     private String buildDocId(String userId, String sessionId) {
-        String effectiveUserId = userId == null ? "" : userId;
-        return effectiveUserId + ":" + sessionId + ":state";
+        return effectiveUserId(userId) + ":" + sessionId + ":state";
+    }
+
+    private String effectiveUserId(String userId) {
+        return userId == null ? "" : userId;
     }
 
     private Map<String, Object> read(String json) {

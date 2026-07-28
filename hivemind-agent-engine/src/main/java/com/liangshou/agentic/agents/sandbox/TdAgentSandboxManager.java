@@ -91,16 +91,34 @@ public class TdAgentSandboxManager {
      * 停止并移除指定会话的沙箱。
      */
     public void removeSandbox(String userId, String sessionId) {
-        String key = userId + ":" + sessionId;
-        Sandbox sandbox = activeSandboxes.remove(key);
-        if (sandbox != null) {
-            try {
-                sandbox.close();
-                log.info("[SandboxManager] 沙箱已关闭 - key: {}", key);
-            } catch (Exception e) {
-                log.warn("[SandboxManager] 关闭沙箱失败 - key: {}", key, e);
-            }
+        removeSandboxByKey(userId + ":" + sessionId);
+    }
+
+    /**
+     * 按会话键（userId:sessionId）移除并关闭沙箱。
+     *
+     * @param sessionKey 会话键
+     * @return 沙箱存在时返回 true（无论关闭是否抛异常）
+     */
+    public boolean removeSandboxByKey(String sessionKey) {
+        Sandbox sandbox = activeSandboxes.remove(sessionKey);
+        if (sandbox == null) {
+            return false;
         }
+        try {
+            sandbox.close();
+            log.info("[SandboxManager] 沙箱已关闭 - key: {}", sessionKey);
+        } catch (Exception e) {
+            log.warn("[SandboxManager] 关闭沙箱失败 - key: {}", sessionKey, e);
+        }
+        return true;
+    }
+
+    /**
+     * 当前活跃沙箱快照（sessionKey → Sandbox），供管理面板查询。
+     */
+    public Map<String, Sandbox> listActiveSandboxes() {
+        return Map.copyOf(activeSandboxes);
     }
 
     /**

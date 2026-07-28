@@ -7,8 +7,10 @@ import io.agentscope.core.agent.Agent;
 import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.event.AgentEvent;
 import io.agentscope.core.message.Msg;
+import io.agentscope.core.message.MsgRole;
 import io.agentscope.core.middleware.MiddlewareBase;
 import io.agentscope.core.middleware.ReasoningInput;
+import io.agentscope.core.state.AgentState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
@@ -52,13 +54,42 @@ public class TdAgentMemoryCompactionMiddleware implements MiddlewareBase {
         List<Msg> messages = new ArrayList<>(input.messages());
 
         try {
-            // 同步输入消息到 MongoConversationMemory（用于压缩判断）
+            // 保留框架在推理输入头部注入的系统消息（sysPrompt 等），
+            // 这类消息不属于对话记忆，压缩与状态回写都不应处理它们
+            List<Msg> leadingSystemMessages = new ArrayList<>();
+            for (Msg msg : messages) {
+                if (msg.getRole() == MsgRole.SYSTEM) {
+                    leadingSystemMessages.add(msg);
+                } else {
+                    break;
+                }
+            }
+
+            // 同步对话消息到 MongoConversationMemory（用于压缩判断，不含系统消息）
             syncMessagesToMemory(messages);
 
             // 判断并执行压缩
-            memoryManager.maybeCompact(context, memory, messages);
+            boolean compacted = memoryManager.maybeCompact(context, memory, messages);
 
-            // 注入压缩摘要
+            if (compacted) {
+                // 压缩发生：推理输入改为"系统消息 + 保留的近期消息"，真正收缩上下文，
+                // 而不是在完整历史上再叠加摘要
+                messages = new ArrayList<>(leadingSystemMessages);
+                messages.addAll(memory.getMessages());
+
+                // 将压缩结果回写到 call-scoped AgentState，框架随后会自动持久化压缩后的状态，
+                // 避免持久化上下文无界增长、每次请求重复触发 LLM 摘要
+                AgentState agentState = ctx.getAgentState();
+                if (agentState != null) {
+                    List<Msg> stateContext = agentState.contextMutable();
+                    stateContext.clear();
+                    stateContext.addAll(memory.getMessages());
+                } else {
+                    log.warn("[记忆压缩] 无法获取 call-scoped AgentState，压缩结果仅对本次调用生效");
+                }
+            }
+
+            // 注入压缩摘要（存在历史摘要时前置摘要系统消息）
             messages = new ArrayList<>(memoryManager.injectCompressedSummary(messages, memory));
         } catch (Exception e) {
             log.warn("[记忆压缩] 压缩失败，继续使用原始消息: {}", e.getMessage());
@@ -71,10 +102,16 @@ public class TdAgentMemoryCompactionMiddleware implements MiddlewareBase {
 
     /**
      * 将输入消息同步到 MongoConversationMemory。
+     *
+     * <p>过滤系统消息：框架会在推理输入头部注入 sysPrompt 等系统消息，
+     * 它们不属于对话记忆（与 1.x 时代从持久层加载的语义一致）。</p>
      */
     private void syncMessagesToMemory(List<Msg> inputMessages) {
         memory.clear();
         for (Msg msg : inputMessages) {
+            if (msg.getRole() == MsgRole.SYSTEM) {
+                continue;
+            }
             memory.addMessage(msg);
         }
     }

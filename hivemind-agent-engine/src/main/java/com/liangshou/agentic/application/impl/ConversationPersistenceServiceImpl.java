@@ -111,8 +111,14 @@ public class ConversationPersistenceServiceImpl implements IConversationPersiste
         document.setMessages(new ArrayList<>(storedMessages));
         document.setRoundCount(calculateRoundCount(messages));
         document.setUpdatedAt(now);
-        document.setSysPrompt(systemPrompt);
-        document.setCompressedSummary(compressedSummary);
+        // 空值传入时保留文档既有值：流式/同步调用结束后的同步写入不携带摘要与提示词，
+        // 不能覆盖压缩中间件写入的 compressedSummary / sysPrompt
+        if (systemPrompt != null && !systemPrompt.isEmpty()) {
+            document.setSysPrompt(systemPrompt);
+        }
+        if (compressedSummary != null) {
+            document.setCompressedSummary(compressedSummary);
+        }
         if (compactionUpdated) {
             document.setCompactionCount(
                     document.getCompactionCount() == null ? 1L : document.getCompactionCount() + 1);

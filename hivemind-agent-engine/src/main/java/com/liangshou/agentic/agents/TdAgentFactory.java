@@ -15,7 +15,6 @@ import com.liangshou.agentic.agents.provider.TdAgentResolvedModelConfig;
 import com.liangshou.agentic.agents.session.AgentSessionStateService;
 import com.liangshou.agentic.agents.session.MongoAgentStateStore;
 import com.liangshou.agentic.agents.skill.TdAgentSkillService;
-import com.liangshou.agentic.agents.tools.TdAgentBuiltinTools;
 import com.liangshou.agentic.common.config.TdAgentProperties;
 import com.liangshou.agentic.application.IConversationPersistenceService;
 import io.agentscope.core.ReActAgent;
@@ -94,10 +93,8 @@ public class TdAgentFactory {
                 new MongoConversationMemory(context, persistenceService, systemPrompt);
         log.debug("[TdAgent Factory] MongoDB 记忆已初始化");
 
-        // 3. 创建 Toolkit 并注册内置工具
+        // 3. 创建 Toolkit（createToolkit 内部已注册内置工具，此处不再重复注册）
         Toolkit toolkit = toolkitFactory.createToolkit(context);
-        TdAgentBuiltinTools builtinTools = new TdAgentBuiltinTools(context, persistenceService);
-        toolkit.registerTool(builtinTools);
 
         // 4. 注册 ReMe 记忆工具（HTTP 模式下直接注册 @Tool 工具）
         if (properties.getReme().isEnabled() && !reMeService.isUseMcp()) {

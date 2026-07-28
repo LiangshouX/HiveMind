@@ -25,6 +25,7 @@ import com.liangshou.agentic.application.dto.ChatRequest;
 import com.liangshou.agentic.application.dto.ChatResponse;
 import com.liangshou.agentic.application.dto.ToolApprovalActionRequest;
 import io.agentscope.core.ReActAgent;
+import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.event.*;
 import io.agentscope.core.message.*;
 import io.agentscope.core.state.AgentState;
@@ -121,7 +122,7 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
         return execute(
                 context,
                 agent,
-                agent.streamEvents(userMessage),
+                agent.streamEvents(userMessage, runtimeContext(context)),
                 true,
                 request.getProviderId(),
                 request.getModelId());
@@ -140,15 +141,17 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
 
         ReActAgent agent = agentFactory.createAgent(context);
 
+        // 工具集只构建一次，多个审批复用（避免重复初始化 MCP/沙箱工具）
+        Toolkit toolkit = toolkitFactory.createToolkit(context);
         List<ContentBlock> toolResults = approvals.stream()
-                .map(approval -> executeApprovedTool(context, approval))
+                .map(approval -> executeApprovedTool(toolkit, approval))
                 .toList();
 
         Msg toolResponse = Msg.builder()
                 .role(MsgRole.TOOL)
                 .content(toolResults)
                 .build();
-        return execute(context, agent, agent.streamEvents(toolResponse), false, null, null);
+        return execute(context, agent, agent.streamEvents(toolResponse, runtimeContext(context)), false, null, null);
     }
 
     @Override
@@ -183,7 +186,7 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
                                                                         .build()))
                                         .toList())
                         .build();
-        return execute(context, agent, agent.streamEvents(toolResponse), false, null, null);
+        return execute(context, agent, agent.streamEvents(toolResponse, runtimeContext(context)), false, null, null);
     }
 
     @Override
@@ -442,7 +445,22 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
                 && result.getGenerateReason() != null
                 && (result.getGenerateReason() == GenerateReason.REASONING_STOP_REQUESTED
                 || result.getGenerateReason() == GenerateReason.ACTING_STOP_REQUESTED
+                || result.getGenerateReason() == GenerateReason.MIDDLEWARE_STOP_REQUESTED
                 || result.getGenerateReason() == GenerateReason.TOOL_SUSPENDED);
+    }
+
+    /**
+     * 构建框架 RuntimeContext，携带 (userId, sessionId) 用于 AgentStateStore 寻址。
+     *
+     * <p>必须与 {@link com.liangshou.agentic.agents.session.MongoAgentStateStore} 及
+     * {@link AgentSessionStateService} 使用的 (userId, sessionId) 保持一致，
+     * 否则框架自动保存的状态与业务侧读写的状态文档会分裂为两份。</p>
+     */
+    private RuntimeContext runtimeContext(ConversationSessionContext context) {
+        return RuntimeContext.builder()
+                .userId(context.getUserId())
+                .sessionId(context.getSessionId())
+                .build();
     }
 
     private void send(SseEmitter emitter, TdAgentStreamEvent event) {
@@ -470,12 +488,11 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
         return userId + ":" + sessionId;
     }
 
-    private ContentBlock executeApprovedTool(ConversationSessionContext context, ToolApprovalDocument approval) {
+    private ContentBlock executeApprovedTool(Toolkit toolkit, ToolApprovalDocument approval) {
         String toolName = approval.getToolName();
         String toolCallId = approval.getToolCallId();
 
         try {
-            Toolkit toolkit = toolkitFactory.createToolkit(context);
             AgentTool tool = toolkit.getTool(toolName);
             if (tool == null) {
                 return new ToolResultBlock(

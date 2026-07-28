@@ -14,6 +14,7 @@ import com.liangshou.agentic.common.exceptions.BizException;
 import com.liangshou.agentic.common.exceptions.HmeErrorCode;
 import com.liangshou.agentic.common.util.ToolConfigProvider;
 import io.agentscope.core.tool.AgentTool;
+import io.agentscope.core.tool.Tool;
 import io.agentscope.core.tool.Toolkit;
 import io.agentscope.core.tool.mcp.McpTool;
 import io.agentscope.harness.agent.filesystem.sandbox.SandboxBackedFilesystem;
@@ -23,6 +24,9 @@ import io.agentscope.harness.agent.tool.ShellExecuteTool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Agent Toolkit 工厂类，负责创建和配置 Agent 的工具集（Toolkit）。
@@ -137,19 +141,28 @@ public class TdAgentToolkitFactory {
      * </ul>
      */
     private void registerTool(Toolkit toolkit, ConversationSessionContext context, Object tool) {
-        String toolName;
-        if (tool instanceof AgentTool agentTool) {
-            toolName = agentTool.getName();
-        } else {
-            // 对于 @Tool 注解的对象，使用类名作为工具名
-            toolName = tool.getClass().getSimpleName();
-        }
         String userId = context.getUserId();
+        List<String> toolNames = resolveToolNames(tool);
 
-        ToolConfigDTO config = toolConfigProvider.getConfig(toolName, userId);
-        if (config != null && !config.getEnabled()) {
-            log.debug("[Toolkit] 跳过已禁用工具: {}, userId: {}", toolName, userId);
+        // 按真实工具名检查启用配置。
+        // 注意：@Tool 注解对象由框架按"注解名/方法名"注册，不能用类名查配置（否则禁用配置永不生效）
+        List<String> enabledNames = new ArrayList<>();
+        for (String toolName : toolNames) {
+            ToolConfigDTO config = toolConfigProvider.getConfig(toolName, userId);
+            if (config != null && !config.getEnabled()) {
+                log.debug("[Toolkit] 跳过已禁用工具: {}, userId: {}", toolName, userId);
+            } else {
+                enabledNames.add(toolName);
+            }
+        }
+        if (enabledNames.isEmpty()) {
             return;
+        }
+        if (enabledNames.size() < toolNames.size()) {
+            // Toolkit.registerTool(Object) 会整体注册对象的全部 @Tool 方法，暂不支持按方法粒度剔除
+            log.warn("[Toolkit] 工具对象 {} 含被禁用工具 {}，框架仅支持整体注册，本次仍整体注册",
+                    tool.getClass().getSimpleName(),
+                    toolNames.stream().filter(n -> !enabledNames.contains(n)).toList());
         }
 
         // AgentTool 接口的工具支持 Tool Guard 包装
@@ -159,6 +172,24 @@ public class TdAgentToolkitFactory {
         }
 
         toolkit.registerTool(tool);
+    }
+
+    /**
+     * 解析工具对象暴露的真实工具名，与框架 {@code Toolkit.registerTool(Object)} 的注册逻辑保持一致：
+     * {@link AgentTool} 取 {@code getName()}；{@code @Tool} 注解对象按方法取注解名（缺省为方法名）。
+     */
+    private List<String> resolveToolNames(Object tool) {
+        if (tool instanceof AgentTool agentTool) {
+            return List.of(agentTool.getName());
+        }
+        List<String> names = new ArrayList<>();
+        for (java.lang.reflect.Method method : tool.getClass().getDeclaredMethods()) {
+            Tool annotation = method.getAnnotation(Tool.class);
+            if (annotation != null) {
+                names.add(annotation.name().isEmpty() ? method.getName() : annotation.name());
+            }
+        }
+        return names;
     }
 
     /**

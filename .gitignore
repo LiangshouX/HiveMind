@@ -50,3 +50,6 @@ node_modules
 .codegraph/
 specs/
 .lib-repo/
+
+# Machine-local MCP server config (absolute paths, personal IDE)
+.mcp.json

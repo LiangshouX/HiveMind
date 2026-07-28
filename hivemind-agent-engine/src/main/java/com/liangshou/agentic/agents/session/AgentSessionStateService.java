@@ -67,7 +67,7 @@ public class AgentSessionStateService {
      */
     public void save(ConversationSessionContext context, ReActAgent agent, boolean paused) {
         agentSessionStateRepository
-                .findByUserIdAndSessionId(context.getUserId(), context.getSessionId())
+                .findByUserIdAndSessionId(effectiveUserId(context), context.getSessionId())
                 .ifPresent(
                         document -> {
                             document.setPaused(paused);
@@ -85,7 +85,7 @@ public class AgentSessionStateService {
      */
     public boolean isPaused(ConversationSessionContext context) {
         return agentSessionStateRepository
-                .findByUserIdAndSessionId(context.getUserId(), context.getSessionId())
+                .findByUserIdAndSessionId(effectiveUserId(context), context.getSessionId())
                 .map(AgentSessionStateDocument::isPaused)
                 .orElse(false);
     }
@@ -97,7 +97,7 @@ public class AgentSessionStateService {
      */
     public String getStoredProviderId(ConversationSessionContext context) {
         return agentSessionStateRepository
-                .findByUserIdAndSessionId(context.getUserId(), context.getSessionId())
+                .findByUserIdAndSessionId(effectiveUserId(context), context.getSessionId())
                 .map(AgentSessionStateDocument::getProviderId)
                 .orElse(null);
     }
@@ -109,7 +109,7 @@ public class AgentSessionStateService {
      */
     public String getStoredModelId(ConversationSessionContext context) {
         return agentSessionStateRepository
-                .findByUserIdAndSessionId(context.getUserId(), context.getSessionId())
+                .findByUserIdAndSessionId(effectiveUserId(context), context.getSessionId())
                 .map(AgentSessionStateDocument::getModelId)
                 .orElse(null);
     }
@@ -120,7 +120,15 @@ public class AgentSessionStateService {
      */
     public void clear(ConversationSessionContext context) {
         agentSessionStateRepository
-                .findByUserIdAndSessionId(context.getUserId(), context.getSessionId())
+                .findByUserIdAndSessionId(effectiveUserId(context), context.getSessionId())
                 .ifPresent(agentSessionStateRepository::delete);
+    }
+
+    /**
+     * 归一化 userId：与 {@link MongoAgentStateStore} 的 {@code null → ""} 映射保持一致，
+     * 避免匿名会话（userId=null）查询不到存储侧写入的文档。
+     */
+    private String effectiveUserId(ConversationSessionContext context) {
+        return context.getUserId() == null ? "" : context.getUserId();
     }
 }

@@ -3,11 +3,13 @@ package com.liangshou.agentic.agents.guard;
 import com.liangshou.agentic.agents.ConversationSessionContext;
 import com.liangshou.agentic.agents.guard.approval.ToolApprovalService;
 import io.agentscope.core.message.ToolResultBlock;
+import io.agentscope.core.message.ToolUseBlock;
 import io.agentscope.core.tool.AgentTool;
 import io.agentscope.core.tool.ToolCallParam;
 import io.agentscope.core.tool.ToolSuspendException;
 import reactor.core.publisher.Mono;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -78,6 +80,16 @@ public class GuardedAgentTool implements AgentTool {
         if (decision.isRequiresApproval()
                 && toolCallId != null
                 && !toolApprovalService.isApproved(context, toolCallId)) {
+            // 自包含：挂起前创建审批记录。推理阶段的 Guard 中间件未启用时，
+            // 这里是唯一的审批入口；若无审批单，会话将永久挂起且无单可批
+            ToolUseBlock toolUseBlock = param.getToolUseBlock();
+            if (toolUseBlock != null) {
+                toolApprovalService.createPendingApprovals(
+                        context,
+                        List.of(toolUseBlock),
+                        toolUse -> toolGuardEngine.evaluate(
+                                toolUse.getName(), toolUse.getInput(), userId));
+            }
             return Mono.error(new ToolSuspendException(decision.getReason()));
         }
         return delegate.callAsync(param)
