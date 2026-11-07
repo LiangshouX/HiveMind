@@ -1,63 +1,58 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none" role="img" aria-label="HiveMind">
   <defs>
-    <!-- 绯红主色 -->
-    <linearGradient id="hm-crimson" x1="10%" y1="0%" x2="90%" y2="100%">
-      <stop offset="0%" stop-color="#c6303f"/>
-      <stop offset="55%" stop-color="#a3222e"/>
-      <stop offset="100%" stop-color="#7c1922"/>
-    </linearGradient>
+    <!-- 绯红主色：中心透亮，边缘沉为深宝石红 -->
+    <radialGradient id="hm-crimson" cx="42%" cy="34%" r="78%">
+      <stop offset="0%" stop-color="#b0283a"/>
+      <stop offset="52%" stop-color="#7c1522"/>
+      <stop offset="100%" stop-color="#3c0810"/>
+    </radialGradient>
     <!-- 琉璃黄强调色 -->
     <linearGradient id="hm-gold" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#f2d681"/>
-      <stop offset="46%" stop-color="#dbb038"/>
-      <stop offset="100%" stop-color="#a67d1e"/>
+      <stop offset="0%" stop-color="#f9e7ac"/>
+      <stop offset="44%" stop-color="#e4bc4d"/>
+      <stop offset="100%" stop-color="#a97a1c"/>
     </linearGradient>
     <!-- 核心辉光 -->
     <radialGradient id="hm-core" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#fff6dc" stop-opacity="0.92"/>
-      <stop offset="40%" stop-color="#e8c45c" stop-opacity="0.4"/>
+      <stop offset="0%" stop-color="#fff8e2" stop-opacity="0.95"/>
+      <stop offset="32%" stop-color="#f4d67c" stop-opacity="0.45"/>
       <stop offset="100%" stop-color="#e8c45c" stop-opacity="0"/>
     </radialGradient>
   </defs>
 
-  <!-- 核心光晕：共享心智的辐射 -->
-  <circle cx="60" cy="63" r="46" fill="url(#hm-core)">
-    <animate attributeName="opacity" values="0.45;0.9;0.45" dur="4s" repeatCount="indefinite"/>
-  </circle>
+  <!-- 底座：绯红光晕盘 -->
+  <circle cx="60" cy="60" r="53" fill="url(#hm-crimson)"/>
+  <circle cx="60" cy="60" r="52" fill="none" stroke="url(#hm-gold)" stroke-width="2.4" stroke-opacity="0.62"/>
 
-  <!-- ============================================================
-       蜂巢簇：真实蜂巢的三上二下紧凑阵列
-       平顶正六边形，R = 20，相邻巢房中心距 = 1.5R = 30
-       ============================================================ -->
+  <!-- 协作网络：节点互联 -->
+  <path d="M32 40 L91 53 L50 94 Z"
+        fill="none" stroke="url(#hm-gold)" stroke-width="1.7" stroke-opacity="0.55" stroke-linejoin="round"/>
 
-  <!-- 上排：左上 / 中上 / 右上 -->
-  <g fill="url(#hm-crimson)" stroke="url(#hm-gold)" stroke-width="1.7" stroke-linejoin="round">
-    <path d="M30 7 L50 18 L50 40 L30 51 L10 40 L10 18 Z"/>
-    <path d="M60 7 L80 18 L80 40 L60 51 L40 40 L40 18 Z"/>
-    <path d="M90 7 L110 18 L110 40 L90 51 L70 40 L70 18 Z"/>
-    <!-- 下排：左下 / 右下 -->
-    <path d="M45 45 L65 56 L65 78 L45 89 L25 78 L25 56 Z"/>
-    <path d="M75 45 L95 56 L95 78 L75 89 L55 78 L55 56 Z"/>
+  <!-- 核心辐射：中枢直达各智能体 -->
+  <g stroke="url(#hm-gold)" stroke-width="2.6" stroke-linecap="round" opacity="0.95">
+    <line x1="58" y1="60" x2="32" y2="40"/>
+    <line x1="58" y1="60" x2="91" y2="53"/>
+    <line x1="58" y1="60" x2="50" y2="94"/>
   </g>
 
-  <!-- 中心巢房：蜂巢之心（描边加粗 + 金色实心） -->
-  <path d="M60 45 L80 56 L80 78 L60 89 L40 78 L40 56 Z"
-        fill="url(#hm-crimson)" stroke="url(#hm-gold)" stroke-width="2.4" stroke-linejoin="round"/>
-
-  <!-- 各巢房内的智能体节点 -->
-  <g fill="#f0d074">
-    <circle cx="30" cy="29" r="2.8" opacity="0.78"/>
-    <circle cx="60" cy="29" r="2.8" opacity="0.64"/>
-    <circle cx="90" cy="29" r="2.8" opacity="0.5"/>
-    <circle cx="45" cy="67" r="2.8" opacity="0.78"/>
-    <circle cx="75" cy="67" r="2.8" opacity="0.64"/>
+  <!-- 卫星微粒 -->
+  <g fill="url(#hm-gold)" opacity="0.8">
+    <circle cx="86" cy="28" r="2.6"/>
+    <circle cx="26" cy="74" r="2.2"/>
   </g>
 
-  <!-- 核心：多智能体共享的心智 -->
-  <circle cx="60" cy="67" r="14" fill="url(#hm-core)">
-    <animate attributeName="r" values="12;16;12" dur="3.4s" repeatCount="indefinite"/>
-    <animate attributeName="opacity" values="0.55;1;0.55" dur="3.4s" repeatCount="indefinite"/>
+  <!-- 各智能体节点 -->
+  <g fill="url(#hm-gold)">
+    <circle cx="32" cy="40" r="5.6"/>
+    <circle cx="91" cy="53" r="4.6"/>
+    <circle cx="50" cy="94" r="4"/>
+  </g>
+
+  <!-- 中枢：共享心智核心 -->
+  <circle cx="58" cy="60" r="20" fill="url(#hm-core)">
+    <animate attributeName="r" values="16;22;16" dur="3.6s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.55;1;0.55" dur="3.6s" repeatCount="indefinite"/>
   </circle>
-  <circle cx="60" cy="67" r="8" fill="url(#hm-gold)"/>
-  <circle cx="60" cy="67" r="3.6" fill="#fff6dc"/>
+  <circle cx="58" cy="60" r="8" fill="url(#hm-gold)"/>
+  <circle cx="58" cy="60" r="3.4" fill="#fff8e2"/>
 </svg>
