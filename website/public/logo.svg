@@ -1,125 +1,63 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none" role="img" aria-label="HiveMind">
   <defs>
-    <linearGradient id="crimson-lg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#c42b3a"/>
-      <stop offset="100%" stop-color="#8f212a"/>
+    <!-- 绯红主色 -->
+    <linearGradient id="hm-crimson" x1="10%" y1="0%" x2="90%" y2="100%">
+      <stop offset="0%" stop-color="#c6303f"/>
+      <stop offset="55%" stop-color="#a3222e"/>
+      <stop offset="100%" stop-color="#7c1922"/>
     </linearGradient>
-    <linearGradient id="gold-lg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#d4a832"/>
-      <stop offset="100%" stop-color="#b8912d"/>
+    <!-- 琉璃黄强调色 -->
+    <linearGradient id="hm-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f2d681"/>
+      <stop offset="46%" stop-color="#dbb038"/>
+      <stop offset="100%" stop-color="#a67d1e"/>
     </linearGradient>
-    <radialGradient id="pulse-lg" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#d4a832" stop-opacity="0.5"/>
-      <stop offset="70%" stop-color="#d4a832" stop-opacity="0.1"/>
-      <stop offset="100%" stop-color="#d4a832" stop-opacity="0"/>
-    </radialGradient>
-    <!-- Subtle inner glow -->
-    <radialGradient id="inner-glow" cx="50%" cy="40%" r="50%">
-      <stop offset="0%" stop-color="#e8455a" stop-opacity="0.3"/>
-      <stop offset="100%" stop-color="#8f212a" stop-opacity="0"/>
+    <!-- 核心辉光 -->
+    <radialGradient id="hm-core" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fff6dc" stop-opacity="0.92"/>
+      <stop offset="40%" stop-color="#e8c45c" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#e8c45c" stop-opacity="0"/>
     </radialGradient>
   </defs>
 
-  <!-- Background subtle glow -->
-  <circle cx="60" cy="60" r="56" fill="url(#pulse-lg)" opacity="0.3"/>
-
-  <!-- Outer hexagon — the hive cell -->
-  <path d="M60 6 L104 31 L104 89 L60 114 L16 89 L16 31 Z"
-        fill="url(#crimson-lg)" stroke="#b8912d" stroke-width="1.8" stroke-linejoin="round"/>
-
-  <!-- Inner atmospheric glow -->
-  <path d="M60 6 L104 31 L104 89 L60 114 L16 89 L16 31 Z"
-        fill="url(#inner-glow)"/>
-
-  <!-- Inner hexagon — second layer -->
-  <path d="M60 20 L93 38 L93 82 L60 100 L27 82 L27 38 Z"
-        fill="none" stroke="#b8912d" stroke-width="1" stroke-opacity="0.35" stroke-linejoin="round"/>
-
-  <!-- Third hexagon — deepest layer -->
-  <path d="M60 32 L82 45 L82 75 L60 88 L38 75 L38 45 Z"
-        fill="none" stroke="#b8912d" stroke-width="0.6" stroke-opacity="0.2" stroke-linejoin="round"/>
-
-  <!-- Neural pathways — radiating connections -->
-  <!-- Center node glow -->
-  <circle cx="60" cy="60" r="14" fill="url(#pulse-lg)"/>
-
-  <!-- Central hub -->
-  <circle cx="60" cy="60" r="6" fill="url(#gold-lg)"/>
-  <circle cx="60" cy="60" r="3" fill="#e8c84a" opacity="0.8"/>
-
-  <!-- Connection lines to 6 directions -->
-  <!-- Up -->
-  <line x1="60" y1="54" x2="60" y2="32" stroke="#d4a832" stroke-width="1.8" stroke-linecap="round"/>
-  <circle cx="60" cy="30" r="3.5" fill="#d4a832"/>
-  <circle cx="60" cy="30" r="1.5" fill="#e8c84a"/>
-
-  <!-- Upper-right -->
-  <line x1="65" y1="57" x2="84" y2="44" stroke="#d4a832" stroke-width="1.4" stroke-linecap="round"/>
-  <circle cx="85" cy="43" r="2.8" fill="#d4a832" opacity="0.85"/>
-  <circle cx="85" cy="43" r="1.2" fill="#e8c84a" opacity="0.7"/>
-
-  <!-- Lower-right -->
-  <line x1="65" y1="63" x2="84" y2="76" stroke="#d4a832" stroke-width="1.4" stroke-linecap="round"/>
-  <circle cx="85" cy="77" r="2.8" fill="#d4a832" opacity="0.85"/>
-  <circle cx="85" cy="77" r="1.2" fill="#e8c84a" opacity="0.7"/>
-
-  <!-- Down -->
-  <line x1="60" y1="66" x2="60" y2="88" stroke="#d4a832" stroke-width="1.8" stroke-linecap="round"/>
-  <circle cx="60" cy="90" r="3.5" fill="#d4a832"/>
-  <circle cx="60" cy="90" r="1.5" fill="#e8c84a"/>
-
-  <!-- Lower-left -->
-  <line x1="55" y1="63" x2="36" y2="76" stroke="#d4a832" stroke-width="1.4" stroke-linecap="round"/>
-  <circle cx="35" cy="77" r="2.8" fill="#d4a832" opacity="0.85"/>
-  <circle cx="35" cy="77" r="1.2" fill="#e8c84a" opacity="0.7"/>
-
-  <!-- Upper-left -->
-  <line x1="55" y1="57" x2="36" y2="44" stroke="#d4a832" stroke-width="1.4" stroke-linecap="round"/>
-  <circle cx="35" cy="43" r="2.8" fill="#d4a832" opacity="0.85"/>
-  <circle cx="35" cy="43" r="1.2" fill="#e8c84a" opacity="0.7"/>
-
-  <!-- Cross-connections between outer nodes (mesh/collaboration web) -->
-  <line x1="35" y1="43" x2="60" y2="30" stroke="#d4a832" stroke-width="0.7" stroke-opacity="0.35" stroke-linecap="round"/>
-  <line x1="60" y1="30" x2="85" y2="43" stroke="#d4a832" stroke-width="0.7" stroke-opacity="0.35" stroke-linecap="round"/>
-  <line x1="85" y1="43" x2="85" y2="77" stroke="#d4a832" stroke-width="0.7" stroke-opacity="0.35" stroke-linecap="round"/>
-  <line x1="85" y1="77" x2="60" y2="90" stroke="#d4a832" stroke-width="0.7" stroke-opacity="0.35" stroke-linecap="round"/>
-  <line x1="60" y1="90" x2="35" y2="77" stroke="#d4a832" stroke-width="0.7" stroke-opacity="0.35" stroke-linecap="round"/>
-  <line x1="35" y1="77" x2="35" y2="43" stroke="#d4a832" stroke-width="0.7" stroke-opacity="0.35" stroke-linecap="round"/>
-
-  <!-- Diagonal cross-connections (richer mesh) -->
-  <line x1="35" y1="43" x2="85" y2="77" stroke="#d4a832" stroke-width="0.4" stroke-opacity="0.15" stroke-linecap="round"/>
-  <line x1="85" y1="43" x2="35" y2="77" stroke="#d4a832" stroke-width="0.4" stroke-opacity="0.15" stroke-linecap="round"/>
-  <line x1="60" y1="30" x2="60" y2="90" stroke="#d4a832" stroke-width="0.4" stroke-opacity="0.15" stroke-linecap="round"/>
-
-  <!-- Active agent pulses — animated thinking dots -->
-  <circle cx="46" cy="34" r="1.8" fill="#d4a832" opacity="0.4">
-    <animate attributeName="opacity" values="0.2;0.7;0.2" dur="2s" repeatCount="indefinite"/>
-    <animate attributeName="r" values="1.4;2;1.4" dur="2s" repeatCount="indefinite"/>
-  </circle>
-  <circle cx="74" cy="34" r="1.8" fill="#d4a832" opacity="0.4">
-    <animate attributeName="opacity" values="0.2;0.7;0.2" dur="2.5s" repeatCount="indefinite"/>
-    <animate attributeName="r" values="1.4;2;1.4" dur="2.5s" repeatCount="indefinite"/>
-  </circle>
-  <circle cx="46" cy="86" r="1.8" fill="#d4a832" opacity="0.4">
-    <animate attributeName="opacity" values="0.2;0.7;0.2" dur="1.8s" repeatCount="indefinite"/>
-    <animate attributeName="r" values="1.4;2;1.4" dur="1.8s" repeatCount="indefinite"/>
-  </circle>
-  <circle cx="74" cy="86" r="1.8" fill="#d4a832" opacity="0.4">
-    <animate attributeName="opacity" values="0.2;0.7;0.2" dur="2.2s" repeatCount="indefinite"/>
-    <animate attributeName="r" values="1.4;2;1.4" dur="2.2s" repeatCount="indefinite"/>
+  <!-- 核心光晕：共享心智的辐射 -->
+  <circle cx="60" cy="63" r="46" fill="url(#hm-core)">
+    <animate attributeName="opacity" values="0.45;0.9;0.45" dur="4s" repeatCount="indefinite"/>
   </circle>
 
-  <!-- Subtle particle dots floating around -->
-  <circle cx="28" cy="28" r="1" fill="#d4a832" opacity="0.25">
-    <animate attributeName="opacity" values="0.1;0.4;0.1" dur="3s" repeatCount="indefinite"/>
+  <!-- ============================================================
+       蜂巢簇：真实蜂巢的三上二下紧凑阵列
+       平顶正六边形，R = 20，相邻巢房中心距 = 1.5R = 30
+       ============================================================ -->
+
+  <!-- 上排：左上 / 中上 / 右上 -->
+  <g fill="url(#hm-crimson)" stroke="url(#hm-gold)" stroke-width="1.7" stroke-linejoin="round">
+    <path d="M30 7 L50 18 L50 40 L30 51 L10 40 L10 18 Z"/>
+    <path d="M60 7 L80 18 L80 40 L60 51 L40 40 L40 18 Z"/>
+    <path d="M90 7 L110 18 L110 40 L90 51 L70 40 L70 18 Z"/>
+    <!-- 下排：左下 / 右下 -->
+    <path d="M45 45 L65 56 L65 78 L45 89 L25 78 L25 56 Z"/>
+    <path d="M75 45 L95 56 L95 78 L75 89 L55 78 L55 56 Z"/>
+  </g>
+
+  <!-- 中心巢房：蜂巢之心（描边加粗 + 金色实心） -->
+  <path d="M60 45 L80 56 L80 78 L60 89 L40 78 L40 56 Z"
+        fill="url(#hm-crimson)" stroke="url(#hm-gold)" stroke-width="2.4" stroke-linejoin="round"/>
+
+  <!-- 各巢房内的智能体节点 -->
+  <g fill="#f0d074">
+    <circle cx="30" cy="29" r="2.8" opacity="0.78"/>
+    <circle cx="60" cy="29" r="2.8" opacity="0.64"/>
+    <circle cx="90" cy="29" r="2.8" opacity="0.5"/>
+    <circle cx="45" cy="67" r="2.8" opacity="0.78"/>
+    <circle cx="75" cy="67" r="2.8" opacity="0.64"/>
+  </g>
+
+  <!-- 核心：多智能体共享的心智 -->
+  <circle cx="60" cy="67" r="14" fill="url(#hm-core)">
+    <animate attributeName="r" values="12;16;12" dur="3.4s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.55;1;0.55" dur="3.4s" repeatCount="indefinite"/>
   </circle>
-  <circle cx="92" cy="28" r="1" fill="#d4a832" opacity="0.25">
-    <animate attributeName="opacity" values="0.1;0.4;0.1" dur="3.5s" repeatCount="indefinite"/>
-  </circle>
-  <circle cx="28" cy="92" r="1" fill="#d4a832" opacity="0.25">
-    <animate attributeName="opacity" values="0.1;0.4;0.1" dur="2.8s" repeatCount="indefinite"/>
-  </circle>
-  <circle cx="92" cy="92" r="1" fill="#d4a832" opacity="0.25">
-    <animate attributeName="opacity" values="0.1;0.4;0.1" dur="3.2s" repeatCount="indefinite"/>
-  </circle>
+  <circle cx="60" cy="67" r="8" fill="url(#hm-gold)"/>
+  <circle cx="60" cy="67" r="3.6" fill="#fff6dc"/>
 </svg>

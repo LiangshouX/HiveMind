@@ -1,81 +1,29 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
   <defs>
-    <!-- Main gradient: crimson to deep crimson -->
-    <linearGradient id="crimson" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#c42b3a"/>
-      <stop offset="100%" stop-color="#8f212a"/>
+    <linearGradient id="f-crimson" x1="10%" y1="0%" x2="90%" y2="100%">
+      <stop offset="0%" stop-color="#c6303f"/>
+      <stop offset="55%" stop-color="#a3222e"/>
+      <stop offset="100%" stop-color="#7c1922"/>
     </linearGradient>
-    <!-- Gold accent gradient -->
-    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#d4a832"/>
-      <stop offset="100%" stop-color="#b8912d"/>
+    <linearGradient id="f-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f2d681"/>
+      <stop offset="46%" stop-color="#dbb038"/>
+      <stop offset="100%" stop-color="#a67d1e"/>
     </linearGradient>
-    <!-- Glow for neural pulse -->
-    <radialGradient id="pulse" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#d4a832" stop-opacity="0.6"/>
-      <stop offset="100%" stop-color="#d4a832" stop-opacity="0"/>
-    </radialGradient>
   </defs>
 
-  <!-- Outer hexagon — the hive cell -->
-  <path d="M32 3 L56 17.5 L56 46.5 L32 61 L8 46.5 L8 17.5 Z"
-        fill="url(#crimson)" stroke="#b8912d" stroke-width="1.2" stroke-linejoin="round"/>
+  <!-- 蜂巢簇：上三下二 -->
+  <g fill="url(#f-crimson)" stroke="url(#f-gold)" stroke-width="1.6" stroke-linejoin="round">
+    <path d="M16 4 L28 10.6 L28 23.8 L16 30.4 L4 23.8 L4 10.6 Z"/>
+    <path d="M32 4 L44 10.6 L44 23.8 L32 30.4 L20 23.8 L20 10.6 Z"/>
+    <path d="M48 4 L60 10.6 L60 23.8 L48 30.4 L36 23.8 L36 10.6 Z"/>
+    <path d="M24 25.6 L36 32.2 L36 45.4 L24 52 L12 45.4 L12 32.2 Z"/>
+    <path d="M40 25.6 L52 32.2 L52 45.4 L40 52 L28 45.4 L28 32.2 Z"/>
+  </g>
 
-  <!-- Inner hexagon — second layer of depth -->
-  <path d="M32 11 L49 21 L49 43 L32 53 L15 43 L15 21 Z"
-        fill="none" stroke="#b8912d" stroke-width="0.8" stroke-opacity="0.5" stroke-linejoin="round"/>
-
-  <!-- Neural pathways — radiating connections from center -->
-  <!-- Center node glow -->
-  <circle cx="32" cy="32" r="8" fill="url(#pulse)"/>
-
-  <!-- Central hub node -->
-  <circle cx="32" cy="32" r="3.5" fill="#d4a832"/>
-
-  <!-- Connection lines (neural dendrites) -->
-  <!-- Up -->
-  <line x1="32" y1="28.5" x2="32" y2="17" stroke="#d4a832" stroke-width="1.2" stroke-linecap="round"/>
-  <circle cx="32" cy="16" r="2" fill="#d4a832"/>
-
-  <!-- Upper-right -->
-  <line x1="35" y1="30" x2="46" y2="22" stroke="#d4a832" stroke-width="1" stroke-linecap="round"/>
-  <circle cx="47" cy="21" r="1.6" fill="#d4a832" opacity="0.8"/>
-
-  <!-- Lower-right -->
-  <line x1="35" y1="34" x2="46" y2="42" stroke="#d4a832" stroke-width="1" stroke-linecap="round"/>
-  <circle cx="47" cy="43" r="1.6" fill="#d4a832" opacity="0.8"/>
-
-  <!-- Down -->
-  <line x1="32" y1="35.5" x2="32" y2="47" stroke="#d4a832" stroke-width="1.2" stroke-linecap="round"/>
-  <circle cx="32" cy="48" r="2" fill="#d4a832"/>
-
-  <!-- Lower-left -->
-  <line x1="29" y1="34" x2="18" y2="42" stroke="#d4a832" stroke-width="1" stroke-linecap="round"/>
-  <circle cx="17" cy="43" r="1.6" fill="#d4a832" opacity="0.8"/>
-
-  <!-- Upper-left -->
-  <line x1="29" y1="30" x2="18" y2="22" stroke="#d4a832" stroke-width="1" stroke-linecap="round"/>
-  <circle cx="17" cy="21" r="1.6" fill="#d4a832" opacity="0.8"/>
-
-  <!-- Cross-connections between outer nodes (mesh/collaboration) -->
-  <line x1="17" y1="21" x2="32" y2="16" stroke="#d4a832" stroke-width="0.5" stroke-opacity="0.4" stroke-linecap="round"/>
-  <line x1="32" y1="16" x2="47" y2="21" stroke="#d4a832" stroke-width="0.5" stroke-opacity="0.4" stroke-linecap="round"/>
-  <line x1="47" y1="21" x2="47" y2="43" stroke="#d4a832" stroke-width="0.5" stroke-opacity="0.4" stroke-linecap="round"/>
-  <line x1="47" y1="43" x2="32" y2="48" stroke="#d4a832" stroke-width="0.5" stroke-opacity="0.4" stroke-linecap="round"/>
-  <line x1="32" y1="48" x2="17" y2="43" stroke="#d4a832" stroke-width="0.5" stroke-opacity="0.4" stroke-linecap="round"/>
-  <line x1="17" y1="43" x2="17" y2="21" stroke="#d4a832" stroke-width="0.5" stroke-opacity="0.4" stroke-linecap="round"/>
-
-  <!-- Small "thinking" dots — representing active agents -->
-  <circle cx="24" cy="18" r="1" fill="#d4a832" opacity="0.5">
-    <animate attributeName="opacity" values="0.3;0.8;0.3" dur="2s" repeatCount="indefinite"/>
-  </circle>
-  <circle cx="40" cy="18" r="1" fill="#d4a832" opacity="0.5">
-    <animate attributeName="opacity" values="0.3;0.8;0.3" dur="2.4s" repeatCount="indefinite"/>
-  </circle>
-  <circle cx="24" cy="46" r="1" fill="#d4a832" opacity="0.5">
-    <animate attributeName="opacity" values="0.3;0.8;0.3" dur="1.8s" repeatCount="indefinite"/>
-  </circle>
-  <circle cx="40" cy="46" r="1" fill="#d4a832" opacity="0.5">
-    <animate attributeName="opacity" values="0.3;0.8;0.3" dur="2.2s" repeatCount="indefinite"/>
-  </circle>
+  <!-- 中心巢房：金色心智核心 -->
+  <path d="M32 25.6 L44 32.2 L44 45.4 L32 52 L20 45.4 L20 32.2 Z"
+        fill="url(#f-crimson)" stroke="url(#f-gold)" stroke-width="2.2" stroke-linejoin="round"/>
+  <circle cx="32" cy="38.8" r="5.2" fill="url(#f-gold)"/>
+  <circle cx="32" cy="38.8" r="2.4" fill="#fff6dc"/>
 </svg>
