@@ -1,7 +1,7 @@
 #!/bin/bash
 # ReMe MCP Server Startup Script (Linux)
 # Usage: ./scripts/start_mcp.sh [transport] [log_level]
-# Example: ./scripts/start_mcp.sh sse INFO
+# Example: ./scripts/start_mcp.sh streamable-http INFO
 
 set -euo pipefail
 
@@ -11,7 +11,8 @@ PROJECT_ROOT="${SCRIPT_DIR}/.."
 ENV_FILE="${PROJECT_ROOT}/.env"
 
 # Default parameters
-MCP_TRANSPORT="${1:-sse}"
+# ReMe 0.4.2.x 默认在 /mcp 挂载 streamable HTTP MCP（新版 MCP 标准）
+MCP_TRANSPORT="${1:-streamable-http}"
 LOG_LEVEL="${2:-INFO}"
 
 echo "ReMe MCP Server Startup Script (Linux)"

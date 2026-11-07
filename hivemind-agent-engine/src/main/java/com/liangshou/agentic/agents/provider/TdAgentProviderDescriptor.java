@@ -60,5 +60,17 @@ public class TdAgentProviderDescriptor {
     private boolean supportConnectionCheck = true;
 
     private Map<String, Object> generateKwargs = new LinkedHashMap<>();
+
+    /** 供应商简介，用于前端「内置供应商清单」展示 */
+    private String description;
+
+    /** 供应商控制台地址（用户前往申请 API Key 的入口） */
+    private String consoleUrl;
+
+    /** API Key 申请地址（部分供应商与控制台不同） */
+    private String apiKeyUrl;
+
+    /** 是否需要 API Key（本地部署类供应商为 false） */
+    private Boolean apiKeyRequired = Boolean.TRUE;
 }
 

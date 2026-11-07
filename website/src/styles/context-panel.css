@@ -1,0 +1,204 @@
+/* ============================================================
+   上下文窗口占用面板
+   ------------------------------------------------------------
+   常驻部分是一个紧凑的百分比徽标（悬浮展开面板）；
+   面板内含分段进度条（系统提示词 / 工具定义 / 对话消息）、
+   会话统计与 Token 用量。
+
+   说明：本文件独立于 index.css，避免与主题整改的改动互相覆盖；
+   引入顺序在 index.css 之后，因此这里的定义优先级更高。
+   颜色变量定义在 .ctx-panel 上，不依赖主题变量体系。
+   ============================================================ */
+
+.context-usage-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 2px 10px 4px;
+  font-size: 12px;
+  color: var(--td-text-tertiary);
+  border-bottom: none;
+  background: transparent;
+}
+
+.ctx-usage-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--td-border-light);
+  background: var(--td-bg-elevated);
+  color: var(--td-text-secondary);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.ctx-usage-badge:hover {
+  color: var(--td-text-base);
+  border-color: var(--td-border-color);
+}
+
+.ctx-usage-badge.is-warning {
+  color: var(--td-danger-color, #dc2626);
+  border-color: var(--td-warning-color, #d97706);
+  background: color-mix(in srgb, var(--td-danger-color, #dc2626) 10%, transparent);
+}
+
+.ctx-panel {
+  --td-ctx-system: #8b8f96;
+  --td-ctx-tools: #a78bfa;
+  --td-ctx-messages: #60a5fa;
+
+  width: 296px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.ctx-panel-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ctx-panel-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--td-text-base);
+}
+
+.ctx-panel-total {
+  color: var(--td-text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 分段进度条：三段按各自占窗口的比例排列 */
+.ctx-panel-track {
+  position: relative;
+  display: flex;
+  height: 6px;
+  margin: 9px 0 10px;
+  border-radius: 999px;
+  background: var(--td-border-light);
+  overflow: hidden;
+}
+
+.ctx-panel-seg {
+  display: block;
+  height: 100%;
+  min-width: 0;
+}
+
+.ctx-panel-seg.is-system {
+  background: var(--td-ctx-system);
+}
+
+.ctx-panel-seg.is-tools {
+  background: var(--td-ctx-tools);
+}
+
+.ctx-panel-seg.is-messages {
+  background: var(--td-ctx-messages);
+}
+
+/* 压缩阈值刻度 */
+.ctx-panel-threshold {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 1px;
+  background: var(--td-text-tertiary);
+  opacity: 0.7;
+}
+
+.ctx-panel-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ctx-panel-legend-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ctx-panel-legend-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--td-text-secondary);
+}
+
+.ctx-panel-legend-value {
+  color: var(--td-text-base);
+  font-variant-numeric: tabular-nums;
+}
+
+.ctx-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.ctx-dot.is-system {
+  background: var(--td-ctx-system);
+}
+
+.ctx-dot.is-tools {
+  background: var(--td-ctx-tools);
+}
+
+.ctx-dot.is-messages {
+  background: var(--td-ctx-messages);
+}
+
+.ctx-panel-divider {
+  height: 1px;
+  margin: 11px 0;
+  background: var(--td-border-light);
+}
+
+.ctx-panel-section {
+  margin-bottom: 8px;
+  color: var(--td-text-tertiary);
+}
+
+.ctx-panel-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 14px;
+}
+
+.ctx-panel-cell-label {
+  margin-bottom: 2px;
+  color: var(--td-text-tertiary);
+  font-size: 11px;
+}
+
+.ctx-panel-cell-value {
+  color: var(--td-text-base);
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.ctx-panel-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.ctx-panel-foot-note {
+  color: var(--td-text-tertiary);
+  font-size: 11px;
+  text-align: right;
+}

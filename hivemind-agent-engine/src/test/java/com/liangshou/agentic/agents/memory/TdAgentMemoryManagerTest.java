@@ -1,10 +1,12 @@
 package com.liangshou.agentic.agents.memory;
 
 import com.liangshou.agentic.agents.ConversationSessionContext;
+import com.liangshou.agentic.agents.TdAgentPromptService;
 import com.liangshou.agentic.agents.memory.compaction.ContextCompressor;
 import com.liangshou.agentic.agents.memory.compaction.ContextWindowManager;
 import com.liangshou.agentic.agents.memory.compaction.EstimatingTokenMeter;
 import com.liangshou.agentic.agents.memory.reme.TdAgentReMeService;
+import com.liangshou.agentic.agents.provider.TdAgentProviderRegistry;
 import com.liangshou.agentic.common.config.TdAgentProperties;
 import io.agentscope.core.message.Msg;
 import io.agentscope.core.message.MsgRole;
@@ -34,9 +36,10 @@ class TdAgentMemoryManagerTest {
         properties.getModel().setModelId("qwen3-max");
         reMeService = mock(TdAgentReMeService.class);
         tokenMeter = new EstimatingTokenMeter();
-        windowManager = new ContextWindowManager(properties);
+        windowManager = new ContextWindowManager(properties, mock(TdAgentProviderRegistry.class));
         compressor = spy(new ContextCompressor(properties, reMeService, tokenMeter, windowManager));
-        manager = new TdAgentMemoryManager(properties, reMeService, compressor, tokenMeter, windowManager);
+        manager = new TdAgentMemoryManager(properties, reMeService, compressor, tokenMeter, windowManager,
+                mock(TdAgentPromptService.class));
 
         context = ConversationSessionContext.builder()
                 .userId("user1")

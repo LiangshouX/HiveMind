@@ -111,6 +111,62 @@ export interface SessionHistoryResponse {
   messages: StoredMessage[];
 }
 
+/** 会话上下文窗口占用情况 */
+export interface SessionContextUsage {
+  usedTokens: number;
+  contextWindow: number;
+  usageRatio: number;
+  thresholdRatio: number;
+  thresholdTokens: number;
+  outputReserveTokens: number;
+  /** 系统提示词固定部分占用的 tokens（每次调用都会占用上下文窗口） */
+  systemPromptTokens?: number;
+  /** 工具定义（Tool Schema）占用的 tokens（每次调用都会占用上下文窗口） */
+  toolDefinitionTokens?: number;
+  /** 对话消息（历史 + 压缩摘要）占用的 tokens */
+  conversationTokens?: number;
+  /** 本轮模型总耗时（毫秒） */
+  modelDurationMs?: number;
+  /** 首 token 延迟（毫秒，Time To First Token） */
+  ttftMs?: number;
+  /** 输出速度（tokens / 秒） */
+  tokensPerSecond?: number;
+  /** 缓存命中率（0~1） */
+  cacheHitRatio?: number;
+  /** 未命中缓存、真实计算的输入 tokens */
+  uncachedInputTokens?: number;
+  /** 缓存读取（命中）的 tokens */
+  cachedInputTokens?: number;
+  /** 输出 tokens */
+  outputTokens?: number;
+  /** 模型调用次数 */
+  modelCalls?: number;
+  /** 当前会话使用的模型展示名 */
+  modelDisplayName?: string;
+  messageCount: number;
+  reasoningCount: number;
+  toolCallCount: number;
+  compactionCount: number;
+  compressedSummaryChars: number;
+  providerId?: string;
+  modelId?: string;
+  nearThreshold: boolean;
+}
+
+/** 手动压缩上下文的结果 */
+export interface CompactContextResult {
+  compacted: boolean;
+  tokensBefore: number;
+  tokensAfter: number;
+  messagesBefore: number;
+  messagesAfter: number;
+  middleCompressed: number;
+  strategy: string;
+  durationMs: number;
+  compressionRatio: number;
+  summary: string;
+}
+
 export interface ToolApproval {
   id: string;
   sessionId: string;
@@ -146,6 +202,8 @@ export interface UiMessageBlock {
   toolName?: string;
   rawInput?: string;
   approvals?: ToolApproval[];
+  /** true 表示该块内容应覆盖上一块同类内容，而不是追加（用于"完整推理"替换"增量推理"） */
+  replace?: boolean;
 }
 
 export interface UiMessage {

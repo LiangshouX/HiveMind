@@ -2,6 +2,7 @@ package com.liangshou.agentic.agents.memory.compaction;
 
 import com.liangshou.agentic.agents.ConversationSessionContext;
 import com.liangshou.agentic.agents.memory.reme.TdAgentReMeService;
+import com.liangshou.agentic.agents.provider.TdAgentProviderRegistry;
 import com.liangshou.agentic.common.config.TdAgentProperties;
 import io.agentscope.core.message.Msg;
 import io.agentscope.core.message.MsgRole;
@@ -33,7 +34,7 @@ class ContextCompressorTest {
         properties.getModel().setModelId("qwen3-max");
         reMeService = mock(TdAgentReMeService.class);
         tokenMeter = new EstimatingTokenMeter();
-        windowManager = new ContextWindowManager(properties);
+        windowManager = new ContextWindowManager(properties, mock(TdAgentProviderRegistry.class));
         compressor = new ContextCompressor(properties, reMeService, tokenMeter, windowManager);
 
         context = ConversationSessionContext.builder()
@@ -150,16 +151,18 @@ class ContextCompressorTest {
                 Msg.builder().role(MsgRole.USER).textContent("Test message").build()
         );
 
-        String result = compressor.compressMiddleLayer(context, middleMessages, "");
+        var result = compressor.compressMiddleLayer(context, middleMessages, "");
 
-        assertNotNull(result);
-        assertFalse(result.isBlank());
+        assertNotNull(result.summary());
+        assertFalse(result.summary().isBlank());
+        assertFalse(result.reme());
     }
 
     @Test
     void compressMiddleLayer_emptyMiddle_returnsNull() {
-        String result = compressor.compressMiddleLayer(context, List.of(), "");
-        assertNull(result);
+        var result = compressor.compressMiddleLayer(context, List.of(), "");
+
+        assertNull(result.summary());
     }
 
     @Test
@@ -171,9 +174,10 @@ class ContextCompressorTest {
                 Msg.builder().role(MsgRole.USER).textContent("Test message").build()
         );
 
-        String result = compressor.compressMiddleLayer(context, middleMessages, "");
+        var result = compressor.compressMiddleLayer(context, middleMessages, "");
 
-        assertEquals("ReMe generated summary", result);
+        assertEquals("ReMe generated summary", result.summary());
+        assertTrue(result.reme());
     }
 
     @Test
@@ -205,5 +209,25 @@ class ContextCompressorTest {
 
         String summary = compressor.localCompress(messages);
         assertTrue(summary.length() <= 50, "Summary should be truncated to max length, got " + summary.length());
+    }
+
+    @Test
+    void mergeSummary_respectsMaxLength() {
+        properties.getCompaction().setMaxSummaryCharacters(20);
+
+        String result = compressor.mergeSummary("old summary content", "new summary content");
+
+        assertTrue(result.length() <= 20,
+                "Merged summary should respect max length, got " + result.length());
+    }
+
+    @Test
+    void mergeSummary_keepsNewestSummaryWhenTruncating() {
+        properties.getCompaction().setMaxSummaryCharacters(30);
+
+        String result = compressor.mergeSummary("x".repeat(200), "NEWEST_MARKER");
+
+        assertTrue(result.contains("NEWEST_MARKER"),
+                "Newest summary must survive truncation, got: " + result);
     }
 }

@@ -291,13 +291,26 @@ public class TdAgentChatServiceImpl implements ITdAgentChatService {
         TdAgentResolvedModelConfig resolvedConfig = providerRegistry.resolveForUser(
                 request.getUserId(), request.getProviderId(), request.getModelId());
 
+        // 记录"本轮实际使用的"供应商与模型。
+        // 前端未显式选择模型时 request 里的 providerId/modelId 为空，
+        // 此时若仍记录空值，会话就丢失了模型信息，
+        // 导致上下文窗口大小无法按实际模型解析（只能回退到全局默认值）。
+        String providerId = request.getProviderId();
+        String modelId = request.getModelId();
+        if ((providerId == null || providerId.isBlank()) && resolvedConfig != null) {
+            providerId = resolvedConfig.getProviderId();
+        }
+        if ((modelId == null || modelId.isBlank()) && resolvedConfig != null) {
+            modelId = resolvedConfig.getModelId();
+        }
+
         return ConversationSessionContext.builder()
                 .userId(request.getUserId())
                 .sessionId(request.getSessionId())
                 .userName(request.getUserName())
                 .sessionTitle(request.getTitle())
-                .modelId(request.getModelId())
-                .providerId(request.getProviderId())
+                .modelId(modelId)
+                .providerId(providerId)
                 .resolvedModelConfig(resolvedConfig)
                 .build();
     }

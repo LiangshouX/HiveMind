@@ -172,6 +172,18 @@ public class DbProviderConfigLoader {
         if (video instanceof Boolean b) {
             model.setSupportsVideo(b);
         }
+        // 用户自建供应商可按模型声明上下文窗口大小（tokens）
+        Object contextWindow = map.get("contextWindow");
+        if (contextWindow instanceof Number number) {
+            model.setContextWindow(number.intValue());
+        } else if (contextWindow instanceof String text && !text.isBlank()) {
+            try {
+                model.setContextWindow(Integer.parseInt(text.trim()));
+            } catch (NumberFormatException e) {
+                log.warn("[DbProviderConfigLoader] 模型上下文窗口配置非法，已忽略 - model: {}, value: {}",
+                        map.get("id"), text);
+            }
+        }
         return model;
     }
 }

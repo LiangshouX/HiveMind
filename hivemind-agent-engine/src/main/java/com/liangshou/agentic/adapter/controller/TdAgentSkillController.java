@@ -2,16 +2,17 @@ package com.liangshou.agentic.adapter.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.liangshou.agentic.application.dto.SkillUpsertRequest;
+import com.liangshou.agentic.common.exceptions.BizException;
+import com.liangshou.agentic.common.exceptions.HmeErrorCode;
 import com.liangshou.agentic.agents.skill.TdAgentSkillInfo;
 import com.liangshou.agentic.agents.skill.TdAgentSkillService;
 import com.liangshou.agentic.application.service.SkillApplicationService;
 import com.liangshou.agentic.infrastructure.mysql.po.SkillMetaManagePO;
+import com.liangshou.agentic.common.utils.Result;
 import com.liangshou.agentic.infrastructure.mysql.support.dto.*;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Map;
@@ -58,8 +59,8 @@ public class TdAgentSkillController {
      * @return 返回结果
      */
     @GetMapping("/users/{userId}")
-    public List<TdAgentSkillInfo> listSkills(@PathVariable String userId) {
-        return skillService.listSkills(userId);
+    public Result<List<TdAgentSkillInfo>> listSkills(@PathVariable String userId) {
+        return Result.success(skillService.listSkills(userId));
     }
 
     /**
@@ -69,8 +70,8 @@ public class TdAgentSkillController {
      * @return 返回结果
      */
     @GetMapping("/users/{userId}/{skillName}")
-    public TdAgentSkillInfo getSkill(@PathVariable String userId, @PathVariable String skillName) {
-        return skillService.getSkill(userId, skillName);
+    public Result<TdAgentSkillInfo> getSkill(@PathVariable String userId, @PathVariable String skillName) {
+        return Result.success(skillService.getSkill(userId, skillName));
     }
 
     /**
@@ -79,12 +80,12 @@ public class TdAgentSkillController {
      * @return 返回结果
      */
     @PostMapping("/custom")
-    public TdAgentSkillInfo saveCustomSkill(@Valid @RequestBody SkillUpsertRequest request) {
-        return skillService.saveCustomSkill(
+    public Result<TdAgentSkillInfo> saveCustomSkill(@Valid @RequestBody SkillUpsertRequest request) {
+        return Result.success(skillService.saveCustomSkill(
                 request.getUserId(),
                 request.getSkillMarkdown(),
                 request.getResources(),
-                request.getEnabled());
+                request.getEnabled()));
     }
 
     /**
@@ -94,9 +95,9 @@ public class TdAgentSkillController {
      * @return 返回结果
      */
     @PostMapping("/users/{userId}/{skillName}/enable")
-    public TdAgentSkillInfo enableSkill(
+    public Result<TdAgentSkillInfo> enableSkill(
             @PathVariable String userId, @PathVariable String skillName) {
-        return skillService.setSkillEnabled(userId, skillName, true);
+        return Result.success(skillService.setSkillEnabled(userId, skillName, true));
     }
 
     /**
@@ -106,9 +107,9 @@ public class TdAgentSkillController {
      * @return 返回结果
      */
     @PostMapping("/users/{userId}/{skillName}/disable")
-    public TdAgentSkillInfo disableSkill(
+    public Result<TdAgentSkillInfo> disableSkill(
             @PathVariable String userId, @PathVariable String skillName) {
-        return skillService.setSkillEnabled(userId, skillName, false);
+        return Result.success(skillService.setSkillEnabled(userId, skillName, false));
     }
 
     /**
@@ -118,10 +119,10 @@ public class TdAgentSkillController {
      * @return 返回结果
      */
     @DeleteMapping("/custom/{userId}/{skillName}")
-    public Map<String, Object> deleteCustomSkill(
+    public Result<Map<String, Object>> deleteCustomSkill(
             @PathVariable String userId, @PathVariable String skillName) {
         skillService.deleteCustomSkill(userId, skillName);
-        return Map.of("success", true, "userId", userId, "skillName", skillName);
+        return Result.success(Map.of("success", true, "userId", userId, "skillName", skillName));
     }
 
     /**
@@ -129,9 +130,9 @@ public class TdAgentSkillController {
      * @return 返回结果
      */
     @PostMapping("/catalog/reload")
-    public Map<String, Object> reloadCatalog() {
+    public Result<Map<String, Object>> reloadCatalog() {
         skillService.reloadBuiltinSkills();
-        return Map.of("success", true);
+        return Result.success(Map.of("success", true));
     }
 
     // ==================== 云端 Skill 管理 API（基于 OSS 存储） ====================
@@ -141,8 +142,7 @@ public class TdAgentSkillController {
      */
     private void checkCloudServiceAvailable() {
         if (skillAppService == null) {
-            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, 
-                    "云端 Skill 存储服务未启用，请在配置中启用 tdagent.skill.storage.oss.enabled=true");
+            throw new BizException(HmeErrorCode.STORAGE_OSS_CONFIG_MISSING, "云端 Skill 存储服务未启用，请在配置中启用 tdagent.skill.storage.oss.enabled=true");
         }
     }
 
@@ -153,11 +153,11 @@ public class TdAgentSkillController {
      * @return Skill 响应信息
      */
     @PostMapping("/cloud/users/{userId}")
-    public SkillResponse createCloudSkill(
+    public Result<SkillResponse> createCloudSkill(
             @PathVariable String userId,
             @Valid @RequestBody SkillCreateRequest request) {
         checkCloudServiceAvailable();
-        return skillAppService.createSkill(userId, request);
+        return Result.success(skillAppService.createSkill(userId, request));
     }
 
     /**
@@ -168,12 +168,12 @@ public class TdAgentSkillController {
      * @return Skill 响应信息
      */
     @PutMapping("/cloud/users/{userId}/{skillId}/versions")
-    public SkillResponse updateCloudSkill(
+    public Result<SkillResponse> updateCloudSkill(
             @PathVariable String userId,
             @PathVariable String skillId,
             @Valid @RequestBody SkillVersionRequest request) {
         checkCloudServiceAvailable();
-        return skillAppService.updateSkill(userId, skillId, request);
+        return Result.success(skillAppService.updateSkill(userId, skillId, request));
     }
 
     /**
@@ -183,11 +183,11 @@ public class TdAgentSkillController {
      * @return Skill 响应信息
      */
     @PostMapping("/cloud/users/{userId}/{skillId}/publish")
-    public SkillResponse publishCloudSkill(
+    public Result<SkillResponse> publishCloudSkill(
             @PathVariable String userId,
             @PathVariable String skillId) {
         checkCloudServiceAvailable();
-        return skillAppService.publishSkill(userId, skillId);
+        return Result.success(skillAppService.publishSkill(userId, skillId));
     }
 
     /**
@@ -197,12 +197,12 @@ public class TdAgentSkillController {
      * @return 成功响应
      */
     @PostMapping("/cloud/users/{userId}/{skillId}/archive")
-    public Map<String, Object> archiveCloudSkill(
+    public Result<Map<String, Object>> archiveCloudSkill(
             @PathVariable String userId,
             @PathVariable String skillId) {
         checkCloudServiceAvailable();
         skillAppService.archiveSkill(userId, skillId);
-        return Map.of("success", true, "skillId", skillId);
+        return Result.success(Map.of("success", true, "skillId", skillId));
     }
 
     /**
@@ -212,12 +212,12 @@ public class TdAgentSkillController {
      * @return 成功响应
      */
     @DeleteMapping("/cloud/users/{userId}/{skillId}")
-    public Map<String, Object> deleteCloudSkill(
+    public Result<Map<String, Object>> deleteCloudSkill(
             @PathVariable String userId,
             @PathVariable String skillId) {
         checkCloudServiceAvailable();
         skillAppService.deleteSkill(userId, skillId);
-        return Map.of("success", true, "skillId", skillId);
+        return Result.success(Map.of("success", true, "skillId", skillId));
     }
 
     /**
@@ -227,11 +227,11 @@ public class TdAgentSkillController {
      * @return Skill 响应信息
      */
     @GetMapping("/cloud/users/{userId}/{skillId}")
-    public SkillResponse getCloudSkill(
+    public Result<SkillResponse> getCloudSkill(
             @PathVariable String userId,
             @PathVariable String skillId) {
         checkCloudServiceAvailable();
-        return skillAppService.getSkill(userId, skillId);
+        return Result.success(skillAppService.getSkill(userId, skillId));
     }
 
     /**
@@ -241,12 +241,12 @@ public class TdAgentSkillController {
      * @return 下载 URL
      */
     @GetMapping("/cloud/users/{userId}/{skillId}/download")
-    public Map<String, String> getCloudSkillDownloadUrl(
+    public Result<Map<String, String>> getCloudSkillDownloadUrl(
             @PathVariable String userId,
             @PathVariable String skillId) {
         checkCloudServiceAvailable();
         String url = skillAppService.getDownloadUrl(userId, skillId);
-        return Map.of("downloadUrl", url);
+        return Result.success(Map.of("downloadUrl", url));
     }
 
     /**
@@ -255,9 +255,9 @@ public class TdAgentSkillController {
      * @return 分页结果
      */
     @GetMapping("/cloud/page")
-    public IPage<SkillMetaManagePO> pageCloudSkills(@Valid SkillPageQuery query) {
+    public Result<IPage<SkillMetaManagePO>> pageCloudSkills(@Valid SkillPageQuery query) {
         checkCloudServiceAvailable();
-        return skillAppService.pageSkills(query);
+        return Result.success(skillAppService.pageSkills(query));
     }
 
     /**
@@ -267,7 +267,7 @@ public class TdAgentSkillController {
      * @return 合并后的技能列表
      */
     @GetMapping("/cloud/all")
-    public List<Map<String, Object>> listAllSkills(@RequestParam String userId) {
+    public Result<List<Map<String, Object>>> listAllSkills(@RequestParam String userId) {
         // 1. 获取系统内置技能（BUILTIN）- 包含完整的 SKILL.md 内容
         List<TdAgentSkillInfo> builtinSkills = skillService.listSkills(userId);
         List<Map<String, Object>> result = new java.util.ArrayList<>();
@@ -330,6 +330,6 @@ public class TdAgentSkillController {
             }
         }
 
-        return result;
+        return Result.success(result);
     }
 }

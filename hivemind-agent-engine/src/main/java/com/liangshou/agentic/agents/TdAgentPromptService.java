@@ -36,6 +36,20 @@ public class TdAgentPromptService {
 
     private static final Logger log = LoggerFactory.getLogger(TdAgentPromptService.class);
 
+    /**
+     * 提示词的动态部分：最近会话摘要 + 压缩历史摘要。
+     *
+     * <p>与固定部分分开，便于单独统计"常量上下文开销"。</p>
+     */
+    private static final String DYNAMIC_SUMMARY_SECTION = """
+
+            最近会话摘要：
+            %s
+
+            已压缩历史摘要：
+            %s
+            """;
+
     private final TdAgentProperties properties;
     private final IConversationPersistenceService persistenceService;
     private final ITdAgentProfileService profileService;
@@ -84,6 +98,34 @@ public class TdAgentPromptService {
      * @return 完整的系统提示词字符串，已填充所有占位符并格式化
      */
     public String buildPrompt(ConversationSessionContext context) {
+        // 1. 固定部分（Profile + 角色定义 + 工具规范）
+        String fixedPrompt = buildFixedPrompt(context);
+
+        // 2. 动态部分（最近会话摘要 + 压缩历史摘要）
+        String preview =
+                persistenceService.buildRecentPreview(
+                        context, properties.getSystemPrompt().getMaxHistoryPreview());
+        String compressedSummary = persistenceService.loadCompressedSummary(context);
+
+        return fixedPrompt
+                + DYNAMIC_SUMMARY_SECTION.formatted(
+                        preview == null || preview.isBlank() ? "暂无历史摘要。" : preview,
+                        compressedSummary == null || compressedSummary.isBlank()
+                                ? "暂无压缩摘要。"
+                                : compressedSummary);
+    }
+
+    /**
+     * 构建系统提示词的<b>固定部分</b>。
+     *
+     * <p>固定部分与对话轮次无关（Profile、角色定义、工具使用规范等），
+     * 属于每次调用都要付出的常量上下文开销。上下文占用统计与压缩阈值判定
+     * 都会把这部分计入，因为这部分同样占用模型的上下文窗口。</p>
+     *
+     * @param context 会话上下文
+     * @return 固定部分提示词
+     */
+    public String buildFixedPrompt(ConversationSessionContext context) {
         // 1. 加载用户 Profile
         List<AgentProfileDocument> profiles = profileService.loadUserProfiles(context.getUserId());
         String profilePrompt = ProfilePromptBuilder.build(profiles);
@@ -112,10 +154,6 @@ public class TdAgentPromptService {
      * @return 基础 system prompt
      */
     private String buildBasePrompt(ConversationSessionContext context) {
-        String preview =
-                persistenceService.buildRecentPreview(
-                        context, properties.getSystemPrompt().getMaxHistoryPreview());
-        String compressedSummary = persistenceService.loadCompressedSummary(context);
         return """
                 你是 %s，一个基于 AgentScope-Java 构建的企业级 Java AI Agent。
                 你的职责：
@@ -135,23 +173,13 @@ public class TdAgentPromptService {
                 - 如果当前会话已有历史，请保持术语、上下文与先前对话一致。
                 - 对高风险工具调用，必须遵守审批与安全策略，不得绕过 Tool Guard。
                 - 当历史上下文较长时，允许依赖自动压缩摘要继续保持上下文一致性。
-
-                最近会话摘要：
-                %s
-
-                已压缩历史摘要：
-                %s
                 """
                 .formatted(
                         properties.getSystemPrompt().getProductName(),
                         properties.getSystemPrompt().getOwnerName(),
                         context.getUserId(),
                         context.getSessionId(),
-                        context.getSessionTitle() == null ? "" : context.getSessionTitle(),
-                        preview == null || preview.isBlank() ? "暂无历史摘要。" : preview,
-                        compressedSummary == null || compressedSummary.isBlank()
-                                ? "暂无压缩摘要。"
-                                : compressedSummary);
+                        context.getSessionTitle() == null ? "" : context.getSessionTitle());
     }
 }
 

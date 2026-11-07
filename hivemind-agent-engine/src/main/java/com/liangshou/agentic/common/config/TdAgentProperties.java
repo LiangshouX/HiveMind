@@ -189,11 +189,30 @@ public class TdAgentProperties {
         /** 是否启用 MCP 模式。为 false 时使用 HTTP fallback。 */
         private boolean enabled = false;
 
-        /** MCP 传输模式：sse, stdio */
-        private String transport = "sse";
+        /**
+         * MCP 传输模式：streamable-http（默认）/ sse / stdio。
+         *
+         * <p>ReMe 0.4.2.x 的 HTTP 服务默认在 {@code /mcp} 挂载 streamable HTTP MCP，
+         * 而非旧版的 {@code /sse}，因此默认使用 {@code streamable-http}。</p>
+         */
+        private String transport = "streamable-http";
 
-        /** SSE 配置 */
+        /** streamable-http 传输配置 */
+        private StreamableHttpConfig streamableHttp = new StreamableHttpConfig();
+
+        /** SSE 传输配置（旧版 ReMe 兼容） */
         private SseConfig sse = new SseConfig();
+    }
+
+    /**
+     * streamable-http 传输配置。
+     */
+    @Getter
+    @Setter
+    public static class StreamableHttpConfig {
+
+        /** ReMe MCP Server 的 streamable HTTP 端点 URL */
+        private String url = "http://localhost:2333/mcp";
     }
 
     /**
@@ -203,7 +222,7 @@ public class TdAgentProperties {
     @Setter
     public static class SseConfig {
 
-        /** ReMe MCP Server 的 SSE 端点 URL */
+        /** ReMe MCP Server 的 SSE 端点 URL（旧版 ReMe） */
         private String url = "http://localhost:2333/sse";
     }
 

@@ -1,8 +1,10 @@
 import {
     AudioOutlined,
     BranchesOutlined,
+    CompressOutlined,
     CheckCircleOutlined,
     ClockCircleOutlined,
+    DashboardOutlined,
     DownOutlined,
     FireOutlined,
     LoadingOutlined,
@@ -18,14 +20,14 @@ import {
 import {Bubble, Prompts, Sender, Welcome} from "@ant-design/x";
 import type {SenderProps} from "@ant-design/x/es/sender/interface";
 import {SenderContext} from "@ant-design/x/es/sender/context";
-import {Avatar, Button, Card, Input, Space, Spin, Tag, Tooltip, Typography} from "antd";
+import {Avatar, Button, Card, Input, Popover, Space, Spin, Tag, Tooltip, Typography} from "antd";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import "dayjs/locale/zh-cn";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import React, {useContext, useEffect, useRef, useState, useCallback} from "react";
-import type {AuthUser, SessionState} from "../../types";
+import type {AuthUser, SessionContextUsage, SessionState} from "../../types";
 import {ChatSendButton} from "./ChatSendButton";
 import {ModelSelector} from "../model/ModelSelector";
 
@@ -66,6 +68,27 @@ function blockTone(type: string) {
     }
 }
 
+/** 中间过程块：推理 / 工具调用 / 工具结果，可折叠、可主动展开 */
+const INTERMEDIATE_BLOCK_TYPES = new Set(["reasoning", "tool_use", "tool_result"]);
+
+function isIntermediateBlock(type: string) {
+    return INTERMEDIATE_BLOCK_TYPES.has(type);
+}
+
+/** 折叠态摘要：去掉 Markdown 代码围栏后取前若干字符 */
+function summarizeBlock(content: string, limit = 60) {
+    const plain = content
+        .replace(/```[a-zA-Z0-9]*\n?/g, "")
+        .replace(/```/g, "")
+        .replace(/`/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+    if (!plain) {
+        return "";
+    }
+    return plain.length > limit ? `${plain.slice(0, limit)}…` : plain;
+}
+
 function toneIcon(type: string) {
     switch (type) {
         case "reasoning":
@@ -84,8 +107,8 @@ function toneIcon(type: string) {
                 <Avatar
                     size={22}
                     style={{
-                        background: "linear-gradient(135deg, #b32934, #c7a434)",
-                        color: "#08111f",
+                        background: "var(--td-brand-gradient)",
+                        color: "var(--td-text-inverse)",
                         fontSize: 11,
                         fontWeight: 900,
                     }}
@@ -97,12 +120,15 @@ function toneIcon(type: string) {
 }
 
 /**
- * Custom TextArea that overrides the Sender's broken submitDisabled state.
- * The Sender initializes submitDisabled via useState(!inputValue) but never
- * re-syncs it when the value changes, so Enter key never triggers onSubmit.
- * This component reads triggerSend directly from SenderContext and handles
- * keyboard events properly: Enter sends, Ctrl+Enter / Shift+Enter insert newline.
+ * 提交回调通道。
+ *
+ * <p>为什么需要它：@ant-design/x 的 Sender 内部用 `useState(!innerValue)` 初始化
+ * `submitDisabled` 且此后**从不重新同步**，导致 `triggerSend()` 永远提前 return，
+ * 于是"回车发送"完全失效（点按钮能发是因为按钮走的是我们自己的 onClick）。
+ * 因此这里自建一条通道，由业务侧直接触发发送。</p>
  */
+const SenderSubmitContext = React.createContext<(() => void) | undefined>(undefined);
+
 /** Ref interface expected by the Sender component */
 interface SenderTextAreaRef {
     nativeElement?: HTMLElement | null;
@@ -115,6 +141,7 @@ interface SenderTextAreaRef {
 
 const EnterSendTextArea = React.forwardRef<SenderTextAreaRef>((props, ref) => {
     const ctx = useContext(SenderContext as React.Context<SenderProps & { triggerSend?: () => void }>);
+    const submit = useContext(SenderSubmitContext);
     const {
         value,
         onChange,
@@ -141,7 +168,8 @@ const EnterSendTextArea = React.forwardRef<SenderTextAreaRef>((props, ref) => {
         blur: () => inputRef.current?.blur(),
         insert: (...args: any[]) => inputRef.current?.insert?.(...args),
         clear: () => inputRef.current?.clear(),
-        getValue: () => inputRef.current?.getValue?.() ?? { value: '', slotConfig: [], skill: undefined },
+        // 直接回读上下文里的 value，避免 antd v6 的 TextArea 没有 getValue 导致取空
+        getValue: () => ({value: value ?? '', slotConfig: [], skill: undefined}),
     }));
 
     const handleCompositionStart = () => {
@@ -153,10 +181,11 @@ const EnterSendTextArea = React.forwardRef<SenderTextAreaRef>((props, ref) => {
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        // 只透传业务侧的 onKeyDown，不调用 Sender 内部那个会吞掉 Enter 的实现
         ctxOnKeyDown?.(e);
         const {key, shiftKey, ctrlKey, altKey, metaKey} = e;
 
-        if (isCompositionRef.current || key !== 'Enter' || e.defaultPrevented) {
+        if (isCompositionRef.current || key !== 'Enter') {
             return;
         }
 
@@ -165,11 +194,17 @@ const EnterSendTextArea = React.forwardRef<SenderTextAreaRef>((props, ref) => {
             (submitType === 'enter' && !shiftKey && !isModifierPressed) ||
             (submitType === 'shiftEnter' && shiftKey && !isModifierPressed);
 
-        if (shouldSubmit) {
-            e.preventDefault();
-            // Call triggerSend directly from context, bypassing Sender's broken submitDisabled check
-            (ctx as any).triggerSend?.();
+        if (!shouldSubmit) {
+            // Shift / Ctrl / Alt + Enter = 换行，交给浏览器默认行为
+            return;
         }
+
+        e.preventDefault();
+        const text = (value ?? '').trim();
+        if (!text || disabled || readOnly) {
+            return;
+        }
+        submit?.();
     };
 
     return (
@@ -183,7 +218,8 @@ const EnterSendTextArea = React.forwardRef<SenderTextAreaRef>((props, ref) => {
             onCompositionEnd={handleCompositionEnd}
             disabled={disabled}
             readOnly={readOnly}
-            autoSize={autoSize}
+            // 兜底：即使上层没透传 autoSize，也要保证输入框可随内容自动增高
+            autoSize={autoSize ?? {minRows: 1, maxRows: 6}}
             placeholder={placeholder}
             onFocus={onFocus}
             onBlur={onBlur}
@@ -202,13 +238,241 @@ interface ConversationWorkspaceProps {
     activeSession?: SessionState;
     activeSessionId?: string;
     selectedModelId?: string;
+    contextUsage?: SessionContextUsage;
+    compacting?: boolean;
     onInputChange: (value: string) => void;
     onSelectModel?: (providerId: string, modelId: string) => void;
     onRefreshSession: () => void;
     onInterrupt: () => void | Promise<void>;
     onSend: () => void | Promise<void>;
+    onCompactContext?: () => void | Promise<void>;
     onApprove?: () => void | Promise<void>;
     onReject?: () => void | Promise<void>;
+}
+
+/** 把 token 数格式化为 K / M，便于阅读 */
+function formatTokens(value?: number) {
+    if (value === undefined || value === null || Number.isNaN(value)) {
+        return "-";
+    }
+    if (value >= 1_000_000) {
+        return `${(value / 1_000_000).toFixed(2)}M`;
+    }
+    if (value >= 1000) {
+        return `${(value / 1000).toFixed(1)}K`;
+    }
+    return String(value);
+}
+
+/** 把毫秒格式化成人类可读的时长 */
+function formatDuration(ms?: number) {
+    if (!ms || ms <= 0) {
+        return "-";
+    }
+    if (ms < 1000) {
+        return `${Math.round(ms)} 毫秒`;
+    }
+    return `${(ms / 1000).toFixed(1)} 秒`;
+}
+
+/** 千分位数字 */
+function formatCount(value?: number) {
+    if (value === undefined || value === null || Number.isNaN(value)) {
+        return "0";
+    }
+    return Math.round(value).toLocaleString("en-US");
+}
+
+/**
+ * 上下文窗口占用面板。
+ *
+ * <p>常驻部分是一个紧凑的百分比徽标（悬浮展开面板），
+ * 面板内展示：占用比例与总量、按构成拆分的分段进度条
+ * （系统提示词 / 工具定义 / 对话消息）、会话统计
+ * （模型用时 / 首 token 延迟 / 输出速度）、Token 用量
+ * （缓存命中 / 未缓存输入 / 缓存读取 / 输出），并提供手动压缩入口。</p>
+ */
+function ContextUsagePanel({
+                             usage,
+                             compacting,
+                             onCompact,
+                         }: {
+    usage?: SessionContextUsage;
+    compacting?: boolean;
+    onCompact?: () => void | Promise<void>;
+}) {
+    if (!usage) {
+        return null;
+    }
+
+    const percent = Math.round(usage.usageRatio * 100);
+    const warning = usage.nearThreshold;
+    const thresholdPercent = Math.round(usage.thresholdRatio * 100);
+    const window = usage.contextWindow || 1;
+
+    const systemTokens = usage.systemPromptTokens ?? 0;
+    const toolTokens = usage.toolDefinitionTokens ?? 0;
+    const messageTokens = usage.conversationTokens
+        ?? Math.max(0, usage.usedTokens - systemTokens - toolTokens);
+
+    // 各部分占上下文窗口的比例（用于分段进度条）
+    const widthOf = (value: number) =>
+        `${Math.min(100, Math.max(0, (value / window) * 100))}%`;
+
+    const cacheHitPercent = Math.round((usage.cacheHitRatio ?? 0) * 100);
+    const tps = usage.tokensPerSecond ?? 0;
+
+    const panel = (
+        <div className="ctx-panel">
+            <div className="ctx-panel-header">
+                <span className="ctx-panel-title">上下文已用 {percent}%</span>
+                <span className="ctx-panel-total">
+                    ~{formatTokens(usage.usedTokens)} / {formatTokens(usage.contextWindow)}
+                </span>
+            </div>
+
+            <div className="ctx-panel-track">
+                <span className="ctx-panel-seg is-system" style={{width: widthOf(systemTokens)}}/>
+                <span className="ctx-panel-seg is-tools" style={{width: widthOf(toolTokens)}}/>
+                <span className="ctx-panel-seg is-messages" style={{width: widthOf(messageTokens)}}/>
+                <span
+                    className="ctx-panel-threshold"
+                    style={{left: `${Math.min(100, thresholdPercent)}%`}}
+                    title={`压缩阈值 ${thresholdPercent}%`}
+                />
+            </div>
+
+            <div className="ctx-panel-legend">
+                <div className="ctx-panel-legend-row">
+                    <span className="ctx-panel-legend-label">
+                        <i className="ctx-dot is-system"/>系统提示词
+                    </span>
+                    <span className="ctx-panel-legend-value">~{formatTokens(systemTokens)}</span>
+                </div>
+                <div className="ctx-panel-legend-row">
+                    <span className="ctx-panel-legend-label">
+                        <i className="ctx-dot is-tools"/>工具定义
+                    </span>
+                    <span className="ctx-panel-legend-value">~{formatTokens(toolTokens)}</span>
+                </div>
+                <div className="ctx-panel-legend-row">
+                    <span className="ctx-panel-legend-label">
+                        <i className="ctx-dot is-messages"/>对话消息
+                    </span>
+                    <span className="ctx-panel-legend-value">~{formatTokens(messageTokens)}</span>
+                </div>
+            </div>
+
+            <div className="ctx-panel-divider"/>
+
+            <div className="ctx-panel-section">会话统计</div>
+            <div className="ctx-panel-grid">
+                <div className="ctx-panel-cell">
+                    <div className="ctx-panel-cell-label">模型用时</div>
+                    <div className="ctx-panel-cell-value">{formatDuration(usage.modelDurationMs)}</div>
+                </div>
+                <div className="ctx-panel-cell">
+                    <div className="ctx-panel-cell-label">首 token 平均 (TTFT)</div>
+                    <div className="ctx-panel-cell-value">{formatDuration(usage.ttftMs)}</div>
+                </div>
+                <div className="ctx-panel-cell">
+                    <div className="ctx-panel-cell-label">输出速度 (TPS)</div>
+                    <div className="ctx-panel-cell-value">
+                        {tps > 0 ? `${tps.toFixed(1)} tok/s` : "-"}
+                    </div>
+                </div>
+            </div>
+
+            <div className="ctx-panel-divider"/>
+
+            <div className="ctx-panel-section">Token 用量</div>
+            <div className="ctx-panel-grid">
+                <div className="ctx-panel-cell">
+                    <div className="ctx-panel-cell-label">缓存命中</div>
+                    <div className="ctx-panel-cell-value">{cacheHitPercent}%</div>
+                </div>
+                <div className="ctx-panel-cell">
+                    <div className="ctx-panel-cell-label">未缓存输入</div>
+                    <div className="ctx-panel-cell-value">
+                        {formatCount(usage.uncachedInputTokens)} tok
+                    </div>
+                </div>
+                <div className="ctx-panel-cell">
+                    <div className="ctx-panel-cell-label">缓存读取</div>
+                    <div className="ctx-panel-cell-value">
+                        {formatCount(usage.cachedInputTokens)} tok
+                    </div>
+                </div>
+                <div className="ctx-panel-cell">
+                    <div className="ctx-panel-cell-label">输出</div>
+                    <div className="ctx-panel-cell-value">
+                        {formatCount(usage.outputTokens)} tok
+                    </div>
+                </div>
+            </div>
+
+            <div className="ctx-panel-divider"/>
+
+            <div className="ctx-panel-footer">
+                <Button
+                    size="small"
+                    icon={<CompressOutlined/>}
+                    loading={compacting}
+                    disabled={compacting}
+                    onClick={() => void onCompact?.()}
+                >
+                    压缩上下文
+                </Button>
+                <span className="ctx-panel-foot-note">
+                    阈值 {thresholdPercent}% · 已压缩 {usage.compactionCount} 次
+                    {usage.compressedSummaryChars > 0
+                        ? `（摘要 ${usage.compressedSummaryChars} 字）`
+                        : ""}
+                </span>
+            </div>
+        </div>
+    );
+
+    return (
+        <div className="context-usage-bar">
+            <Popover
+                content={panel}
+                trigger="hover"
+                placement="topRight"
+                overlayClassName="ctx-panel-popover"
+            >
+                <button
+                    type="button"
+                    className={`ctx-usage-badge${warning ? " is-warning" : ""}`}
+                    aria-label="查看上下文窗口占用详情"
+                >
+                    <DashboardOutlined/>
+                    <span>{percent}%</span>
+                </button>
+            </Popover>
+            {warning ? (
+                <Tag color="warning" style={{marginInlineEnd: 0}}>
+                    临近阈值
+                </Tag>
+            ) : null}
+            <Tooltip title="手动压缩上下文（将历史中间层折叠为摘要）">
+                <Button
+                    size="small"
+                    type="text"
+                    icon={<CompressOutlined/>}
+                    loading={compacting}
+                    disabled={compacting}
+                    onClick={() => void onCompact?.()}
+                    style={{
+                        color: "var(--td-text-tertiary)",
+                        height: 22,
+                        padding: "0 6px",
+                        fontSize: 12,
+                    }}
+                />
+            </Tooltip>
+        </div>
+    );
 }
 
 export function ConversationWorkspace({
@@ -218,10 +482,13 @@ export function ConversationWorkspace({
                                           activeSession,
                                           activeSessionId,
                                           selectedModelId,
+                                          contextUsage,
+                                          compacting,
                                           onInputChange,
                                           onSelectModel,
                                           onInterrupt,
                                           onSend,
+                                          onCompactContext,
                                           onApprove,
                                           onReject,
                                       }: ConversationWorkspaceProps) {
@@ -229,49 +496,20 @@ export function ConversationWorkspace({
     const [prevMessageCount, setPrevMessageCount] = useState(0);
     const prevSessionIdRef = useRef<string | undefined>(undefined);
     const [shouldScroll, setShouldScroll] = useState(false);
-    // 推理块默认折叠：记录用户手动展开过的 blockId
-    const expandedByUserRef = useRef<Set<string>>(new Set());
-    const [collapsedBlocks, setCollapsedBlocks] = useState<Set<string>>(() => {
-        const initial = new Set<string>();
-        activeSession?.messages.forEach((msg) =>
-            msg.blocks.forEach((b) => { if (b.type === "reasoning") initial.add(b.id); })
-        );
-        return initial;
-    });
+    // 中间过程块的展开状态覆盖：
+    // undefined = 跟随默认（最终结果渲染完成后自动折叠）
+    // true     = 用户手动展开
+    // false    = 用户手动折叠
+    const [blockExpandOverrides, setBlockExpandOverrides] = useState<Record<string, boolean>>({});
 
-    // 新推理块（流式到达时）自动折叠
-    const processedIdsRef = useRef<Set<string>>(new Set());
-    useEffect(() => {
-        if (!activeSession) return;
-        let changed = false;
-        const next = new Set(collapsedBlocks);
-        activeSession.messages.forEach((msg) =>
-            msg.blocks.forEach((b) => {
-                if (b.type === "reasoning" && !processedIdsRef.current.has(b.id)) {
-                    processedIdsRef.current.add(b.id);
-                    if (!expandedByUserRef.current.has(b.id)) {
-                        next.add(b.id);
-                        changed = true;
-                    }
-                }
-            })
-        );
-        if (changed) setCollapsedBlocks(next);
-    }, [activeSession?.messages]);
-
-    const toggleBlockCollapse = useCallback((blockId: string) => {
-        setCollapsedBlocks((prev) => {
-            const next = new Set(prev);
-            if (next.has(blockId)) {
-                next.delete(blockId);
-                expandedByUserRef.current.add(blockId);
-            } else {
-                next.add(blockId);
-                expandedByUserRef.current.delete(blockId);
-            }
-            return next;
-        });
+    const toggleBlockCollapse = useCallback((blockId: string, currentlyCollapsed: boolean) => {
+        setBlockExpandOverrides((prev) => ({...prev, [blockId]: !currentlyCollapsed}));
     }, []);
+
+    // 输入框回车发送的统一出口（供 EnterSendTextArea 通过 Context 调用）
+    const handleSubmit = useCallback(() => {
+        void onSend();
+    }, [onSend]);
 
     const bubbleItems =
         activeSession?.messages.map((message) => ({
@@ -280,7 +518,7 @@ export function ConversationWorkspace({
             // 禁用 typing 动画以避免与 SSE 实时更新冲突，提升流式输出流畅度
             typing: false,
             content: (
-                <div className="message-stack">
+                <div className={`message-stack is-${message.role}`}>
                     <div className="message-meta">
                         <Space size={8}>
                             <Text className="message-author"
@@ -298,35 +536,65 @@ export function ConversationWorkspace({
                     </div>
 
                     {message.blocks.map((block) => {
-                        const isReasoning = block.type === "reasoning";
-                        const isCollapsed = collapsedBlocks.has(block.id);
+                        const intermediate = isIntermediateBlock(block.type);
+                        // 默认态：最终结果渲染完成后，中间过程块自动折叠；
+                        // 用户手动展开/折叠过的块以其显式选择为准。
+                        const hasFinalResult = message.blocks.some((item) => item.type === "result");
+                        const defaultCollapsed = intermediate && hasFinalResult;
+                        const override = blockExpandOverrides[block.id];
+                        const isCollapsed = intermediate ? (override ?? defaultCollapsed) : false;
+                        const preview = intermediate && isCollapsed ? summarizeBlock(block.content) : "";
+                        // 正文与最终结果不套卡片，直接呈现文字；中间过程块保留色调条
+                        const isPlain = block.type === "result" || block.type === "text";
 
                         return (
-                        <div key={block.id} className={`message-block tone-${blockTone(block.type)}`}>
+                        <div
+                            key={block.id}
+                            className={`message-block tone-${blockTone(block.type)}${isCollapsed ? " is-collapsed" : ""}${isPlain ? " is-plain" : ""}`}
+                        >
                             {block.title || block.toolName ? (
                                 <div
                                     className="message-block-title"
                                     style={{
                                         color: 'var(--td-text-base)',
-                                        ...(isReasoning ? { cursor: 'pointer', userSelect: 'none' } : {}),
+                                        ...(intermediate
+                                            ? {cursor: 'pointer', userSelect: 'none'}
+                                            : {}),
                                     }}
-                                    onClick={isReasoning ? () => toggleBlockCollapse(block.id) : undefined}
+                                    onClick={intermediate
+                                        ? () => toggleBlockCollapse(block.id, isCollapsed)
+                                        : undefined}
+                                    role={intermediate ? "button" : undefined}
+                                    tabIndex={intermediate ? 0 : undefined}
+                                    onKeyDown={intermediate
+                                        ? (e) => {
+                                            if (e.key === "Enter" || e.key === " ") {
+                                                e.preventDefault();
+                                                toggleBlockCollapse(block.id, isCollapsed);
+                                            }
+                                        }
+                                        : undefined}
                                 >
-                                    <Space size={8}>
-                                        {isReasoning ? (
+                                    <Space size={8} wrap={false} style={{flexWrap: 'nowrap', minWidth: 0}}>
+                                        {intermediate ? (
                                             <span style={{ fontSize: 10, color: 'var(--td-text-tertiary)' }}>
                                                 {isCollapsed ? <RightOutlined/> : <DownOutlined/>}
                                             </span>
                                         ) : toneIcon(block.type)}
-                                        {block.title ? <span>{block.title}</span> : null}
-                                        {block.toolName ? <Tag>{block.toolName}</Tag> : null}
+                                        {block.title ? (
+                                            <span className="message-block-label">{block.title}</span>
+                                        ) : null}
+                                        {block.toolName ? <Tag style={{flexShrink: 0}}>{block.toolName}</Tag> : null}
+                                        {preview ? (
+                                            <span className="message-block-preview">{preview}</span>
+                                        ) : null}
                                     </Space>
                                 </div>
                             ) : null}
 
                             <div style={{
                                 display: 'grid',
-                                gridTemplateRows: (isReasoning && isCollapsed) ? '0fr' : '1fr',
+                                gridTemplateRows: isCollapsed ? '0fr' : '1fr',
                                 transition: 'grid-template-rows 200ms ease-out',
                             }}>
                                 <div style={{overflow: 'hidden', minHeight: 0}}>
@@ -339,7 +607,10 @@ export function ConversationWorkspace({
                                         }}>{block.rawInput}</pre>
                                     ) : null}
 
-                                    <div className="markdown-body" style={{color: 'var(--td-text-base)'}}>
+                                    <div
+                                        className={`markdown-body${intermediate ? " markdown-scroll" : ""}`}
+                                        style={{color: 'var(--td-text-base)'}}
+                                    >
                                         <ReactMarkdown remarkPlugins={[remarkGfm]}>
                                             {block.content || " "}
                                         </ReactMarkdown>
@@ -590,10 +861,11 @@ export function ConversationWorkspace({
                         borderTop: '1px solid var(--td-border-light)',
                         borderBottomLeftRadius: '12px',
                         borderBottomRightRadius: '12px',
-                        padding: '8px 12px 4px',
+                        padding: '0 0 4px',
                         boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.02)',
                         transition: 'border-color 0.3s',
                     }}>
+                        <SenderSubmitContext.Provider value={handleSubmit}>
                         <Sender
                             value={input}
                             onChange={onInputChange}
@@ -603,12 +875,12 @@ export function ConversationWorkspace({
                             submitType="enter"
                             components={{input: EnterSendTextArea as any}}
                             autoSize={{minRows: 1, maxRows: 6}}
-                            placeholder="输入任务..."
+                            placeholder="输入任务...（Enter 发送 / Shift+Enter 换行）"
                             style={{
                                 resize: 'none',
                                 color: 'var(--td-text-base)',
                                 fontSize: '15px',
-                                padding: '0 0 4px 0',
+                                padding: '8px 12px 4px',
                                 boxShadow: 'none',
                                 background: 'transparent'
                             }}
@@ -657,6 +929,12 @@ export function ConversationWorkspace({
                                     </Space>
                                 );
                             }}
+                        />
+                        </SenderSubmitContext.Provider>
+                        <ContextUsagePanel
+                            usage={contextUsage}
+                            compacting={compacting}
+                            onCompact={onCompactContext}
                         />
                     </div>
                 </div>

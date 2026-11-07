@@ -1,6 +1,7 @@
 package com.liangshou.agentic.application;
 
 import com.liangshou.agentic.agents.ConversationSessionContext;
+import com.liangshou.agentic.domain.memory.model.ConversationContextStats;
 import com.liangshou.agentic.domain.memory.model.ConversationMemoryDocument;
 import com.liangshou.agentic.domain.memory.model.ConversationViewDocument;
 import com.liangshou.agentic.domain.tool.model.ToolApprovalDocument;
@@ -95,6 +96,17 @@ public interface IConversationPersistenceService {
      * @return 压缩后的历史摘要；如果会话不存在或无摘要则返回空字符串
      */
     String loadCompressedSummary(ConversationSessionContext context);
+
+    /**
+     * 记录会话上下文统计快照。
+     *
+     * <p>保存最近一轮对话的运行时指标（工具定义开销、总耗时、首 token 延迟、TPS 等），
+     * 供前端"上下文面板"展示。统计快照与消息历史相互独立，写入失败不影响主流程。</p>
+     *
+     * @param context 会话上下文
+     * @param stats   统计快照
+     */
+    void recordContextStats(ConversationSessionContext context, ConversationContextStats stats);
 
     /**
      * 列出会话列表。

@@ -73,7 +73,26 @@ public class MongoAgentStateStore implements AgentStateStore {
         if (value == null) {
             return Optional.empty();
         }
-        return Optional.of(objectMapper.convertValue(value, type));
+        T converted = objectMapper.convertValue(value, type);
+        if (converted instanceof AgentState agentState) {
+            stripFrameworkSystemMessages(agentState);
+        }
+        return Optional.of(converted);
+    }
+
+    /**
+     * 剔除状态上下文里残留的框架系统消息（Agent sysPrompt）。
+     *
+     * <p>历史版本曾把每轮重建的系统消息写进 Agent 状态，导致逐轮累积。
+     * 这里在加载时统一清理，存量会话也会自动恢复。</p>
+     */
+    private void stripFrameworkSystemMessages(AgentState agentState) {
+        List<Msg> context = agentState.contextMutable();
+        boolean removed = context.removeIf(this::isFrameworkSystemMessage);
+        if (removed) {
+            log.info("[MongoAgentStateStore] 已清理状态上下文中的遗留系统消息 - sessionId: {}",
+                    agentState.getSessionId());
+        }
     }
 
     @Override
@@ -139,17 +158,41 @@ public class MongoAgentStateStore implements AgentStateStore {
             return;
         }
 
+        // 过滤掉历史遗留的框架系统消息（Agent sysPrompt）。
+        // 它每轮都会重新生成，进入 Agent 状态会造成逐轮累积并形成正反馈。
+        List<Msg> filtered = historyMessages.stream()
+                .filter(msg -> !isFrameworkSystemMessage(msg))
+                .collect(Collectors.toList());
+        if (filtered.size() != historyMessages.size()) {
+            log.info("[MongoAgentStateStore] 已过滤历史遗留的系统消息 - sessionId: {}, 过滤: {}",
+                    sessionId, historyMessages.size() - filtered.size());
+        }
+        if (filtered.isEmpty()) {
+            log.debug("[MongoAgentStateStore] 过滤后无历史消息，跳过预填充 - userId: {}, sessionId: {}",
+                    userId, sessionId);
+            return;
+        }
+
         // 创建 AgentState 并填充历史消息
         AgentState agentState = AgentState.builder()
                 .userId(userId)
                 .sessionId(sessionId)
                 .build();
-        agentState.contextMutable().addAll(historyMessages);
+        agentState.contextMutable().addAll(filtered);
 
         // 保存到 AgentStateStore
         save(userId, sessionId, "agent_state", agentState);
         log.info("[MongoAgentStateStore] 已预填充对话历史 - userId: {}, sessionId: {}, messages: {}",
-                userId, sessionId, historyMessages.size());
+                userId, sessionId, filtered.size());
+    }
+
+    /**
+     * 判断是否为 AgentScope 框架注入的系统消息（Agent 的 sysPrompt）。
+     */
+    private boolean isFrameworkSystemMessage(Msg msg) {
+        return msg != null
+                && msg.getRole() == io.agentscope.core.message.MsgRole.SYSTEM
+                && "system".equals(msg.getName());
     }
 
     private void persist(String userId, String sessionId, Map<String, Object> payload) {

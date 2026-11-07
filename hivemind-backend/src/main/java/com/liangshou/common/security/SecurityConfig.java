@@ -26,6 +26,8 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -137,10 +139,19 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(List.of(
+        // 本地开发 + 部署域名可通过环境变量 CORS_ALLOWED_ORIGINS 追加（逗号分隔）
+        List<String> allowedOriginPatterns = new ArrayList<>(List.of(
                 "http://localhost:*",
                 "http://127.0.0.1:*"
         ));
+        String extraOrigins = System.getenv("CORS_ALLOWED_ORIGINS");
+        if (extraOrigins != null && !extraOrigins.isBlank()) {
+            Arrays.stream(extraOrigins.split(","))
+                    .map(String::trim)
+                    .filter(origin -> !origin.isEmpty())
+                    .forEach(allowedOriginPatterns::add);
+        }
+        configuration.setAllowedOriginPatterns(allowedOriginPatterns);
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of(
                 HttpHeaders.AUTHORIZATION,

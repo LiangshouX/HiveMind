@@ -61,6 +61,13 @@ public class TdAgentResolvedModelConfig {
     private final Map<String, Object> additionalBodyParams;
 
     /**
+     * 模型声明的上下文窗口大小（tokens），null 表示未声明。
+     *
+     * <p>由供应商目录中的模型描述符解析而来，供上下文占用率展示与压缩阈值计算使用。</p>
+     */
+    private final Integer contextWindow;
+
+    /**
      * 返回可直接传递给 AgentScope GenerateOptions 的附加请求体参数。
      *
      * @return 不可变附加请求体参数

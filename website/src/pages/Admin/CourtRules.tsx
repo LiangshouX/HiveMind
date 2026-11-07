@@ -304,7 +304,7 @@ const CourtRules: React.FC = () => {
 
       <Row gutter={16} style={{ flex: 1, overflow: 'hidden' }}>
         {/* Left Sidebar: File List */}
-        <Col span={6} style={{ height: '100%', overflowY: 'auto' }}>
+        <Col xs={10} sm={10} md={8} lg={6} style={{ height: '100%', overflowY: 'auto' }}>
           <Collapse
             defaultActiveKey={['core', 'memory']}
             ghost
@@ -312,11 +312,11 @@ const CourtRules: React.FC = () => {
             items={categories.map(category => ({
               key: category.key,
               label: (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                  <Space>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: 8 }}>
+                  <Space style={{ flex: '0 1 auto', minWidth: 0 }}>
                     {category.icon}
-                    <span style={{ fontWeight: 600 }}>{category.label}</span>
-                    <Text type="secondary" style={{ fontSize: 12 }}>({category.files.length})</Text>
+                    <span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>{category.label}</span>
+                    <Text type="secondary" style={{ fontSize: 12, whiteSpace: 'nowrap' }}>({category.files.length})</Text>
                   </Space>
                   <Button
                     type="text"
@@ -342,8 +342,8 @@ const CourtRules: React.FC = () => {
                       style={{
                         padding: '8px 12px',
                         cursor: 'pointer',
-                        color: '#1890ff',
-                        borderBottom: '1px solid #f0f0f0',
+                        color: 'var(--td-highlight)',
+                        borderBottom: '1px solid var(--td-divider)',
                         marginBottom: 4,
                       }}
                       onClick={handleBackDir}
@@ -377,8 +377,8 @@ const CourtRules: React.FC = () => {
                           style={{
                             padding: '10px 12px',
                             cursor: 'pointer',
-                            background: isActive ? 'rgba(24, 144, 255, 0.08)' : 'transparent',
-                            borderLeft: isActive ? '3px solid #1890ff' : '3px solid transparent',
+                            background: isActive ? 'var(--td-item-selected-bg)' : 'transparent',
+                            borderLeft: isActive ? '3px solid var(--td-highlight)' : '3px solid transparent',
                             borderRadius: '0 4px 4px 0',
                             marginBottom: 2,
                             transition: 'all 0.2s',
@@ -396,7 +396,7 @@ const CourtRules: React.FC = () => {
                           }}
                           onMouseEnter={(e) => {
                             if (!isActive) {
-                              e.currentTarget.style.background = 'rgba(0, 0, 0, 0.02)';
+                              e.currentTarget.style.background = 'var(--td-item-hover-bg)';
                             }
                           }}
                           onMouseLeave={(e) => {
@@ -408,11 +408,11 @@ const CourtRules: React.FC = () => {
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             <Space size={8}>
                               {category.key === 'memory' && isDirectory(fileName) ? (
-                                <FolderOutlined style={{ color: '#faad14', fontSize: 16 }} />
+                                <FolderOutlined style={{ color: 'var(--td-warning-color)', fontSize: 16 }} />
                               ) : (
-                                <FileTextOutlined style={{ color: isActive ? '#1890ff' : '#999', fontSize: 16 }} />
+                                <FileTextOutlined style={{ color: isActive ? 'var(--td-highlight)' : 'var(--td-text-tertiary)', fontSize: 16 }} />
                               )}
-                              <span style={{ fontWeight: isActive ? 600 : 400, fontSize: 13 }}>
+                              <span style={{ fontWeight: isActive ? 600 : 400, fontSize: 13, whiteSpace: 'nowrap' }}>
                                 {fileName}
                               </span>
                             </Space>
@@ -453,7 +453,7 @@ const CourtRules: React.FC = () => {
         </Col>
 
         {/* Right Content: Editor */}
-        <Col span={18} style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <Col xs={14} sm={14} md={16} lg={18} style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
           <Card
             title={
               <Space>
@@ -477,10 +477,10 @@ const CourtRules: React.FC = () => {
                 </Button>
               </Space>
             }
-            bodyStyle={{ flex: 1, display: 'flex', flexDirection: 'column', height: 'calc(100% - 57px)', padding: 0 }}
+            styles={{ body: { flex: 1, display: 'flex', flexDirection: 'column', height: 'calc(100% - 57px)', padding: 0 } }}
             style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
           >
-            <div style={{ padding: '8px 16px', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ padding: '8px 16px', borderBottom: '1px solid var(--td-divider)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Text strong>内容</Text>
               <Space>
                 <Text type="secondary" style={{ fontSize: 12 }}>预览</Text>
@@ -500,8 +500,8 @@ const CourtRules: React.FC = () => {
                     {/* Frontmatter 展示 */}
                     {Object.keys(parsedContent.frontmatter).length > 0 && (
                       <div style={{
-                        background: '#f6f8fa',
-                        border: '1px solid #e1e4e8',
+                        background: 'var(--td-metadata-bg)',
+                        border: '1px solid var(--td-metadata-border)',
                         borderRadius: 6,
                         padding: '12px 16px',
                         marginBottom: 16,
@@ -542,8 +542,8 @@ const CourtRules: React.FC = () => {
                   />
                 )
               ) : (
-                <div style={{ textAlign: 'center', color: '#999', padding: '40px 0' }}>
-                  <FileMarkdownOutlined style={{ fontSize: 48, marginBottom: 16 }} />
+                <div style={{ textAlign: 'center', color: 'var(--td-text-tertiary)', padding: '40px 0' }}>
+                  <FileMarkdownOutlined style={{ fontSize: 48, marginBottom: 16, color: 'var(--td-text-quaternary)' }} />
                   <div>请从左侧选择文件</div>
                 </div>
               )}

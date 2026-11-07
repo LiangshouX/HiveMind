@@ -1,45 +1,61 @@
 [
   {
     "id": "dashscope",
-    "name": "DashScope",
+    "name": "阿里云百炼 DashScope",
+    "description": "阿里云官方大模型服务平台（通义千问系列），OpenAI 兼容接口",
     "providerType": "dashscope",
     "baseUrl": "https://dashscope.aliyuncs.com/compatible-mode/v1",
     "apiKey": "{{env:DASHSCOPE_API_KEY}}",
     "chatModel": "io.agentscope.core.model.DashScopeChatModel",
+    "consoleUrl": "https://bailian.console.aliyun.com/",
+    "apiKeyUrl": "https://bailian.console.aliyun.com/?apiKey=1",
     "models": [
       {
         "id": "qwen-max",
-        "name": "Qwen Max",
+        "name": "通义千问 Max",
         "supportsMultimodal": true,
         "supportsVideo": true,
+        "contextWindow": 32768,
         "probeSource": null
       },
       {
         "id": "qwen3-max",
-        "name": "Qwen Max",
+        "name": "通义千问 3 Max",
         "supportsMultimodal": true,
         "supportsVideo": true,
+        "contextWindow": 262144,
         "probeSource": null
       },
       {
         "id": "qwen3.5-plus",
-        "name": "Qwen 3.5 Plus",
+        "name": "通义千问 3.5 Plus",
         "supportsMultimodal": true,
         "supportsVideo": true,
+        "contextWindow": 131072,
         "probeSource": null
       },
       {
         "id": "qwen3.5",
-        "name": "Qwen 3.5",
+        "name": "通义千问 3.5",
         "supportsMultimodal": true,
         "supportsVideo": true,
+        "contextWindow": 131072,
         "probeSource": null
       },
       {
         "id": "qwen-plus",
-        "name": "Qwen Plus",
+        "name": "通义千问 Plus",
         "supportsMultimodal": true,
         "supportsVideo": true,
+        "contextWindow": 131072,
+        "probeSource": null
+      },
+      {
+        "id": "qwen-turbo",
+        "name": "通义千问 Turbo",
+        "supportsMultimodal": false,
+        "supportsVideo": false,
+        "contextWindow": 1000000,
         "probeSource": null
       }
     ],
@@ -55,17 +71,21 @@
   {
     "id": "deepseek",
     "name": "DeepSeek",
+    "description": "深度求索，OpenAI 兼容接口，性价比高",
     "providerType": "openai",
     "baseUrl": "https://api.deepseek.com/v1",
     "apiKey": "{{env:DEEPSEEK_API_KEY}}",
     "chatModel": "io.agentscope.core.model.OpenAIChatModel",
     "formatter": "deepseek",
+    "consoleUrl": "https://platform.deepseek.com/",
+    "apiKeyUrl": "https://platform.deepseek.com/api_keys",
     "models": [
       {
         "id": "deepseek-chat",
         "name": "DeepSeek Chat",
         "supportsMultimodal": false,
         "supportsVideo": false,
+        "contextWindow": 65536,
         "probeSource": null
       },
       {
@@ -73,6 +93,7 @@
         "name": "DeepSeek Reasoner",
         "supportsMultimodal": false,
         "supportsVideo": false,
+        "contextWindow": 65536,
         "probeSource": null
       }
     ],
@@ -83,6 +104,208 @@
     "supportConnectionCheck": true,
     "generateKwargs": {
       "max_tokens": 65536
+    }
+  },
+  {
+    "id": "openai",
+    "name": "OpenAI",
+    "description": "OpenAI 官方接口（gpt-4o / gpt-4o-mini）",
+    "providerType": "openai",
+    "baseUrl": "https://api.openai.com/v1",
+    "apiKey": "{{env:OPENAI_API_KEY}}",
+    "chatModel": "io.agentscope.core.model.OpenAIChatModel",
+    "consoleUrl": "https://platform.openai.com/",
+    "apiKeyUrl": "https://platform.openai.com/api-keys",
+    "models": [
+      {
+        "id": "gpt-4o",
+        "name": "GPT-4o",
+        "supportsMultimodal": true,
+        "supportsVideo": false,
+        "contextWindow": 128000,
+        "probeSource": null
+      },
+      {
+        "id": "gpt-4o-mini",
+        "name": "GPT-4o Mini",
+        "supportsMultimodal": true,
+        "supportsVideo": false,
+        "contextWindow": 128000,
+        "probeSource": null
+      }
+    ],
+    "apiKeyPrefix": "sk-",
+    "freezeUrl": false,
+    "isCustom": false,
+    "supportModelDiscovery": true,
+    "supportConnectionCheck": true,
+    "generateKwargs": {
+      "max_tokens": 8192
+    }
+  },
+  {
+    "id": "moonshot",
+    "name": "Moonshot 月之暗面",
+    "description": "Kimi 系列模型，OpenAI 兼容接口",
+    "providerType": "openai",
+    "baseUrl": "https://api.moonshot.cn/v1",
+    "apiKey": "{{env:MOONSHOT_API_KEY}}",
+    "chatModel": "io.agentscope.core.model.OpenAIChatModel",
+    "consoleUrl": "https://platform.moonshot.cn/",
+    "apiKeyUrl": "https://platform.moonshot.cn/console/api-keys",
+    "models": [
+      {
+        "id": "moonshot-v1-8k",
+        "name": "Moonshot v1 8K",
+        "supportsMultimodal": false,
+        "supportsVideo": false,
+        "contextWindow": 8192,
+        "probeSource": null
+      },
+      {
+        "id": "moonshot-v1-32k",
+        "name": "Moonshot v1 32K",
+        "supportsMultimodal": false,
+        "supportsVideo": false,
+        "contextWindow": 32768,
+        "probeSource": null
+      },
+      {
+        "id": "moonshot-v1-128k",
+        "name": "Moonshot v1 128K",
+        "supportsMultimodal": false,
+        "supportsVideo": false,
+        "contextWindow": 131072,
+        "probeSource": null
+      }
+    ],
+    "apiKeyPrefix": "sk-",
+    "freezeUrl": false,
+    "isCustom": false,
+    "supportModelDiscovery": false,
+    "supportConnectionCheck": true,
+    "generateKwargs": {
+      "max_tokens": 8192
+    }
+  },
+  {
+    "id": "zhipu",
+    "name": "智谱 GLM",
+    "description": "智谱 AI，GLM 系列模型，OpenAI 兼容接口",
+    "providerType": "openai",
+    "baseUrl": "https://open.bigmodel.cn/api/paas/v4",
+    "apiKey": "{{env:ZHIPU_API_KEY}}",
+    "chatModel": "io.agentscope.core.model.OpenAIChatModel",
+    "consoleUrl": "https://open.bigmodel.cn/",
+    "apiKeyUrl": "https://open.bigmodel.cn/usercenter/apikeys",
+    "models": [
+      {
+        "id": "glm-4-plus",
+        "name": "GLM-4 Plus",
+        "supportsMultimodal": false,
+        "supportsVideo": false,
+        "contextWindow": 131072,
+        "probeSource": null
+      },
+      {
+        "id": "glm-4-air",
+        "name": "GLM-4 Air",
+        "supportsMultimodal": false,
+        "supportsVideo": false,
+        "contextWindow": 131072,
+        "probeSource": null
+      },
+      {
+        "id": "glm-4-flash",
+        "name": "GLM-4 Flash",
+        "supportsMultimodal": false,
+        "supportsVideo": false,
+        "contextWindow": 131072,
+        "probeSource": null
+      }
+    ],
+    "apiKeyPrefix": "",
+    "freezeUrl": false,
+    "isCustom": false,
+    "supportModelDiscovery": false,
+    "supportConnectionCheck": true,
+    "generateKwargs": {
+      "max_tokens": 8192
+    }
+  },
+  {
+    "id": "siliconflow",
+    "name": "硅基流动 SiliconFlow",
+    "description": "聚合多家开源模型，OpenAI 兼容接口",
+    "providerType": "openai",
+    "baseUrl": "https://api.siliconflow.cn/v1",
+    "apiKey": "{{env:SILICONFLOW_API_KEY}}",
+    "chatModel": "io.agentscope.core.model.OpenAIChatModel",
+    "consoleUrl": "https://cloud.siliconflow.cn/",
+    "apiKeyUrl": "https://cloud.siliconflow.cn/account/ak",
+    "models": [
+      {
+        "id": "Qwen/Qwen2.5-7B-Instruct",
+        "name": "Qwen2.5 7B Instruct",
+        "supportsMultimodal": false,
+        "supportsVideo": false,
+        "contextWindow": 32768,
+        "probeSource": null
+      },
+      {
+        "id": "deepseek-ai/DeepSeek-V3",
+        "name": "DeepSeek V3",
+        "supportsMultimodal": false,
+        "supportsVideo": false,
+        "contextWindow": 65536,
+        "probeSource": null
+      }
+    ],
+    "apiKeyPrefix": "sk-",
+    "freezeUrl": false,
+    "isCustom": false,
+    "supportModelDiscovery": true,
+    "supportConnectionCheck": true,
+    "generateKwargs": {
+      "max_tokens": 8192
+    }
+  },
+  {
+    "id": "ollama",
+    "name": "Ollama 本地部署",
+    "description": "本地 Ollama 服务，无需 API Key（OpenAI 兼容端点）",
+    "providerType": "openai",
+    "baseUrl": "http://localhost:11434/v1",
+    "apiKey": "{{env:OLLAMA_API_KEY}}",
+    "chatModel": "io.agentscope.core.model.OpenAIChatModel",
+    "consoleUrl": "https://ollama.com/library",
+    "apiKeyUrl": "",
+    "apiKeyRequired": false,
+    "models": [
+      {
+        "id": "qwen2.5:7b",
+        "name": "Qwen2.5 7B",
+        "supportsMultimodal": false,
+        "supportsVideo": false,
+        "contextWindow": 32768,
+        "probeSource": null
+      },
+      {
+        "id": "llama3.2:3b",
+        "name": "Llama 3.2 3B",
+        "supportsMultimodal": false,
+        "supportsVideo": false,
+        "contextWindow": 131072,
+        "probeSource": null
+      }
+    ],
+    "apiKeyPrefix": "",
+    "freezeUrl": false,
+    "isCustom": false,
+    "supportModelDiscovery": true,
+    "supportConnectionCheck": true,
+    "generateKwargs": {
+      "max_tokens": 4096
     }
   }
 ]

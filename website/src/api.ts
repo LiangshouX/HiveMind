@@ -107,8 +107,40 @@ export interface TaskExecuteResponse {
   message: string;
 }
 
-// 统一 baseURL
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+// ── 定时任务相关类型 ──
+
+export interface PageResult<T> {
+  total: number;
+  records: T[];
+  current: number;
+  size: number;
+}
+
+export interface ScheduledJob {
+  id: number;
+  jobId: string | null;
+  jobName: string;
+  isActivated: number;
+  cronConfig: string | null;
+  timeZone: string | null;
+  jobDescription: string | null;
+  jobDrivedTaskId: string | null;
+  createTime: string | null;
+  updateTime: string | null;
+}
+
+export interface ScheduledJobPayload {
+  jobId?: string;
+  jobName: string;
+  isActivated: number;
+  cronConfig: string;
+  timeZone: string;
+  jobDescription?: string;
+}
+
+// 统一 baseURL：默认走同源相对路径（由 Nginx / Vite proxy 反代到后端），
+// 仅在跨域部署时通过 VITE_API_URL 指定绝对地址。
+const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
 
 // 创建 axios 实例
 const request = axios.create({
@@ -130,12 +162,18 @@ request.interceptors.request.use(
   }
 );
 
-// 响应拦截器：错误码处理
+// 响应拦截器：统一解包 Result<T> 包装并处理错误码
 request.interceptors.response.use(
   (response) => {
-    // 后端返回 { code: "SUCCESS", data: ..., message: ... }
     const res = response.data;
-    // 有些接口直接返回数据
+    // 标准 Result<T> 包装：{ code, data, message }
+    if (res && typeof res === 'object' && 'code' in res && 'data' in res) {
+      if (res.code !== 'SUCCESS') {
+        return Promise.reject(new Error(res.message || '请求失败'));
+      }
+      return res.data;
+    }
+    // 少数接口直接返回裸数据
     return res;
   },
   (error) => {
@@ -169,43 +207,12 @@ export const api = {
   morningConfig: (): Promise<SubConfig> => Promise.resolve({ categories: [], keywords: [], custom_feeds: [], feishu_webhook: '' }) as any,
   agentsStatus: (): Promise<AgentsStatusData> => Promise.resolve({ ok: false, gateway: { alive: false, probe: false, status: '' }, agents: [], checkedAt: '' }) as any,
 
-  // 任务实时动态
-  taskActivity: (id: string): Promise<any> => request.get(`/api/task-activity/${encodeURIComponent(id)}`),
-  schedulerState: (id: string): Promise<any> => request.get(`/api/scheduler-state/${encodeURIComponent(id)}`),
-
-  // 技能内容
-  skillContent: (agentId: string, skillName: string): Promise<any> => request.get(`/api/skill-content/${encodeURIComponent(agentId)}/${encodeURIComponent(skillName)}`),
-
-  // 操作类
-  setModel: (agentId: string, model: string): Promise<any> => request.post('/api/set-model', { agentId, model }),
-  agentWake: (agentId: string): Promise<any> => request.post('/api/agent-wake', { agentId }),
-  taskAction: (taskId: string, action: string, reason: string): Promise<any> => request.post('/api/task-action', { taskId, action, reason }),
-  reviewAction: (taskId: string, action: string, comment: string): Promise<any> => request.post('/api/review-action', { taskId, action, comment }),
-  advanceState: (taskId: string, comment: string): Promise<any> => request.post('/api/advance-state', { taskId, comment }),
-  archiveTask: (taskId: string, archived: boolean): Promise<any> => request.post('/api/archive-task', { taskId, archived }),
-  archiveAllDone: (): Promise<any> => request.post('/api/archive-task', { archiveAllDone: true }),
-  schedulerScan: (thresholdSec = 180): Promise<any> => request.post('/api/scheduler-scan', { thresholdSec }),
-  schedulerRetry: (taskId: string, reason: string): Promise<any> => request.post('/api/scheduler-retry', { taskId, reason }),
-  schedulerEscalate: (taskId: string, reason: string): Promise<any> => request.post('/api/scheduler-escalate', { taskId, reason }),
-  schedulerRollback: (taskId: string, reason: string): Promise<any> => request.post('/api/scheduler-rollback', { taskId, reason }),
-  refreshMorning: (): Promise<any> => request.post('/api/morning-brief/refresh', {}),
-  saveMorningConfig: (config: any): Promise<any> => request.post('/api/morning-config', config),
-  addSkill: (agentId: string, skillName: string, description: string, trigger: string): Promise<any> => request.post('/api/add-skill', { agentId, skillName, description, trigger }),
-
-  createTask: (data: any): Promise<any> => request.post('/api/create-task', data),
-
-  // Remote Skills
-  remoteSkillsList: (): Promise<any> => Promise.resolve({ ok: false, error: '暂不支持' }) as any,
-  addRemoteSkill: (agentId: string, skillName: string, sourceUrl: string, description: string): Promise<any> => request.post('/api/add-remote-skill', { agentId, skillName, sourceUrl, description }),
-  updateRemoteSkill: (agentId: string, skillName: string): Promise<any> => request.post('/api/update-remote-skill', { agentId, skillName }),
-  removeRemoteSkill: (agentId: string, skillName: string): Promise<any> => request.post('/api/remove-remote-skill', { agentId, skillName }),
-
   // Token Usage
-  tokenUsageSummary: (startDate: string, endDate: string): Promise<TokenUsageSummary> => 
+  tokenUsageSummary: (startDate: string, endDate: string): Promise<TokenUsageSummary> =>
     request.get('/api/agent/token-usage/summary', { params: { startDate, endDate } }),
-  tokenUsageByModel: (startDate: string, endDate: string): Promise<TokenUsageByModel[]> => 
+  tokenUsageByModel: (startDate: string, endDate: string): Promise<TokenUsageByModel[]> =>
     request.get('/api/agent/token-usage/by-model', { params: { startDate, endDate } }),
-  tokenUsageByProvider: (startDate: string, endDate: string): Promise<TokenUsageByProvider[]> => 
+  tokenUsageByProvider: (startDate: string, endDate: string): Promise<TokenUsageByProvider[]> =>
     request.get('/api/agent/token-usage/by-provider', { params: { startDate, endDate } }),
   tokenUsageByDate: (startDate: string, endDate: string): Promise<TokenUsageByDate[]> =>
     request.get('/api/agent/token-usage/by-date', { params: { startDate, endDate } }),
@@ -231,6 +238,16 @@ export const api = {
     request.post(`/api/agent/sandboxes/${encodeURIComponent(containerId)}/remove`),
   cleanupSandboxes: (): Promise<{ removed: number }> =>
     request.post('/api/agent/sandboxes/cleanup'),
+
+  // 定时任务
+  listScheduledJobs: (current = 1, size = 20): Promise<PageResult<ScheduledJob>> =>
+    request.get('/api/scheduled-jobs', { params: { current, size } }),
+  createScheduledJob: (data: ScheduledJobPayload): Promise<boolean> =>
+    request.post('/api/scheduled-jobs', data),
+  updateScheduledJob: (id: number, data: ScheduledJobPayload): Promise<boolean> =>
+    request.put(`/api/scheduled-jobs/${id}`, data),
+  deleteScheduledJob: (id: number): Promise<boolean> =>
+    request.delete(`/api/scheduled-jobs/${id}`),
 
   // 任务模板
   listTaskTemplates: (): Promise<TaskTemplate[]> =>

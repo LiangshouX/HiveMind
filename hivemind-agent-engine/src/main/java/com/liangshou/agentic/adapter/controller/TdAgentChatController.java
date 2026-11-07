@@ -6,6 +6,7 @@ import com.liangshou.agentic.agents.provider.TdAgentProviderDescriptor;
 import com.liangshou.agentic.agents.provider.TdAgentProviderRegistry;
 import com.liangshou.agentic.application.ITdAgentChatService;
 import com.liangshou.agentic.application.ITdAgentStreamingService;
+import com.liangshou.agentic.application.IContextUsageService;
 import com.liangshou.agentic.application.dto.*;
 import com.liangshou.agentic.common.exceptions.BizException;
 import com.liangshou.agentic.common.exceptions.HmeErrorCode;
@@ -44,6 +45,7 @@ public class TdAgentChatController {
     private final JdbcTemplate jdbcTemplate;
     private final TdAgentProviderRegistry providerRegistry;
     private final DbProviderConfigLoader dbConfigLoader;
+    private final IContextUsageService contextUsageService;
 
     public TdAgentChatController(
             ITdAgentChatService chatService,
@@ -51,19 +53,21 @@ public class TdAgentChatController {
             ToolApprovalService toolApprovalService,
             JdbcTemplate jdbcTemplate,
             TdAgentProviderRegistry providerRegistry,
-            DbProviderConfigLoader dbConfigLoader) {
+            DbProviderConfigLoader dbConfigLoader,
+            IContextUsageService contextUsageService) {
         this.chatService = chatService;
         this.streamingService = streamingService;
         this.toolApprovalService = toolApprovalService;
         this.jdbcTemplate = jdbcTemplate;
         this.providerRegistry = providerRegistry;
         this.dbConfigLoader = dbConfigLoader;
+        this.contextUsageService = contextUsageService;
     }
 
     @PostMapping("/chat")
-    public ChatResponse chat(Principal principal, @Valid @RequestBody ChatRequest request) {
+    public Result<ChatResponse> chat(Principal principal, @Valid @RequestBody ChatRequest request) {
         applyCurrentUser(principal, request);
-        return chatService.chat(request);
+        return Result.success(chatService.chat(request));
     }
 
     @PostMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
@@ -100,19 +104,19 @@ public class TdAgentChatController {
     }
 
     @GetMapping("/approvals/me/{sessionId}")
-    public List<?> listApprovals(Principal principal, @PathVariable String sessionId) {
-        return toolApprovalService.listPending(currentUserId(principal), sessionId);
+    public Result<List<?>> listApprovals(Principal principal, @PathVariable String sessionId) {
+        return Result.success(toolApprovalService.listPending(currentUserId(principal), sessionId));
     }
 
     @PostMapping("/chat/interrupt")
-    public ChatResponse interrupt(Principal principal, @Valid @RequestBody InterruptRequest request) {
+    public Result<ChatResponse> interrupt(Principal principal, @Valid @RequestBody InterruptRequest request) {
         String userId = currentUserId(principal);
         log.info("[中断会话] 收到中断请求 - userId: {}, sessionId: {}", userId, request.getSessionId());
         request.setUserId(userId);
         boolean interrupted = streamingService.interrupt(userId, request.getSessionId());
         log.info("[中断会话] 中断结果 - userId: {}, sessionId: {}, success: {}",
                 userId, request.getSessionId(), interrupted);
-        return ChatResponse.builder()
+        return Result.success(ChatResponse.builder()
                 .success(interrupted)
                 .commandHandled(false)
                 .userId(userId)
@@ -121,22 +125,41 @@ public class TdAgentChatController {
                 .messageCount(0)
                 .timestamp(java.time.Instant.now().toString())
                 .metadata(java.util.Map.of("interrupted", interrupted))
-                .build();
+                .build());
     }
 
     @GetMapping("/sessions/me")
-    public List<ConversationViewDocument> listSessions(Principal principal) {
-        return chatService.listSessions(currentUserId(principal));
+    public Result<List<ConversationViewDocument>> listSessions(Principal principal) {
+        return Result.success(chatService.listSessions(currentUserId(principal)));
     }
 
     @GetMapping("/sessions/me/{sessionId}")
-    public SessionHistoryResponse getSessionHistory(Principal principal, @PathVariable String sessionId) {
-        return chatService.getSessionHistory(currentUserId(principal), sessionId);
+    public Result<SessionHistoryResponse> getSessionHistory(Principal principal, @PathVariable String sessionId) {
+        return Result.success(chatService.getSessionHistory(currentUserId(principal), sessionId));
     }
 
     @DeleteMapping("/sessions/me/{sessionId}")
-    public void deleteSession(Principal principal, @PathVariable String sessionId) {
+    public Result<Void> deleteSession(Principal principal, @PathVariable String sessionId) {
         chatService.deleteSession(currentUserId(principal), sessionId);
+        return Result.success();
+    }
+
+    /**
+     * 查询会话的上下文窗口占用情况（已占用/总量、思考次数、工具调用次数）。
+     */
+    @GetMapping("/sessions/me/{sessionId}/context")
+    public Result<SessionContextUsageResponse> getSessionContextUsage(
+            Principal principal, @PathVariable String sessionId) {
+        return Result.success(contextUsageService.getUsage(currentUserId(principal), sessionId));
+    }
+
+    /**
+     * 手动触发会话上下文压缩。
+     */
+    @PostMapping("/sessions/me/{sessionId}/compact")
+    public Result<CompactContextResponse> compactSessionContext(
+            Principal principal, @PathVariable String sessionId) {
+        return Result.success(contextUsageService.compact(currentUserId(principal), sessionId));
     }
 
     /**

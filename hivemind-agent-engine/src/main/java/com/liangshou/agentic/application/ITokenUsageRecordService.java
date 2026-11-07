@@ -1,5 +1,6 @@
 package com.liangshou.agentic.application;
 
+import com.liangshou.agentic.application.dto.SessionTokenUsageDTO;
 import com.liangshou.agentic.infrastructure.mysql.support.dto.*;
 
 import java.time.LocalDate;
@@ -42,4 +43,15 @@ public interface ITokenUsageRecordService {
      * 按日期分组统计（趋势）
      */
     List<TokenUsageByDateDTO> getByDate(String userId, LocalDate startDate, LocalDate endDate);
+
+    /**
+     * 汇总指定会话的 Token 用量。
+     *
+     * <p>供"上下文面板"展示缓存命中、未缓存输入、缓存读取与输出。</p>
+     *
+     * @param userId    用户ID
+     * @param sessionId 会话ID
+     * @return 会话维度的 Token 用量汇总（无记录时返回全 0）
+     */
+    SessionTokenUsageDTO summarizeSession(String userId, String sessionId);
 }

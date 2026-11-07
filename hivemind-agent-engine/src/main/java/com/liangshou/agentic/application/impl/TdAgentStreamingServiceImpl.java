@@ -14,19 +14,25 @@ import com.liangshou.agentic.agents.session.AgentSessionStateService;
 import com.liangshou.agentic.agents.streaming.TdAgentActiveSessionRegistry;
 import com.liangshou.agentic.agents.streaming.TdAgentStreamEvent;
 import com.liangshou.agentic.application.ITokenUsageRecordService;
+import com.liangshou.agentic.application.IContextUsageService;
 import com.liangshou.agentic.application.IConversationPersistenceService;
+import com.liangshou.agentic.agents.memory.compaction.TokenMeter;
 import com.liangshou.agentic.common.config.TdAgentProperties;
 import com.liangshou.agentic.common.enums.TdAgentStreamEventType;
+import com.liangshou.agentic.domain.memory.model.ConversationContextStats;
 import com.liangshou.agentic.domain.tool.model.ToolApprovalDocument;
 import com.liangshou.agentic.application.IChatCommandService;
 import com.liangshou.agentic.application.ITdAgentChatService;
 import com.liangshou.agentic.application.ITdAgentStreamingService;
 import com.liangshou.agentic.application.dto.ChatRequest;
 import com.liangshou.agentic.application.dto.ChatResponse;
+import com.liangshou.agentic.application.dto.SessionContextUsageResponse;
 import com.liangshou.agentic.application.dto.ToolApprovalActionRequest;
 import io.agentscope.core.ReActAgent;
 import io.agentscope.core.event.*;
 import io.agentscope.core.message.*;
+import io.agentscope.core.model.ChatUsage;
+import io.agentscope.core.model.ToolSchema;
 import io.agentscope.core.state.AgentState;
 import io.agentscope.core.tool.AgentTool;
 import io.agentscope.core.tool.ToolCallParam;
@@ -42,6 +48,7 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -70,6 +77,8 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
     private final TdAgentToolkitFactory toolkitFactory;
     private final ObjectMapper objectMapper;
     private final IConversationPersistenceService conversationPersistenceService;
+    private final IContextUsageService contextUsageService;
+    private final TokenMeter tokenMeter;
 
     public TdAgentStreamingServiceImpl(
             TdAgentFactory agentFactory,
@@ -83,7 +92,9 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
             ITokenUsageRecordService tokenUsageRecordService,
             TdAgentToolkitFactory toolkitFactory,
             ObjectMapper objectMapper,
-            IConversationPersistenceService conversationPersistenceService) {
+            IConversationPersistenceService conversationPersistenceService,
+            IContextUsageService contextUsageService,
+            TokenMeter tokenMeter) {
         this.agentFactory = agentFactory;
         this.chatService = chatService;
         this.IChatCommandService = IChatCommandService;
@@ -96,6 +107,8 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
         this.toolkitFactory = toolkitFactory;
         this.objectMapper = objectMapper;
         this.conversationPersistenceService = conversationPersistenceService;
+        this.contextUsageService = contextUsageService;
+        this.tokenMeter = tokenMeter;
     }
 
     @Override
@@ -208,12 +221,17 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
 
         SseEmitter emitter = new SseEmitter(0L);
         AtomicReference<Msg> finalMessage = new AtomicReference<>();
+        // 计时起点：用于统计本轮模型耗时与首 token 延迟（TTFT）
+        long startNanos = System.nanoTime();
+        AtomicLong firstTokenNanos = new AtomicLong(0L);
         // 缓存最近的 ToolCallStartEvent 信息，用于在 TOOL_RESULT 事件时填充 metadata
         AtomicReference<ToolCallStartEvent> lastToolCallStart = new AtomicReference<>();
         // 缓存 ThinkingBlock 文本
         StringBuilder thinkingBuffer = new StringBuilder();
         // 缓存 TextBlock 文本
         StringBuilder textBuffer = new StringBuilder();
+        // 按 toolCallId 累积工具执行输出的文本增量，用于向前端推送"工具结果"内容
+        Map<String, StringBuilder> toolResultBuffers = new LinkedHashMap<>();
 
         if (registerActive) {
             activeSessionRegistry.register(sessionKey, agent, providerId, modelId);
@@ -225,6 +243,9 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
                     if (event instanceof AgentResultEvent resultEvent) {
                         finalMessage.set(resultEvent.getResult());
                         recordTokenUsage(context, resultEvent.getResult());
+                        markFirstToken(firstTokenNanos);
+                        recordContextStats(context, agent, resultEvent.getResult(),
+                                startNanos, firstTokenNanos);
                         send(emitter, toStreamEvent(context, TdAgentStreamEventType.RESULT,
                                 resultEvent.getResult(), true, Map.of()));
                         return;
@@ -232,6 +253,7 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
 
                     // 处理 ThinkingBlockDeltaEvent — 推理过程（流式增量）
                     if (event instanceof ThinkingBlockDeltaEvent thinkingDelta) {
+                        markFirstToken(firstTokenNanos);
                         thinkingBuffer.append(thinkingDelta.getDelta());
                         send(emitter, toStreamEvent(context, TdAgentStreamEventType.REASONING,
                                 null, false, Map.of("delta", thinkingDelta.getDelta())));
@@ -251,8 +273,9 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
 
                     // 处理 ToolCallStartEvent — 工具调用开始
                     if (event instanceof ToolCallStartEvent toolCallStart) {
+                        markFirstToken(firstTokenNanos);
                         lastToolCallStart.set(toolCallStart);
-                        send(emitter, toStreamEvent(context, TdAgentStreamEventType.MESSAGE,
+                        send(emitter, toStreamEvent(context, TdAgentStreamEventType.TOOL_USE,
                                 null, false, Map.of(
                                         "toolCallId", toolCallStart.getToolCallId(),
                                         "toolName", toolCallStart.getToolCallName(),
@@ -260,22 +283,42 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
                         return;
                     }
 
+                    // 处理 ToolResultTextDeltaEvent — 工具执行输出的文本增量（先累积，收尾时统一推送）
+                    if (event instanceof ToolResultTextDeltaEvent toolTextDelta) {
+                        toolResultBuffers
+                                .computeIfAbsent(toolTextDelta.getToolCallId(), key -> new StringBuilder())
+                                .append(toolTextDelta.getDelta());
+                        return;
+                    }
+
                     // 处理 ToolResultEndEvent — 工具执行结果
                     if (event instanceof ToolResultEndEvent toolResultEnd) {
                         ToolCallStartEvent cachedStart = lastToolCallStart.getAndSet(null);
+                        String toolCallId = toolResultEnd.getToolCallId();
+                        StringBuilder buffer = toolResultBuffers.remove(toolCallId);
+                        String output = buffer == null ? "" : buffer.toString();
                         Map<String, Object> metadata = new LinkedHashMap<>();
-                        metadata.put("toolCallId", toolResultEnd.getToolCallId());
+                        metadata.put("toolCallId", toolCallId);
                         metadata.put("toolName", toolResultEnd.getToolCallName());
+                        metadata.put("state",
+                                toolResultEnd.getState() == null ? "" : toolResultEnd.getState().name());
                         if (cachedStart != null) {
                             metadata.put("toolCallName", cachedStart.getToolCallName());
                         }
-                        send(emitter, toStreamEvent(context, TdAgentStreamEventType.TOOL_RESULT,
-                                null, true, metadata));
+                        send(emitter, TdAgentStreamEvent.builder()
+                                .type(TdAgentStreamEventType.TOOL_RESULT)
+                                .sessionId(context.getSessionId())
+                                .userId(context.getUserId())
+                                .content(truncateToolOutput(output))
+                                .last(true)
+                                .metadata(metadata)
+                                .build());
                         return;
                     }
 
                     // 处理 TextBlockDeltaEvent — 文本增量（最终回复）
                     if (event instanceof TextBlockDeltaEvent textDelta) {
+                        markFirstToken(firstTokenNanos);
                         textBuffer.append(textDelta.getDelta());
                         return;
                     }
@@ -312,7 +355,8 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
                                 .metadata(Map.of("timestamp", Instant.now().toString()))
                                 .build());
                     } finally {
-                        cleanup(context, agent, finalMessage.get(), false, emitter);
+                        cleanup(context, agent, finalMessage.get(), false);
+                        completeEmitter(emitter);
                     }
                 },
                 () -> {
@@ -334,27 +378,72 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
                                 .build());
                     }
 
+                    // 先落库再统计上下文用量，保证 DONE 里携带的是本轮结束后的真实占用
+                    cleanup(context, agent, result, paused);
+
+                    Map<String, Object> doneMetadata = new LinkedHashMap<>();
+                    doneMetadata.put("paused", paused);
+                    doneMetadata.put("timestamp", Instant.now().toString());
+                    doneMetadata.put("contextUsage", buildContextUsage(context));
+
                     send(emitter, TdAgentStreamEvent.builder()
                             .type(TdAgentStreamEventType.DONE)
                             .sessionId(context.getSessionId())
                             .userId(context.getUserId())
                             .content("done")
                             .last(true)
-                            .metadata(Map.of("paused", paused, "timestamp", Instant.now().toString()))
+                            .metadata(doneMetadata)
                             .build());
 
-                    cleanup(context, agent, result, paused, emitter);
+                    completeEmitter(emitter);
                 });
 
         return emitter;
+    }
+
+    /**
+     * 构建上下文用量快照，供前端实时展示上下文窗口占用。
+     */
+    private Map<String, Object> buildContextUsage(ConversationSessionContext context) {
+        try {
+            SessionContextUsageResponse usage =
+                    contextUsageService.getUsage(context.getUserId(), context.getSessionId());
+            Map<String, Object> snapshot = new LinkedHashMap<>();
+            snapshot.put("usedTokens", usage.getUsedTokens());
+            snapshot.put("contextWindow", usage.getContextWindow());
+            snapshot.put("usageRatio", usage.getUsageRatio());
+            snapshot.put("thresholdRatio", usage.getThresholdRatio());
+            snapshot.put("thresholdTokens", usage.getThresholdTokens());
+            snapshot.put("outputReserveTokens", usage.getOutputReserveTokens());
+            snapshot.put("systemPromptTokens", usage.getSystemPromptTokens());
+            snapshot.put("toolDefinitionTokens", usage.getToolDefinitionTokens());
+            snapshot.put("conversationTokens", usage.getConversationTokens());
+            snapshot.put("modelDurationMs", usage.getModelDurationMs());
+            snapshot.put("ttftMs", usage.getTtftMs());
+            snapshot.put("tokensPerSecond", usage.getTokensPerSecond());
+            snapshot.put("cacheHitRatio", usage.getCacheHitRatio());
+            snapshot.put("uncachedInputTokens", usage.getUncachedInputTokens());
+            snapshot.put("cachedInputTokens", usage.getCachedInputTokens());
+            snapshot.put("outputTokens", usage.getOutputTokens());
+            snapshot.put("modelCalls", usage.getModelCalls());
+            snapshot.put("modelDisplayName", usage.getModelDisplayName());
+            snapshot.put("reasoningCount", usage.getReasoningCount());
+            snapshot.put("toolCallCount", usage.getToolCallCount());
+            snapshot.put("messageCount", usage.getMessageCount());
+            snapshot.put("compactionCount", usage.getCompactionCount());
+            snapshot.put("nearThreshold", usage.isNearThreshold());
+            return snapshot;
+        } catch (Exception e) {
+            log.debug("[流式执行] 构建上下文用量失败 - error: {}", e.getMessage());
+            return Map.of();
+        }
     }
 
     private void cleanup(
             ConversationSessionContext context,
             ReActAgent agent,
             Msg finalMessage,
-            boolean paused,
-            SseEmitter emitter) {
+            boolean paused) {
         String sessionKey = key(context);
 
         try {
@@ -385,12 +474,33 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
         } catch (Exception e) {
             log.warn("[流式清理] 注销会话时发生异常 - error: {}", e.getMessage());
         }
+    }
 
+    /**
+     * 完成 SSE Emitter（与落库解耦，确保 DONE 事件能先发出去）。
+     */
+    private void completeEmitter(SseEmitter emitter) {
         try {
             emitter.complete();
         } catch (Exception e) {
             log.warn("[流式清理] 完成 Emitter 时发生异常 - error: {}", e.getMessage());
         }
+    }
+
+    /**
+     * 工具输出可能非常大（整份文件、批量检索结果），SSE 侧只推送截断后的内容，
+     * 完整内容仍以 MongoDB 会话历史为准（刷新后可完整查看）。
+     */
+    private static final int TOOL_OUTPUT_MAX_LENGTH = 4000;
+
+    private String truncateToolOutput(String output) {
+        if (output == null || output.isEmpty()) {
+            return "";
+        }
+        if (output.length() <= TOOL_OUTPUT_MAX_LENGTH) {
+            return output;
+        }
+        return output.substring(0, TOOL_OUTPUT_MAX_LENGTH) + "\n…（输出过长，已截断，完整内容见会话历史）";
     }
 
     private TdAgentStreamEvent toStreamEvent(
@@ -523,6 +633,104 @@ public class TdAgentStreamingServiceImpl implements ITdAgentStreamingService {
             log.warn("[审批执行] 解析工具输入参数失败: {}", e.getMessage());
             return Map.of();
         }
+    }
+
+    /**
+     * 标记"首 token"到达时刻。
+     *
+     * <p>只有携带实际内容的事件（推理增量 / 文本增量 / 工具调用 / 最终结果）
+     * 才算首 token；框架的即时状态事件不算，否则 TTFT 会失真为毫秒级。</p>
+     */
+    private void markFirstToken(AtomicLong firstTokenNanos) {
+        firstTokenNanos.compareAndSet(0L, System.nanoTime());
+    }
+
+    /**
+     * 记录本轮上下文统计快照。
+     *
+     * <p>采集三类指标，供前端"上下文面板"展示：</p>
+     * <ul>
+     *   <li>工具定义（Tool Schema）开销 — 每次请求都要随提示词送给模型</li>
+     *   <li>模型总耗时与首 token 延迟（TTFT）</li>
+     *   <li>输出速度（TPS）</li>
+     * </ul>
+     */
+    private void recordContextStats(ConversationSessionContext context,
+                                    ReActAgent agent,
+                                    Msg result,
+                                    long startNanos,
+                                    AtomicLong firstTokenNanos) {
+        try {
+            long durationMs = (System.nanoTime() - startNanos) / 1_000_000L;
+            long ttftMs = firstTokenNanos.get() > 0L
+                    ? (firstTokenNanos.get() - startNanos) / 1_000_000L
+                    : durationMs;
+            int outputTokens = extractOutputTokens(result == null ? null : result.getMetadata());
+            long generationMs = Math.max(1L, durationMs - ttftMs);
+            double tps = (double) outputTokens / (generationMs / 1000d);
+
+            ConversationContextStats stats = ConversationContextStats.builder()
+                    .toolDefinitionTokens(estimateToolDefinitionTokens(agent))
+                    .modelDurationMs(durationMs)
+                    .ttftMs(ttftMs)
+                    .outputTokens(outputTokens)
+                    .tokensPerSecond(Math.round(tps * 10d) / 10d)
+                    .measuredAt(Instant.now())
+                    .build();
+            conversationPersistenceService.recordContextStats(context, stats);
+        } catch (Exception e) {
+            log.debug("[流式执行] 记录上下文统计失败 - error: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 估算工具定义（Tool Schema）占用的 token 数。
+     */
+    private int estimateToolDefinitionTokens(ReActAgent agent) {
+        try {
+            Toolkit toolkit = agent.getToolkit();
+            if (toolkit == null) {
+                return 0;
+            }
+            List<ToolSchema> schemas = toolkit.getToolSchemas();
+            if (schemas == null || schemas.isEmpty()) {
+                return 0;
+            }
+            StringBuilder sb = new StringBuilder();
+            for (ToolSchema schema : schemas) {
+                sb.append(schema.getName()).append('\n');
+                if (schema.getDescription() != null) {
+                    sb.append(schema.getDescription()).append('\n');
+                }
+                if (schema.getParameters() != null) {
+                    sb.append(objectMapper.writeValueAsString(schema.getParameters())).append('\n');
+                }
+            }
+            return tokenMeter.countTokens(sb.toString());
+        } catch (Exception e) {
+            log.debug("[流式执行] 估算工具定义开销失败 - error: {}", e.getMessage());
+            return 0;
+        }
+    }
+
+    /**
+     * 从消息 metadata 中提取本轮输出 token 数。
+     */
+    private int extractOutputTokens(Map<String, Object> metadata) {
+        if (metadata == null) {
+            return 0;
+        }
+        Object usage = metadata.get("_chat_usage");
+        if (usage instanceof ChatUsage chatUsage) {
+            return chatUsage.getOutputTokens();
+        }
+        if (usage instanceof Map<?, ?> map) {
+            Object value = map.get("outputTokens");
+            if (value instanceof Number number) {
+                return number.intValue();
+            }
+        }
+        return 0;
     }
 
     @SuppressWarnings("deprecation")

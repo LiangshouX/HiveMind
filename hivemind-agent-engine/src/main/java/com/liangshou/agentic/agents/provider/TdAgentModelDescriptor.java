@@ -12,6 +12,7 @@ import lombok.Setter;
  *     <li>{@code name} - 模型显示名称，用于 UI 展示</li>
  *     <li>{@code supportsMultimodal} - 是否支持多模态输入（图片、音频等）</li>
  *     <li>{@code supportsVideo} - 是否支持视频输入</li>
+ *     <li>{@code contextWindow} - 上下文窗口大小（tokens），null 表示未声明、走全局配置/默认值</li>
  *     <li>{@code probeSource} - 模型探测数据来源，用于健康检查</li>
  * </ul>
  *
@@ -30,6 +31,15 @@ public class TdAgentModelDescriptor {
     private boolean supportsMultimodal;
 
     private boolean supportsVideo;
+
+    /**
+     * 上下文窗口大小（tokens）。
+     *
+     * <p>内置供应商目录（{@code provider/builtin_provider.json}）与用户自建供应商的
+     * {@code models_json} 都可以为每个模型声明该值；未声明时回退到全局配置
+     * {@code tdagent.compaction.context-window-size}，再回退到内置默认值。</p>
+     */
+    private Integer contextWindow;
 
     private String probeSource;
 }

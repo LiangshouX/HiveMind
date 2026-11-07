@@ -2,6 +2,7 @@ package com.liangshou.agentic.application.impl;
 
 import com.liangshou.agentic.agents.ConversationSessionContext;
 import com.liangshou.agentic.application.IConversationPersistenceService;
+import com.liangshou.agentic.domain.memory.model.ConversationContextStats;
 import com.liangshou.agentic.domain.memory.model.ConversationMemoryDocument;
 import com.liangshou.agentic.domain.memory.model.ConversationViewDocument;
 import com.liangshou.agentic.domain.memory.model.StoredMessage;
@@ -11,6 +12,7 @@ import com.liangshou.agentic.infrastructure.mongo.repository.ConversationMemoryR
 import com.liangshou.agentic.infrastructure.mongo.repository.ConversationViewRepository;
 import com.liangshou.agentic.common.util.MessageMapper;
 import io.agentscope.core.message.Msg;
+import io.agentscope.core.message.MsgRole;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -103,6 +105,14 @@ public class ConversationPersistenceServiceImpl implements IConversationPersiste
         List<StoredMessage> storedMessages =
                 messages.stream()
                         .filter(msg -> !"long_term_memory".equals(msg.getName()))
+                        // 过滤掉推理时注入的压缩摘要消息：摘要本身已单独存在
+                        // compressedSummary 字段中，若同时落库会被重复计费，
+                        // 导致上下文占用统计虚高。
+                        .filter(msg -> !isInjectedCompressedSummary(msg))
+                        // 过滤掉框架每轮重新生成的系统消息（Agent sysPrompt）。
+                        // 它每次调用都会重建，若落库会逐轮累积并形成
+                        // "系统提示词 -> 最近会话预览 -> 历史 -> 系统提示词"的正反馈。
+                        .filter(msg -> !isFrameworkSystemMessage(msg))
                         .map(messageMapper::toStoredMessage)
                         .toList();
         ConversationMemoryDocument document =
@@ -112,7 +122,12 @@ public class ConversationPersistenceServiceImpl implements IConversationPersiste
         document.setRoundCount(calculateRoundCount(messages));
         document.setUpdatedAt(now);
         document.setSysPrompt(systemPrompt);
-        document.setCompressedSummary(compressedSummary);
+        // 压缩摘要只在明确传入时覆盖：
+        // 普通消息落库（compactionUpdated=false）传的是 null，若直接覆盖会把已有摘要清空，
+        // 导致上一轮压缩的结果丢失、上下文被"还原"成未压缩状态。
+        if (compressedSummary != null) {
+            document.setCompressedSummary(compressedSummary);
+        }
         if (compactionUpdated) {
             document.setCompactionCount(
                     document.getCompactionCount() == null ? 1L : document.getCompactionCount() + 1);
@@ -267,6 +282,25 @@ public class ConversationPersistenceServiceImpl implements IConversationPersiste
                 .collect(Collectors.joining(System.lineSeparator()));
     }
 
+    @Override
+    public void recordContextStats(ConversationSessionContext context, ConversationContextStats stats) {
+        if (context == null || stats == null) {
+            return;
+        }
+        try {
+            Instant now = Instant.now();
+            ConversationMemoryDocument document = loadMemoryDocument(context)
+                    .orElseGet(() -> newMemoryDocument(context, now, ""));
+            document.setContextStats(stats);
+            document.setUpdatedAt(now);
+            conversationMemoryRepository.save(document);
+        } catch (Exception e) {
+            // 统计快照写入失败不影响主流程
+            log.warn("[对话持久化] 写入上下文统计快照失败 - sessionId: {}, error: {}",
+                    context.getSessionId(), e.getMessage());
+        }
+    }
+
     private Optional<ConversationMemoryDocument> loadMemoryDocument(ConversationSessionContext context) {
         return conversationMemoryRepository.findByUserIdAndSessionId(context.getUserId(), context.getSessionId());
     }
@@ -402,6 +436,33 @@ public class ConversationPersistenceServiceImpl implements IConversationPersiste
                     doc.setUpdatedAt(now);
                     conversationMemoryRepository.save(doc);
                 });
+    }
+
+    /**
+     * 判断是否为推理阶段注入的压缩摘要消息。
+     *
+     * <p>压缩中间件会在推理时把摘要包成一条 {@code <compressed_history>} 系统消息注入上下文，
+     * 这条消息只是瞬态提示，真实摘要保存在 {@code compressedSummary} 字段中，
+     * 若同时落库会被重复计费，导致上下文占用统计虚高。</p>
+     */
+    private boolean isInjectedCompressedSummary(Msg msg) {
+        if (msg == null || msg.getRole() != MsgRole.SYSTEM) {
+            return false;
+        }
+        String text = msg.getTextContent();
+        return text != null && text.contains("<compressed_history>");
+    }
+
+    /**
+     * 判断是否为 AgentScope 框架注入的系统消息（Agent 的 sysPrompt）。
+     *
+     * <p>该消息每次调用都会重新生成，不属于对话历史；若落库会逐轮累积，
+     * 并与"最近会话预览"形成正反馈，导致上下文无限膨胀。</p>
+     */
+    private boolean isFrameworkSystemMessage(Msg msg) {
+        return msg != null
+                && msg.getRole() == MsgRole.SYSTEM
+                && "system".equals(msg.getName());
     }
 
     private long calculateRoundCount(List<Msg> messages) {

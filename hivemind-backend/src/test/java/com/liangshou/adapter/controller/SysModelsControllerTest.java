@@ -55,7 +55,7 @@ class SysModelsControllerTest {
         vo.setId(1L);
         when(service.getById(anyString(), anyLong())).thenReturn(vo);
 
-        mockMvc.perform(get("/api/sys-modelss/{id}", 1L))
+        mockMvc.perform(get("/api/sys-models/{id}", 1L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("SUCCESS"));
     }

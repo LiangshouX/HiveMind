@@ -1,6 +1,8 @@
 import type {
   ChatRequestPayload,
+  CompactContextResult,
   ConversationView,
+  SessionContextUsage,
   SessionHistoryResponse,
   TdAgentStreamEvent,
   ToolApproval,
@@ -171,6 +173,25 @@ export const agentConsoleApi = {
     return parseApiResult<ToolApproval[]>(response);
   },
 
+  /** 查询会话上下文窗口占用情况（已占用/总量、思考次数、工具调用次数） */
+  async getSessionContext(sessionId: string) {
+    const response = await fetch(buildUrl(`/sessions/me/${sessionId}/context`), {
+      headers: createHeaders(),
+    });
+    return parseApiResult<SessionContextUsage>(response);
+  },
+
+  /** 手动触发会话上下文压缩 */
+  async compactSession(sessionId: string) {
+    const response = await fetch(buildUrl(`/sessions/me/${sessionId}/compact`), {
+      method: "POST",
+      headers: createHeaders({
+        "Content-Type": "application/json",
+      }),
+    });
+    return parseApiResult<CompactContextResult>(response);
+  },
+
   async interruptChat(sessionId: string) {
     const response = await fetch(buildUrl("/chat/interrupt"), {
       method: "POST",
@@ -179,7 +200,7 @@ export const agentConsoleApi = {
       }),
       body: JSON.stringify({ sessionId }),
     });
-    return response.json();
+    return parseApiResult<unknown>(response);
   },
 
   streamChat(

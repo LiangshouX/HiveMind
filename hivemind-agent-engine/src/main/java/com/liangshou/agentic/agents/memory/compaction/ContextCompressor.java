@@ -66,6 +66,18 @@ public class ContextCompressor {
      */
     private static final int USER_PREVIEW_CHARS = 200;
 
+    /**
+     * 新摘要允许占用的最小 token 预算（避免摘要被压成空串）。
+     */
+    private static final int MIN_SUMMARY_TOKEN_BUDGET = 120;
+
+    /**
+     * 新摘要相对被压缩内容的目标 token 比例。
+     *
+     * <p>摘要只有明显小于被替换的内容，压缩才有意义；否则压缩反而会让上下文变大。</p>
+     */
+    private static final double SUMMARY_BUDGET_RATIO = 0.6;
+
     private final TdAgentProperties properties;
     private final TdAgentReMeService reMeService;
     private final TokenMeter tokenMeter;
@@ -96,11 +108,12 @@ public class ContextCompressor {
             List<Msg> messages) {
 
         long startTime = System.currentTimeMillis();
+        String previousSummary = memory.getCompressedSummary();
         int totalTokensBefore = tokenMeter.countTotalTokens(messages)
-                + tokenMeter.countTokens(memory.getCompressedSummary());
+                + tokenMeter.countTokens(previousSummary);
 
         log.info("[ContextCompressor] 开始压缩 - sessionId: {}, 总tokens: {}, 阈值: {}",
-                context.getSessionId(), totalTokensBefore, windowManager.getCompactionThreshold());
+                context.getSessionId(), totalTokensBefore, windowManager.getCompactionThreshold(context));
 
         // 步骤1: 分层分割消息
         MessageLayers layers = splitLayers(messages);
@@ -112,8 +125,16 @@ public class ContextCompressor {
                 layers.tailMessages.size());
 
         // 步骤2: 压缩中间层
-        String newSummary = compressMiddleLayer(
-                context, layers.middleMessages, memory.getCompressedSummary());
+        MiddleCompression outcome =
+                compressMiddleLayer(context, layers.middleMessages, previousSummary);
+        String newSummary = outcome.summary();
+
+        // 步骤2.5: 摘要预算裁剪
+        // 摘要必须明显小于它所替代的内容，否则"压缩"反而会让上下文变大。
+        int middleTokens = tokenMeter.countTotalTokens(layers.middleMessages);
+        if (newSummary != null && !newSummary.isBlank()) {
+            newSummary = trimSummaryToBudget(newSummary, middleTokens);
+        }
 
         // 步骤3: 计算保留消息 = system + head + tail
         List<Msg> retainedMessages = new ArrayList<>();
@@ -122,11 +143,11 @@ public class ContextCompressor {
         retainedMessages.addAll(layers.tailMessages);
 
         // 步骤3.5: 截断保留区中的超大消息
-        int compactionTarget = windowManager.getCompactionTarget();
+        int compactionTarget = windowManager.getCompactionTarget(context);
         retainedMessages = truncateOversizedMessages(retainedMessages, compactionTarget);
 
         // 步骤4: 融合摘要
-        String mergedSummary = mergeSummary(memory.getCompressedSummary(), newSummary);
+        String mergedSummary = mergeSummary(previousSummary, newSummary);
 
         // 步骤5: 应用压缩
         memory.applyCompaction(retainedMessages, mergedSummary);
@@ -135,8 +156,7 @@ public class ContextCompressor {
                 + tokenMeter.countTokens(mergedSummary);
         long duration = System.currentTimeMillis() - startTime;
 
-        String strategy = newSummary != null
-                && !newSummary.equals(memory.getCompressedSummary()) ? "REME" : "LOCAL";
+        String strategy = outcome.reme() ? "REME" : "LOCAL";
 
         String ratio = String.format("%.1f",
                 totalTokensBefore > 0 ? (1.0 - (double) totalTokensAfter / totalTokensBefore) * 100 : 0);
@@ -162,6 +182,45 @@ public class ContextCompressor {
                 .durationMs(duration)
                 .strategy(strategy)
                 .build();
+    }
+
+    /**
+     * 按 token 预算裁剪摘要。
+     *
+     * <p>摘要的 token 数被限制在"被压缩内容 token 数"的一定比例以内（并保留一个下限），
+     * 从而保证压缩后上下文不会比压缩前更大。</p>
+     *
+     * @param summary      原始摘要
+     * @param middleTokens 被压缩内容的 token 数
+     * @return 裁剪后的摘要
+     */
+    private String trimSummaryToBudget(String summary, int middleTokens) {
+        int budget = (int) Math.max(MIN_SUMMARY_TOKEN_BUDGET, middleTokens * SUMMARY_BUDGET_RATIO);
+        int current = tokenMeter.countTokens(summary);
+        if (current <= budget) {
+            return summary;
+        }
+
+        // 二分查找可以保留的最大字符数
+        int low = 0;
+        int high = summary.length();
+        while (low < high) {
+            int mid = (low + high + 1) / 2;
+            if (tokenMeter.countTokens(summary.substring(0, mid)) <= budget) {
+                low = mid;
+            } else {
+                high = mid - 1;
+            }
+        }
+
+        String trimmed = summary.substring(0, low).trim();
+        if (trimmed.isEmpty()) {
+            // 极端情况下至少保留一段可读文本
+            return summary.substring(0, Math.min(summary.length(), 120));
+        }
+        log.debug("[ContextCompressor] 摘要超出预算，已裁剪 - 原始tokens: {}, 预算: {}, 保留字符: {}",
+                current, budget, trimmed.length());
+        return trimmed;
     }
 
     /**
@@ -269,13 +328,13 @@ public class ContextCompressor {
     /**
      * 压缩中间层消息。
      */
-    String compressMiddleLayer(
+    MiddleCompression compressMiddleLayer(
             ConversationSessionContext context,
             List<Msg> middleMessages,
             String existingSummary) {
 
         if (middleMessages.isEmpty()) {
-            return null;
+            return new MiddleCompression(null, false);
         }
 
         // 策略1: 尝试 ReMe 智能压缩
@@ -285,7 +344,7 @@ public class ContextCompressor {
                         context, middleMessages, existingSummary);
                 if (summary != null && !summary.isBlank()) {
                     log.debug("[ContextCompressor] ReMe 压缩成功 - 摘要长度: {}", summary.length());
-                    return summary;
+                    return new MiddleCompression(summary, true);
                 }
             } catch (Exception e) {
                 log.warn("[ContextCompressor] ReMe 压缩失败，降级为本地压缩 - error: {}",
@@ -294,7 +353,16 @@ public class ContextCompressor {
         }
 
         // 策略2: 本地降级压缩
-        return localCompress(middleMessages);
+        return new MiddleCompression(localCompress(middleMessages), false);
+    }
+
+    /**
+     * 中间层压缩结果。
+     *
+     * @param summary 生成的摘要，可为 null
+     * @param reme    是否由 ReMe 生成（用于标注压缩策略）
+     */
+    record MiddleCompression(String summary, boolean reme) {
     }
 
     /**
@@ -391,15 +459,47 @@ public class ContextCompressor {
 
     /**
      * 融合新旧摘要。
+     *
+     * <p>多次压缩会让摘要不断累加，因此这里按 {@code maxSummaryCharacters} 硬上限截断，
+     * 避免摘要无限增长。</p>
      */
     String mergeSummary(String existingSummary, String newSummary) {
         if (newSummary == null || newSummary.isBlank()) {
             return existingSummary == null ? "" : existingSummary;
         }
         if (existingSummary == null || existingSummary.isBlank()) {
-            return newSummary;
+            return capSummary(newSummary);
         }
-        return existingSummary + "\n---\n" + newSummary;
+
+        int maxLen = properties.getCompaction().getMaxSummaryCharacters();
+        if (maxLen <= 0) {
+            return existingSummary + "\n---\n" + newSummary;
+        }
+
+        // 最新的摘要必须完整保留：先为它预留额度，剩余额度再用于旧摘要的尾部
+        String separator = "\n---\n";
+        if (newSummary.length() + separator.length() >= maxLen) {
+            // 新摘要本身就超长：直接截断新摘要（它代表最新的上下文）
+            return newSummary.substring(0, Math.min(newSummary.length(), maxLen));
+        }
+        int oldBudget = maxLen - newSummary.length() - separator.length();
+        String trimmedExisting = existingSummary;
+        if (trimmedExisting.length() > oldBudget) {
+            // 保留旧摘要的尾部（更接近当前上下文的部分）
+            trimmedExisting = trimmedExisting.substring(trimmedExisting.length() - oldBudget);
+        }
+        return trimmedExisting + separator + newSummary;
+    }
+
+    /**
+     * 按配置的字符上限截断摘要。
+     */
+    private String capSummary(String summary) {
+        int maxLen = properties.getCompaction().getMaxSummaryCharacters();
+        if (maxLen <= 0 || summary.length() <= maxLen) {
+            return summary;
+        }
+        return summary.substring(0, maxLen);
     }
 
     /**

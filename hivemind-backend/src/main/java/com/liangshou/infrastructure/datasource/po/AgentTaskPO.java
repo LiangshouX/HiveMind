@@ -41,7 +41,7 @@ public class AgentTaskPO implements Serializable {
 
     @TableField("user_id")
 
-    private Long userId;
+    private String userId;
 
     /**
      * 任务标题

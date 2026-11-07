@@ -67,11 +67,13 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
         flexDirection: "column",
         opacity: isActivated ? 1 : 0.65,
       }}
-      bodyStyle={{
-        flex: 1,
-        display: "flex",
-        flexDirection: "column",
-        padding: 16,
+      styles={{
+        body: {
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          padding: 16,
+        },
       }}
     >
       {/* Header: name + type badge */}

@@ -17,9 +17,16 @@ RUN npm ci --silent 2>/dev/null || npm install --silent
 # Copy source code
 COPY . .
 
-# Build argument for API root (can be overridden at build time)
+# Build arguments
+# VITE_BACKEND_API_ROOT: 后端 API 前缀（默认 /api/v1，由 Nginx 反代）
+# VITE_API_URL: 跨域部署时的后端绝对地址（同源部署留空）
+# VITE_AGENT_API_BASE: Agent 流式接口前缀（默认 /tdagent）
 ARG VITE_BACKEND_API_ROOT=/api/v1
+ARG VITE_API_URL=""
+ARG VITE_AGENT_API_BASE=/tdagent
 ENV VITE_BACKEND_API_ROOT=${VITE_BACKEND_API_ROOT}
+ENV VITE_API_URL=${VITE_API_URL}
+ENV VITE_AGENT_API_BASE=${VITE_AGENT_API_BASE}
 
 # Build the application
 RUN npm run build

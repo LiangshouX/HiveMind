@@ -19,10 +19,16 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
- * ReMe MCP 客户端 - 通过 MCP SSE 协议与 ReMe 服务通信。
+ * ReMe MCP 客户端 - 通过 MCP 协议与 ReMe 服务通信。
  *
  * <p>封装 AgentScope-Java 的 McpSyncClientWrapper，提供类型安全的工具调用接口。
  * 支持自动初始化、错误降级、优雅关闭，以及基于用户 ID 的 workspace 隔离。</p>
+ *
+ * <p><b>传输方式：</b></p>
+ * <ul>
+ *     <li>{@code streamable-http}（默认）：ReMe 0.4.2.x 的 HTTP 服务在 {@code /mcp} 挂载 streamable HTTP MCP</li>
+ *     <li>{@code sse}：旧版 ReMe 的 {@code /sse} 端点（保留兼容）</li>
+ * </ul>
  *
  * <p><b>用户隔离机制：</b></p>
  * <p>通过 {@link #callToolForUser} 方法，文件操作类工具（read、write、edit、list）
@@ -36,6 +42,12 @@ public class McpReMeClient {
 
     private static final Logger log = LoggerFactory.getLogger(McpReMeClient.class);
 
+    /** 传输方式：streamable HTTP（ReMe 0.4.2.x 默认） */
+    public static final String TRANSPORT_STREAMABLE_HTTP = "streamable-http";
+
+    /** 传输方式：SSE（旧版 ReMe） */
+    public static final String TRANSPORT_SSE = "sse";
+
     /** 路径遍历检测：匹配 .. 段（独立的 .. 或以 /.. 或 ../ 开头/结尾） */
     private static final Pattern PATH_TRAVERSAL = Pattern.compile("(^|[/\\\\])\\.\\.($|[/\\\\])");
 
@@ -48,11 +60,20 @@ public class McpReMeClient {
 
     /**
      * -- GETTER --
-     *  获取 SSE URL。
+     *  获取 MCP 端点 URL。
      *
      */
     @Getter
-    private final String sseUrl;
+    private final String endpointUrl;
+
+    /**
+     * -- GETTER --
+     *  获取传输方式。
+     *
+     */
+    @Getter
+    private final String transport;
+
     private final Duration timeout;
     private McpClientWrapper clientWrapper;
     /**
@@ -70,11 +91,15 @@ public class McpReMeClient {
     /**
      * 构造 MCP 客户端。
      *
-     * @param sseUrl         MCP SSE 端点 URL
+     * @param transport      传输方式（streamable-http / sse）
+     * @param endpointUrl    MCP 端点 URL
      * @param timeoutSeconds 超时时间（秒）
      */
-    public McpReMeClient(String sseUrl, int timeoutSeconds) {
-        this.sseUrl = sseUrl;
+    public McpReMeClient(String transport, String endpointUrl, int timeoutSeconds) {
+        this.transport = (transport == null || transport.isBlank())
+                ? TRANSPORT_STREAMABLE_HTTP
+                : transport.trim().toLowerCase();
+        this.endpointUrl = endpointUrl;
         this.timeout = Duration.ofSeconds(timeoutSeconds);
     }
 
@@ -86,10 +111,13 @@ public class McpReMeClient {
     public synchronized boolean initialize() {
         if (initialized) return true;
         try {
-            McpClientWrapper wrapper = McpClientBuilder.create("reme-memory")
-                    .sseTransport(sseUrl)
-                    .timeout(timeout)
-                    .buildSync();
+            McpClientBuilder builder = McpClientBuilder.create("reme-memory");
+            if (TRANSPORT_SSE.equals(transport)) {
+                builder.sseTransport(endpointUrl);
+            } else {
+                builder.streamableHttpTransport(endpointUrl);
+            }
+            McpClientWrapper wrapper = builder.timeout(timeout).buildSync();
 
             // 安全类型检查：确保返回的是 McpSyncClientWrapper
             if (wrapper instanceof McpSyncClientWrapper syncWrapper) {
@@ -103,10 +131,11 @@ public class McpReMeClient {
 
             clientWrapper.initialize().block();
             initialized = true;
-            log.info("ReMe MCP client initialized: {}", sseUrl);
+            log.info("ReMe MCP client initialized: transport={}, endpoint={}", transport, endpointUrl);
             return true;
         } catch (Exception e) {
-            log.error("Failed to initialize ReMe MCP client", e);
+            log.error("Failed to initialize ReMe MCP client (transport={}, endpoint={})",
+                    transport, endpointUrl, e);
             initialized = false;
             return false;
         }

@@ -50,3 +50,10 @@ node_modules
 .codegraph/
 specs/
 .lib-repo/
+
+# 本机 IDE / 工具配置（含绝对路径，不入库）
+.mcp.json
+
+# 临时探针脚本
+.tmp_*
+*.tmp

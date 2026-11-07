@@ -29,6 +29,7 @@ import {
   CloudServerOutlined,
   ApiOutlined,
   InfoCircleOutlined,
+  LinkOutlined,
 } from "@ant-design/icons";
 import ProviderCard from "../../components/model/ProviderCard";
 import {
@@ -42,8 +43,9 @@ import {
   testConnection,
   initializeBuiltIn,
   getDefaultModel,
+  fetchProviderCatalog,
 } from "../../services/providerApi";
-import type { ProviderVO, ProviderDTO } from "../../services/providerApi";
+import type { ProviderVO, ProviderDTO, ProviderCatalogEntry } from "../../services/providerApi";
 
 const { Title, Text } = Typography;
 
@@ -170,6 +172,48 @@ const ModelConfigPage: React.FC = () => {
   // 防止 React StrictMode 双重挂载导致 initializeBuiltIn 被并发调用两次
   const initDoneRef = useRef(false);
 
+  // 内置供应商目录（不含 API Key，供用户快捷配置）
+  const [catalog, setCatalog] = useState<ProviderCatalogEntry[]>([]);
+  const [catalogLoading, setCatalogLoading] = useState(false);
+  const [selectedCatalogId, setSelectedCatalogId] = useState<string | undefined>(undefined);
+
+  const loadCatalog = useCallback(async () => {
+    setCatalogLoading(true);
+    try {
+      const entries = await fetchProviderCatalog();
+      setCatalog(entries ?? []);
+    } catch {
+      // 目录加载失败不阻塞手工配置流程
+    } finally {
+      setCatalogLoading(false);
+    }
+  }, []);
+
+  // 从清单选择供应商后自动填充名称、标识、URL 与模型列表
+  const handleCatalogSelect = (catalogId: string) => {
+    setSelectedCatalogId(catalogId);
+    const entry = catalog.find((item) => item.id === catalogId);
+    if (!entry) return;
+    const current = form.getFieldsValue();
+    form.setFieldsValue({
+      providerName: entry.name,
+      modelProviderId: entry.id,
+      modelProviderType: "SYSTEM",
+      baseUrl: entry.baseUrl,
+      // 保留用户已手动编辑的模型列表
+      models:
+        current?.models && current.models.length > 0
+          ? current.models
+          : entry.models.map((m) => ({
+              id: m.id,
+              name: m.name,
+              supportsMultimodal: m.supportsMultimodal ?? false,
+              supportsVideo: m.supportsVideo ?? false,
+              ...(m.contextWindow ? { contextWindow: m.contextWindow } : {}),
+            })),
+    });
+  };
+
   // ── Data Loading ──
 
   const loadProviders = useCallback(async () => {
@@ -207,6 +251,7 @@ const ModelConfigPage: React.FC = () => {
         }
         await loadProviders();
         await loadDefaultModel();
+        await loadCatalog();
       } catch {
         message.error("初始化 Provider 失败");
       } finally {
@@ -214,7 +259,7 @@ const ModelConfigPage: React.FC = () => {
       }
     };
     init();
-  }, [loadProviders, loadDefaultModel]);
+  }, [loadProviders, loadDefaultModel, loadCatalog]);
 
   // ── Actions ──
 
@@ -222,6 +267,7 @@ const ModelConfigPage: React.FC = () => {
     setEditingProvider(null);
     form.resetFields();
     form.setFieldsValue({ modelProviderType: "CUSTOM" });
+    setSelectedCatalogId(undefined);
     setModalOpen(true);
   };
 
@@ -229,16 +275,33 @@ const ModelConfigPage: React.FC = () => {
     setEditingProvider(provider);
 
     // 解析模型列表
-    let models: Array<{ id: string; name: string; supportsMultimodal?: boolean; supportsVideo?: boolean }> = [];
+    let models: Array<{
+      id: string;
+      name: string;
+      supportsMultimodal?: boolean;
+      supportsVideo?: boolean;
+      contextWindow?: number;
+    }> = [];
     try {
       if (provider.modelsJson) {
         const parsed = JSON.parse(provider.modelsJson);
         if (Array.isArray(parsed)) {
           models = parsed.map((item: unknown) => {
             if (typeof item === "string") {
-              return { id: item, name: item, supportsMultimodal: false, supportsVideo: false };
+              return {
+                id: item,
+                name: item,
+                supportsMultimodal: false,
+                supportsVideo: false,
+              };
             }
-            return item as { id: string; name: string; supportsMultimodal?: boolean; supportsVideo?: boolean };
+            return item as {
+              id: string;
+              name: string;
+              supportsMultimodal?: boolean;
+              supportsVideo?: boolean;
+              contextWindow?: number;
+            };
           });
         }
       }
@@ -334,11 +397,21 @@ const ModelConfigPage: React.FC = () => {
       if (values.models && Array.isArray(values.models)) {
         const modelsJson = values.models
           .filter((m: { id?: string; name?: string }) => m.id && m.name)
-          .map((m: { id: string; name: string; supportsMultimodal?: boolean; supportsVideo?: boolean }) => ({
+          .map((m: {
+            id: string;
+            name: string;
+            supportsMultimodal?: boolean;
+            supportsVideo?: boolean;
+            contextWindow?: number;
+          }) => ({
             id: m.id,
             name: m.name,
             supportsMultimodal: m.supportsMultimodal || false,
             supportsVideo: m.supportsVideo || false,
+            // 上下文窗口可选：不填则由后端回退到默认值
+            ...(m.contextWindow && m.contextWindow > 0
+              ? { contextWindow: m.contextWindow }
+              : {}),
           }));
         dto.modelsJson = JSON.stringify(modelsJson);
 
@@ -505,10 +578,10 @@ const ModelConfigPage: React.FC = () => {
       )}
 
       {/* Provider grid */}
-      <div style={{ flex: 1, overflowY: "auto" }}>
+      <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden" }}>
         {loading ? (
           <div style={{ textAlign: "center", padding: "100px 0" }}>
-            <Spin size="large" tip="加载中..." />
+            <Spin size="large" description="加载中..." />
           </div>
         ) : providers.length === 0 ? (
           <Empty
@@ -572,9 +645,77 @@ const ModelConfigPage: React.FC = () => {
         cancelText="取消"
         confirmLoading={saving}
         width={600}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
+          {!editingProvider && catalog.length > 0 && (
+            <>
+              <Form.Item
+                label="从清单快速选择"
+                tooltip="选择一个内置供应商，自动填入接口地址与常用模型，你只需填写自己的 API Key。"
+                style={{ marginBottom: 12 }}
+              >
+                <Select
+                  allowClear
+                  showSearch
+                  loading={catalogLoading}
+                  placeholder="选择供应商（可选）"
+                  value={selectedCatalogId}
+                  onChange={handleCatalogSelect}
+                  optionFilterProp="label"
+                  options={catalog.map((entry) => ({
+                    value: entry.id,
+                    label: entry.name,
+                  }))}
+                  optionRender={(option) => {
+                    const entry = catalog.find((item) => item.id === option.value);
+                    return (
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <span style={{ fontWeight: 600 }}>{entry?.name}</span>
+                          {entry?.apiKeyRequired === false && (
+                            <Tag color="green" style={{ marginInlineEnd: 0 }}>无需 Key</Tag>
+                          )}
+                        </div>
+                        {entry?.description && (
+                          <div style={{ fontSize: 12, color: "var(--td-text-tertiary)" }}>
+                            {entry.description}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }}
+                />
+              </Form.Item>
+
+              {selectedCatalogId && (
+                <Alert
+                  type="info"
+                  showIcon
+                  style={{ marginBottom: 16 }}
+                  message={
+                    <Space size={8} wrap>
+                      <span>
+                        平台不托管密钥，请填写你在
+                        {catalog.find((c) => c.id === selectedCatalogId)?.name}
+                        申请的 API Key。
+                      </span>
+                      {catalog.find((c) => c.id === selectedCatalogId)?.apiKeyUrl && (
+                        <a
+                          href={catalog.find((c) => c.id === selectedCatalogId)!.apiKeyUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          <LinkOutlined /> 申请 API Key
+                        </a>
+                      )}
+                    </Space>
+                  }
+                />
+              )}
+            </>
+          )}
+
           <Form.Item
             name="providerName"
             label="显示名称"
@@ -703,7 +844,7 @@ const ModelConfigPage: React.FC = () => {
                           删除
                         </Button>
                       </div>
-                      <div style={{ display: "flex", gap: 16, paddingLeft: 28 }}>
+                      <div style={{ display: "flex", gap: 16, paddingLeft: 28, flexWrap: "wrap", alignItems: "center" }}>
                         <Tooltip title="启用后该模型可处理图片等多模态内容">
                           <Form.Item
                             {...field}
@@ -722,6 +863,28 @@ const ModelConfigPage: React.FC = () => {
                             style={{ marginBottom: 0 }}
                           >
                             <Checkbox>视频支持</Checkbox>
+                          </Form.Item>
+                        </Tooltip>
+                        <Tooltip title="该模型的上下文窗口大小（tokens）。留空则使用系统默认值（32768），用于计算上下文占用比例与压缩阈值">
+                          <Form.Item
+                            {...field}
+                            name={[field.name, "contextWindow"]}
+                            style={{ marginBottom: 0, width: 200 }}
+                            getValueFromEvent={(value: string) => {
+                              const trimmed = (value ?? "").trim();
+                              if (!trimmed) {
+                                return undefined;
+                              }
+                              const parsed = Number(trimmed);
+                              return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+                            }}
+                          >
+                            <Input
+                              type="number"
+                              min={1}
+                              placeholder="上下文窗口 (tokens)"
+                              style={{ width: 200 }}
+                            />
                           </Form.Item>
                         </Tooltip>
                       </div>

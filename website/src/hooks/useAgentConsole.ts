@@ -2,11 +2,17 @@ import { message as antMessage } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { agentConsoleApi } from "../services/agentConsoleApi";
+import {
+  countReasoningBlocks,
+  countToolCalls,
+  estimateMessagesTokens,
+} from "../utils/tokenEstimate";
 import type {
   AuthUser,
   ChatRequestPayload,
   ConversationGroupItem,
   ConversationView,
+  SessionContextUsage,
   SessionHistoryResponse,
   SessionState,
   StoredMessage,
@@ -19,6 +25,11 @@ import type {
 } from "../types";
 
 const STORAGE_KEY = "hm-agent-console-ui";
+
+/** 后端未返回上下文窗口时使用的兜底值（与后端默认保持一致） */
+const DEFAULT_CONTEXT_WINDOW = 32768;
+/** 后端未返回时使用的默认压缩阈值比例 */
+const DEFAULT_THRESHOLD_RATIO = 0.85;
 
 interface PersistedState {
   activeSessionId?: string;
@@ -133,12 +144,12 @@ function createAssistantMessage(): UiMessage {
 function mapStoredMessage(stored: StoredMessage, user: AuthUser): UiMessage {
   const role = getRole(stored.role);
   const contentItems = stored.content ?? [];
-  
-  // 为 assistant 角色智能识别最后一条 text block 作为"最终结果"
-  const isAssistant = role === "assistant";
-  const lastTextIndex = isAssistant ? contentItems.findLastIndex((item) => item.type === "text") : -1;
-  
-  const blocks = contentItems.map((item, index) => {
+
+  // 注意：这里不判断"最终结果"。
+  // ReAct Agent 一轮对话会落库成多条消息（assistant 前言 + tool_use、tool 结果、assistant 正文），
+  // 单条消息里的最后一个 text 往往只是"前言"而不是最终答复，
+  // 因此"最终结果"必须在跨消息合并之后统一判定（见 promoteFinalResultBlock）。
+  const blocks = contentItems.map((item) => {
     if (item.type === "thinking") {
       return createBlock("reasoning", "推理", item.text ?? "");
     }
@@ -183,10 +194,7 @@ function mapStoredMessage(stored: StoredMessage, user: AuthUser): UiMessage {
         }],
       });
     }
-    // text 类型：如果是 assistant 的最后一条 text，标记为"最终结果"
-    if (item.type === "text" && isAssistant && index === lastTextIndex && contentItems.length > 1) {
-      return createBlock("result", "最终结果", item.text ?? "");
-    }
+    // text 类型：普通文本块，是否为"最终结果"由合并后统一判定
     return createBlock(
       "text",
       "",
@@ -236,7 +244,7 @@ function normalizeHistory(
   // 合并连续的 assistant 消息为一条，与流式阶段的行为一致
   // ReAct Agent 一轮对话会产生多条 Msg（thinking+tool_use、tool_result、text），
   // 但流式阶段前端只创建一条 assistant 消息，所以加载时也需要合并
-  const messages = mergeConsecutiveAssistantMessages(rawMessages);
+  const messages = mergeConsecutiveAssistantMessages(rawMessages).map(promoteFinalResultBlock);
   return {
     ...fallback,
     title: history.session?.title?.trim() || fallback.title,
@@ -248,6 +256,33 @@ function normalizeHistory(
     preview: messages.length ? createSessionPreview({ ...fallback, messages }) : fallback.preview,
     messages,
   };
+}
+
+/**
+ * 将一条 assistant 消息中最后一个非空文本块提升为"最终结果"。
+ *
+ * <p>ReAct Agent 一轮对话在库里是「assistant 前言 + tool_use」→「tool 结果」→「assistant 正文」
+ * 三条消息，前端合并成一条气泡后，真正的最终答复就是最后一个文本块。
+ * 早期实现在"单条消息内"找最后一个 text，会把前言误标成最终结果、正文反而没有标题。</p>
+ */
+function promoteFinalResultBlock(message: UiMessage): UiMessage {
+  if (message.role !== "assistant" || message.blocks.length === 0) {
+    return message;
+  }
+  let targetIndex = -1;
+  for (let i = message.blocks.length - 1; i >= 0; i -= 1) {
+    const block = message.blocks[i];
+    if (block.type === "text" && block.content.trim()) {
+      targetIndex = i;
+      break;
+    }
+  }
+  if (targetIndex < 0) {
+    return message;
+  }
+  const blocks = [...message.blocks];
+  blocks[targetIndex] = { ...blocks[targetIndex], type: "result", title: "最终结果" };
+  return { ...message, blocks };
 }
 
 /**
@@ -309,8 +344,16 @@ function toEventBlocks(event: TdAgentStreamEvent): UiMessageBlock[] {
   switch (event.type) {
     case "MESSAGE":
       return [createBlock("text", "", event.content)];
-    case "REASONING":
-      return [createBlock("reasoning", "推理", event.content)];
+    case "REASONING": {
+      // 后端把推理文本放在 metadata.delta（增量）或 metadata.thinking（完整）中，
+      // event.content 恒为空，直接用 event.content 会渲染出 "nullnull"。
+      const full = event.metadata?.thinking as string | undefined;
+      const delta = event.metadata?.delta as string | undefined;
+      if (full) {
+        return [createBlock("reasoning", "推理", full, {replace: true})];
+      }
+      return [createBlock("reasoning", "推理", delta ?? event.content ?? "")];
+    }
     case "TOOL_USE":
       // 工具调用用代码块格式展示
       const toolInput = event.content ? `\`\`\`json\n${event.content}\n\`\`\`` : "";
@@ -322,15 +365,15 @@ function toEventBlocks(event: TdAgentStreamEvent): UiMessageBlock[] {
       const toolInputJson = event.metadata?.toolInput as string | undefined;
       const blocks: UiMessageBlock[] = [];
 
-      // 如果携带了工具调用元数据，先创建 tool_use block
-      if (toolName) {
-        const formattedInput = toolInputJson ? `\`\`\`json\n${toolInputJson}\n\`\`\`` : "";
-        blocks.push(createBlock("tool_use", "工具调用", formattedInput, { toolName }));
+      // 工具调用块已由 TOOL_USE 事件单独推送，这里只在缺少时补一个，避免重复气泡
+      if (toolName && toolInputJson) {
+        const formattedInput = `\`\`\`json\n${toolInputJson}\n\`\`\``;
+        blocks.push(createBlock("tool_use", "工具调用", formattedInput, {toolName}));
       }
 
       // 创建 tool_result block
       const formattedResult = event.content ? `\`\`\`\n${event.content}\n\`\`\`` : "";
-      blocks.push(createBlock("tool_result", "工具结果", formattedResult, { toolName }));
+      blocks.push(createBlock("tool_result", "工具结果", formattedResult, {toolName}));
 
       return blocks;
     }
@@ -355,6 +398,16 @@ function mergeStreamBlock(blocks: UiMessageBlock[], incoming: UiMessageBlock): U
     previous.toolName === incoming.toolName &&
     incoming.type !== "approval"
   ) {
+    // replace 语义：完整内容覆盖增量内容
+    if (incoming.replace) {
+      return [
+        ...blocks.slice(0, -1),
+        {
+          ...previous,
+          content: incoming.content,
+        },
+      ];
+    }
     return [
       ...blocks.slice(0, -1),
       {
@@ -381,16 +434,26 @@ export function useAgentConsole(
   const [messageApi, contextHolder] = antMessage.useMessage();
   const [sessions, setSessions] = useState<SessionState[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | undefined>(routeSessionId);
+  // 会话列表是否已完成首次加载。历史回填必须等列表就绪后才能判断"当前会话是否有消息"，
+  // 否则刷新页面时 effect 只跑一次（activeSessionId 初值就等于路由值），历史永远不会被拉取。
+  const [sessionsReady, setSessionsReady] = useState(false);
   const [input, setInput] = useState("");
   const [loadingSessions, setLoadingSessions] = useState(true);
   const [busy, setBusy] = useState(false);
   const [approvalComment, setApprovalComment] = useState("");
   const [runningSessionId, setRunningSessionId] = useState<string>();
+  // 会话上下文窗口占用快照（按 sessionId 存储），来自后端精确统计
+  const [contextUsages, setContextUsages] = useState<Record<string, SessionContextUsage>>({});
+  // 流式过程中的本地估算 token 数（与后端 EstimatingTokenMeter 同口径），DONE 后由后端精确值校准
+  const [liveContextTokens, setLiveContextTokens] = useState<Record<string, number>>({});
+  const [compactingSessionId, setCompactingSessionId] = useState<string>();
   const [selectedModelId, setSelectedModelId] = useState<string | undefined>(undefined);
   const [selectedProviderId, setSelectedProviderId] = useState<string | undefined>(undefined);
   const streamAbortRef = useRef<AbortController | null>(null);
   const hydratedRef = useRef(false);
   const sessionsRef = useRef<SessionState[]>([]);
+  // 正在拉取历史的会话，避免"侧栏点击"与"自动回填"并发触发同一请求
+  const historyLoadingRef = useRef<Set<string>>(new Set());
   // 流式事件批处理：收集待处理的事件，通过 requestAnimationFrame 批量更新
   const pendingEventsRef = useRef<Array<{ sessionId: string; assistantMessageId: string; event: TdAgentStreamEvent }>>([]);
   const rafIdRef = useRef<number | null>(null);
@@ -398,6 +461,28 @@ export function useAgentConsole(
   useEffect(() => {
     sessionsRef.current = sessions;
   }, [sessions]);
+
+  // 流式过程中的本地 token 估算：与后端 EstimatingTokenMeter 同口径，
+  // 用于在 DONE 事件到达前实时驱动底部占用条。
+  // 注意：后端口径 = 系统提示词开销 + 工具定义开销 + 对话历史 + 压缩摘要，
+  // 因此这里也要叠加两个固定开销基线，否则流式期间与结束后的数值会跳变。
+  useEffect(() => {
+    if (!runningSessionId) {
+      return;
+    }
+    const session = sessions.find((item) => item.sessionId === runningSessionId);
+    if (!session) {
+      return;
+    }
+    const baseline = contextUsages[runningSessionId];
+    const overhead = (baseline?.systemPromptTokens ?? 0) + (baseline?.toolDefinitionTokens ?? 0);
+    const tokens = estimateMessagesTokens(session.messages) + overhead;
+    setLiveContextTokens((current) =>
+      current[runningSessionId] === tokens
+        ? current
+        : {...current, [runningSessionId]: tokens},
+    );
+  }, [sessions, runningSessionId, contextUsages]);
 
   const activeSession = useMemo(
     () => sessions.find((session) => session.sessionId === activeSessionId),
@@ -529,8 +614,29 @@ export function useAgentConsole(
     [updateSession],
   );
 
+  /**
+   * 拉取指定会话的上下文占用快照（精确值来自后端）。
+   */
+  const refreshContextUsage = useCallback(
+    async (sessionId: string) => {
+      try {
+        const usage = await agentConsoleApi.getSessionContext(sessionId);
+        setContextUsages((current) => ({...current, [sessionId]: usage}));
+        return usage;
+      } catch (error) {
+        console.warn("读取上下文占用失败", error);
+        return undefined;
+      }
+    },
+    [],
+  );
+
   const loadSessionHistory = useCallback(
     async (sessionId: string) => {
+      if (historyLoadingRef.current.has(sessionId)) {
+        return;
+      }
+      historyLoadingRef.current.add(sessionId);
       updateSession(sessionId, (session) => ({
         ...session,
         loadingHistory: true,
@@ -545,15 +651,19 @@ export function useAgentConsole(
           temp: false,
         });
         await syncPendingApprovals(sessionId);
+        // 历史回填后同步上下文占用快照
+        void refreshContextUsage(sessionId);
       } catch (error) {
         messageApi.error(error instanceof Error ? error.message : "读取会话历史失败");
         updateSession(sessionId, (session) => ({
           ...session,
           loadingHistory: false,
         }));
+      } finally {
+        historyLoadingRef.current.delete(sessionId);
       }
     },
-    [ensureSession, messageApi, syncPendingApprovals, updateSession, upsertSession, user],
+    [ensureSession, messageApi, refreshContextUsage, syncPendingApprovals, updateSession, upsertSession, user],
   );
 
   const refreshSessions = useCallback(
@@ -588,6 +698,8 @@ export function useAgentConsole(
           const tempToKeep = tempOnly.filter((item) => item.messages.length > 0);
           return sortSessions([...merged, ...tempToKeep]);
         });
+        // 列表就绪标记：历史回填依赖它触发
+        setSessionsReady(true);
 
         const saved = parseJsonSafely<PersistedState>(localStorage.getItem(STORAGE_KEY) || undefined);
         
@@ -709,6 +821,46 @@ export function useAgentConsole(
           streaming: false,
         }));
         const paused = Boolean(event.metadata?.paused);
+        // DONE 事件携带后端精确统计的上下文占用快照，直接校准本地估算值
+        const usageSnapshot = event.metadata?.contextUsage as
+          | Partial<SessionContextUsage>
+          | undefined;
+        if (usageSnapshot && typeof usageSnapshot.usedTokens === "number") {
+          setContextUsages((current) => {
+            const previous = current[sessionId];
+            const merged: SessionContextUsage = {
+              usedTokens: usageSnapshot.usedTokens ?? previous?.usedTokens ?? 0,
+              contextWindow:
+                usageSnapshot.contextWindow ?? previous?.contextWindow ?? DEFAULT_CONTEXT_WINDOW,
+              usageRatio: usageSnapshot.usageRatio ?? previous?.usageRatio ?? 0,
+              thresholdRatio: usageSnapshot.thresholdRatio ?? previous?.thresholdRatio ?? DEFAULT_THRESHOLD_RATIO,
+              thresholdTokens: usageSnapshot.thresholdTokens ?? previous?.thresholdTokens ?? 0,
+              outputReserveTokens: usageSnapshot.outputReserveTokens ?? previous?.outputReserveTokens ?? 0,
+              systemPromptTokens: usageSnapshot.systemPromptTokens ?? previous?.systemPromptTokens ?? 0,
+              toolDefinitionTokens: usageSnapshot.toolDefinitionTokens ?? previous?.toolDefinitionTokens ?? 0,
+              conversationTokens: usageSnapshot.conversationTokens ?? previous?.conversationTokens ?? 0,
+              modelDurationMs: usageSnapshot.modelDurationMs ?? previous?.modelDurationMs ?? 0,
+              ttftMs: usageSnapshot.ttftMs ?? previous?.ttftMs ?? 0,
+              tokensPerSecond: usageSnapshot.tokensPerSecond ?? previous?.tokensPerSecond ?? 0,
+              cacheHitRatio: usageSnapshot.cacheHitRatio ?? previous?.cacheHitRatio ?? 0,
+              uncachedInputTokens: usageSnapshot.uncachedInputTokens ?? previous?.uncachedInputTokens ?? 0,
+              cachedInputTokens: usageSnapshot.cachedInputTokens ?? previous?.cachedInputTokens ?? 0,
+              outputTokens: usageSnapshot.outputTokens ?? previous?.outputTokens ?? 0,
+              modelCalls: usageSnapshot.modelCalls ?? previous?.modelCalls ?? 0,
+              modelDisplayName: usageSnapshot.modelDisplayName ?? previous?.modelDisplayName,
+              messageCount: usageSnapshot.messageCount ?? previous?.messageCount ?? 0,
+              reasoningCount: usageSnapshot.reasoningCount ?? previous?.reasoningCount ?? 0,
+              toolCallCount: usageSnapshot.toolCallCount ?? previous?.toolCallCount ?? 0,
+              compactionCount: usageSnapshot.compactionCount ?? previous?.compactionCount ?? 0,
+              compressedSummaryChars:
+                usageSnapshot.compressedSummaryChars ?? previous?.compressedSummaryChars ?? 0,
+              providerId: usageSnapshot.providerId ?? previous?.providerId,
+              modelId: usageSnapshot.modelId ?? previous?.modelId,
+              nearThreshold: usageSnapshot.nearThreshold ?? previous?.nearThreshold ?? false,
+            };
+            return {...current, [sessionId]: merged};
+          });
+        }
         if (!paused) {
           // 使用防抖延迟刷新会话列表，避免 DONE 事件后立即刷新导致卡顿
           setTimeout(() => void refreshSessions(sessionId), 300);
@@ -923,9 +1075,10 @@ export function useAgentConsole(
         await loadSessionHistory(sessionId);
       } else {
         void syncPendingApprovals(sessionId);
+        void refreshContextUsage(sessionId);
       }
     },
-    [activateSession, loadSessionHistory, syncPendingApprovals],
+    [activateSession, loadSessionHistory, refreshContextUsage, syncPendingApprovals],
   );
 
   const deleteSession = useCallback(
@@ -1106,22 +1259,120 @@ export function useAgentConsole(
     void refreshSessions(routeSessionId || saved?.activeSessionId);
   }, [refreshSessions, routeSessionId]);
 
+  // 历史回填：会话列表就绪后，若当前会话在内存中没有消息，则拉取后端历史。
+  //
+  // 旧实现只依赖 activeSessionId，而页面刷新/路由直达时 activeSessionId 的初值就等于路由值，
+  // 值不发生变化 → effect 不会二次触发 → /sessions/me/{id} 从不请求 → 刷新后整个消息区空白。
+  // 引入 sessionsReady 作为触发源，保证"刷新页面"与"跳转路由"都能正确回填。
   useEffect(() => {
-    if (!activeSessionId) {
+    if (!sessionsReady || !activeSessionId) {
       return;
     }
     const current = sessionsRef.current.find((item) => item.sessionId === activeSessionId);
-    if (current && current.messages.length === 0 && !current.temp && !current.loadingHistory) {
-      void loadSessionHistory(activeSessionId);
+    if (!current || current.temp || current.messages.length > 0 || current.loadingHistory) {
+      return;
     }
-    // 使用 activeSessionId 作为触发条件，通过 sessionsRef 读取最新状态，
-    // 避免 sessions 作为依赖导致 loadSessionHistory → upsertSession → sessions 变化的死循环
-  }, [activeSessionId, loadSessionHistory]);
+    void loadSessionHistory(activeSessionId);
+  }, [activeSessionId, sessionsReady, loadSessionHistory]);
 
   const selectModel = useCallback((providerId: string, modelId: string) => {
     setSelectedProviderId(providerId);
     setSelectedModelId(modelId);
   }, []);
+
+  /**
+   * 手动触发上下文压缩。
+   *
+   * <p>压缩会重写会话历史（中间层被摘要替代），因此完成后需要重新拉取历史与占用快照。</p>
+   */
+  const compactContext = useCallback(
+    async (sessionId: string) => {
+      if (!sessionId || compactingSessionId) {
+        return;
+      }
+      setCompactingSessionId(sessionId);
+      try {
+        const result = await agentConsoleApi.compactSession(sessionId);
+        if (result?.compacted) {
+          messageApi.success(result.summary || "上下文压缩完成");
+        } else {
+          messageApi.info(result?.summary || "当前会话内容过少，无需压缩");
+        }
+        // 压缩改变了会话内容，重新拉取历史与占用
+        await loadSessionHistory(sessionId);
+        await refreshContextUsage(sessionId);
+      } catch (error) {
+        messageApi.error(error instanceof Error ? error.message : "上下文压缩失败");
+      } finally {
+        setCompactingSessionId(undefined);
+      }
+    },
+    [compactingSessionId, loadSessionHistory, messageApi, refreshContextUsage],
+  );
+
+  /**
+   * 当前活跃会话的上下文占用（后端精确值优先，流式过程中用本地估算值补齐）。
+   */
+  const activeContextUsage = useMemo<SessionContextUsage | undefined>(() => {
+    if (!activeSessionId) {
+      return undefined;
+    }
+    const server = contextUsages[activeSessionId];
+    const live = liveContextTokens[activeSessionId];
+    const streaming = runningSessionId === activeSessionId && busy;
+
+    if (!server && live === undefined) {
+      return undefined;
+    }
+
+    const contextWindow = server?.contextWindow ?? DEFAULT_CONTEXT_WINDOW;
+    const thresholdRatio = server?.thresholdRatio ?? DEFAULT_THRESHOLD_RATIO;
+    const thresholdTokens =
+      server?.thresholdTokens ?? Math.floor(contextWindow * thresholdRatio);
+
+    // 流式过程中：本地估算只统计"前端已渲染的消息"，比后端落库口径略小，
+    // 因此取两者的较大值，避免占用条回退跳动。
+    const usedTokens =
+      streaming && live !== undefined
+        ? Math.max(server?.usedTokens ?? 0, live)
+        : (server?.usedTokens ?? live ?? 0);
+
+    const reasoningCount = streaming
+      ? countReasoningBlocks(activeSession?.messages)
+      : (server?.reasoningCount ?? countReasoningBlocks(activeSession?.messages));
+    const toolCallCount = streaming
+      ? countToolCalls(activeSession?.messages)
+      : (server?.toolCallCount ?? countToolCalls(activeSession?.messages));
+
+    return {
+      usedTokens,
+      contextWindow,
+      usageRatio: contextWindow > 0 ? Math.min(1, usedTokens / contextWindow) : 0,
+      thresholdRatio,
+      thresholdTokens,
+      outputReserveTokens: server?.outputReserveTokens ?? 0,
+      systemPromptTokens: server?.systemPromptTokens ?? 0,
+      toolDefinitionTokens: server?.toolDefinitionTokens ?? 0,
+      conversationTokens: server?.conversationTokens ?? 0,
+      modelDurationMs: server?.modelDurationMs ?? 0,
+      ttftMs: server?.ttftMs ?? 0,
+      tokensPerSecond: server?.tokensPerSecond ?? 0,
+      cacheHitRatio: server?.cacheHitRatio ?? 0,
+      uncachedInputTokens: server?.uncachedInputTokens ?? 0,
+      cachedInputTokens: server?.cachedInputTokens ?? 0,
+      outputTokens: server?.outputTokens ?? 0,
+      modelCalls: server?.modelCalls ?? 0,
+      modelDisplayName: server?.modelDisplayName,
+      messageCount: server?.messageCount ?? 0,
+      reasoningCount,
+      toolCallCount,
+      compactionCount: server?.compactionCount ?? 0,
+      compressedSummaryChars: server?.compressedSummaryChars ?? 0,
+      providerId: server?.providerId,
+      modelId: server?.modelId,
+      nearThreshold: usedTokens >= thresholdTokens,
+    };
+  }, [activeSession, activeSessionId, busy, contextUsages, liveContextTokens, runningSessionId]);
 
   return {
     contextHolder,
@@ -1135,6 +1386,8 @@ export function useAgentConsole(
     apiBase: agentConsoleApi.apiBase,
     selectedModelId,
     selectedProviderId,
+    contextUsage: activeContextUsage,
+    compacting: compactingSessionId === activeSessionId,
     setInput,
     setApprovalComment,
     selectModel,
@@ -1144,6 +1397,8 @@ export function useAgentConsole(
     sendMessage,
     interruptCurrent,
     refreshSessions,
+    refreshContextUsage,
+    compactContext,
     handleApprovalAction,
   };
 }

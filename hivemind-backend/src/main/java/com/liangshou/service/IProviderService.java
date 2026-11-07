@@ -3,6 +3,7 @@ package com.liangshou.service;
 import com.liangshou.common.utils.PageResult;
 import com.liangshou.service.dto.ConnectionTestResult;
 import com.liangshou.service.dto.ProviderDTO;
+import com.liangshou.service.dto.ProviderCatalogDTO;
 import com.liangshou.service.vo.ProviderVO;
 
 import java.util.List;
@@ -96,6 +97,16 @@ public interface IProviderService {
      * @return 初始化后的 Provider 列表
      */
     List<ProviderVO> initializeBuiltIn();
+
+    /**
+     * 获取内置供应商目录（不含 API Key）。
+     *
+     * <p>用于前端快捷配置：选择供应商后自动填入 Base URL 与常用模型，
+     * 用户只需填写自己的 API Key。</p>
+     *
+     * @return 供应商目录条目列表
+     */
+    List<ProviderCatalogDTO> catalog();
 
     /**
      * 测试 Provider 连接

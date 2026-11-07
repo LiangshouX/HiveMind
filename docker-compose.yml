@@ -62,7 +62,7 @@ services:
       - FLOW_EMBEDDING_API_KEY=${FLOW_EMBEDDING_API_KEY:-${FLOW_LLM_API_KEY:-sk-xxx}}
       - FLOW_EMBEDDING_BASE_URL=${FLOW_EMBEDDING_BASE_URL:-https://dashscope.aliyuncs.com/compatible-mode/v1}
       - REME_BACKEND=mcp
-      - MCP_TRANSPORT=sse
+      - MCP_TRANSPORT=streamable-http
       - HTTP_PORT=8002
       - LOG_LEVEL=INFO
     healthcheck:
@@ -94,6 +94,8 @@ services:
       - MONGODB_URI=mongodb://mongodb:27017/hivemind
       # JWT
       - JWT_SECRET=${JWT_SECRET:-HiveMindJwtSecretKey2026ForDockerDeployment}
+      # CORS（部署域名，逗号分隔；同源部署由 Nginx 反代可留空）
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-}
       # LLM Configuration
       - AI_DASHSCOPE_API_KEY=${AI_DASHSCOPE_API_KEY:-}
       - TDAGENT_MODEL_PROVIDER=${TDAGENT_MODEL_PROVIDER:-dashscope}
@@ -102,7 +104,8 @@ services:
       - TDAGENT_MODEL_BASE_URL=${TDAGENT_MODEL_BASE_URL:-https://dashscope.aliyuncs.com}
       # ReMe
       - TDAGENT_REME_BASE_URL=http://reme-server:8002
-      - REME_MCP_SSE_URL=http://reme-server:8002/sse
+      - REME_MCP_TRANSPORT=streamable-http
+      - REME_MCP_URL=http://reme-server:8002/mcp
       - REME_MCP_ENABLED=true
       # Sandbox (disabled in Docker - Docker-in-Docker requires privileged mode)
       - TDAGENT_SANDBOX_ENABLED=false

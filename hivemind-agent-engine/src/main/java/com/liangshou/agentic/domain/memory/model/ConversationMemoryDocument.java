@@ -80,4 +80,11 @@ public class ConversationMemoryDocument {
 
     @Field("summary_updated_at")
     private Instant summaryUpdatedAt;
+
+    /**
+     * 会话上下文统计快照（工具定义开销、耗时、TTFT、TPS 等），
+     * 供前端"上下文面板"展示。
+     */
+    @Field("context_stats")
+    private ConversationContextStats contextStats;
 }

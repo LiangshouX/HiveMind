@@ -25,7 +25,7 @@ public class AgentTaskServiceImpl implements IAgentTaskService {
     public AgentTaskVO getById(String userId, String taskId) {
         AgentTaskPO po = support.lambdaQuery()
                 .eq(AgentTaskPO::getTaskId, taskId)
-                .eq(AgentTaskPO::getUserId, Long.valueOf(userId))
+                .eq(AgentTaskPO::getUserId, userId)
                 .one();
         if (po == null) return null;
         AgentTaskVO vo = new AgentTaskVO();
@@ -36,7 +36,7 @@ public class AgentTaskServiceImpl implements IAgentTaskService {
     @Override
     public PageResult<AgentTaskVO> page(String userId, int current, int size) {
         Page<AgentTaskPO> page = support.lambdaQuery()
-                .eq(AgentTaskPO::getUserId, Long.valueOf(userId))
+                .eq(AgentTaskPO::getUserId, userId)
                 .page(new Page<>(current, size));
         return PageResult.of(
                 page.getTotal(),
@@ -55,7 +55,7 @@ public class AgentTaskServiceImpl implements IAgentTaskService {
     public boolean save(String userId, AgentTaskDTO dto) {
         AgentTaskPO po = new AgentTaskPO();
         po.setTaskId(dto.getTaskId());
-        po.setUserId(Long.valueOf(userId));
+        po.setUserId(userId);
         return support.save(po);
     }
 
@@ -64,7 +64,7 @@ public class AgentTaskServiceImpl implements IAgentTaskService {
     public boolean update(String userId, AgentTaskDTO dto) {
         AgentTaskPO po = support.lambdaQuery()
                 .eq(AgentTaskPO::getTaskId, dto.getTaskId())
-                .eq(AgentTaskPO::getUserId, Long.valueOf(userId))
+                .eq(AgentTaskPO::getUserId, userId)
                 .one();
         if (po == null) {
             throw new BizException(HmeBackendErrorCode.TASK_RECORD_NOT_FOUND_UPDATE);
@@ -78,7 +78,7 @@ public class AgentTaskServiceImpl implements IAgentTaskService {
     public boolean delete(String userId, String taskId) {
         AgentTaskPO po = support.lambdaQuery()
                 .eq(AgentTaskPO::getTaskId, taskId)
-                .eq(AgentTaskPO::getUserId, Long.valueOf(userId))
+                .eq(AgentTaskPO::getUserId, userId)
                 .one();
         if (po == null) {
             throw new BizException(HmeBackendErrorCode.TASK_RECORD_NOT_FOUND_DELETE);

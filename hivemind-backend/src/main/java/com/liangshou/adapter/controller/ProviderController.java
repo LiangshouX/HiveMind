@@ -6,6 +6,7 @@ import com.liangshou.common.HmeBackendErrorCode;
 import com.liangshou.service.IProviderService;
 import com.liangshou.service.dto.ConnectionTestResult;
 import com.liangshou.service.dto.ProviderDTO;
+import com.liangshou.service.dto.ProviderCatalogDTO;
 import com.liangshou.service.vo.ProviderVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -161,5 +162,19 @@ public class ProviderController {
     @PostMapping("/initialize-built-in")
     public Result<List<ProviderVO>> initializeBuiltIn() {
         return Result.success(providerService.initializeBuiltIn());
+    }
+
+    /**
+     * 获取内置供应商目录
+     *
+     * <p>不含 API Key —— 平台不托管密钥，每个用户自行填写自己的 Key。</p>
+     *
+     * @return 供应商目录条目列表
+     */
+    @Operation(summary = "获取供应商目录",
+            description = "获取内置供应商清单（含 Base URL、常用模型与控制台地址），供用户快捷配置")
+    @GetMapping("/catalog")
+    public Result<List<ProviderCatalogDTO>> catalog() {
+        return Result.success(providerService.catalog());
     }
 }

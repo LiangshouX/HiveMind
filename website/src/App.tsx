@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ConfigProvider, App as AntApp } from 'antd';
 import { getHiveMindTheme } from './theme';
@@ -16,36 +16,14 @@ import { ProfilePage } from './pages/ProfilePage';
 import { ChatPage } from './pages/Workspace/ChatPage.tsx';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
 import { AuthProvider } from './providers/AuthProvider';
-import { ThemeProvider } from './providers/ThemeProvider';
+import { ThemeProvider, useTheme } from './providers/ThemeProvider';
 
 const App: React.FC = () => {
-  const [isDark, setIsDark] = useState(true);
-
-  useEffect(() => {
-    // 初始化检查主题 - 这是必要的初始化逻辑，不是级联更新
-    const currentTheme = document.documentElement.getAttribute('data-theme') ||
-                         localStorage.getItem('theme') ||
-                         (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setIsDark(currentTheme === 'dark');
-
-    // 监听 data-theme 属性变化
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        if (mutation.attributeName === 'data-theme') {
-          const newTheme = document.documentElement.getAttribute('data-theme');
-          setIsDark(newTheme === 'dark');
-        }
-      });
-    });
-
-    observer.observe(document.documentElement, { attributes: true });
-
-    return () => observer.disconnect();
-  }, []);
+  // 主题状态统一由 ThemeProvider 持有，避免第二套探测逻辑导致首屏主题闪烁
+  const { isDarkMode } = useTheme();
 
   return (
-    <ConfigProvider theme={getHiveMindTheme(isDark)}>
+    <ConfigProvider theme={getHiveMindTheme(isDarkMode)}>
       <AntApp>
         <BrowserRouter>
           <Routes>

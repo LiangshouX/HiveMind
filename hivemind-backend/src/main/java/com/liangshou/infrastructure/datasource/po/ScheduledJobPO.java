@@ -56,7 +56,7 @@ public class ScheduledJobPO implements Serializable {
 
     @TableField("user_id")
 
-    private Long userId;
+    private String userId;
 
     /**
 

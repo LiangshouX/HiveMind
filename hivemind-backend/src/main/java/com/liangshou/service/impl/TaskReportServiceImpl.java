@@ -25,7 +25,7 @@ public class TaskReportServiceImpl implements ITaskReportService {
     public TaskReportVO getById(String userId, Long id) {
         TaskReportPO po = support.lambdaQuery()
                 .eq(TaskReportPO::getId, id)
-                .eq(TaskReportPO::getUserId, Long.valueOf(userId))
+                .eq(TaskReportPO::getUserId, userId)
                 .one();
         if (po == null) return null;
         TaskReportVO vo = new TaskReportVO();
@@ -36,7 +36,7 @@ public class TaskReportServiceImpl implements ITaskReportService {
     @Override
     public PageResult<TaskReportVO> page(String userId, int current, int size) {
         Page<TaskReportPO> page = support.lambdaQuery()
-                .eq(TaskReportPO::getUserId, Long.valueOf(userId))
+                .eq(TaskReportPO::getUserId, userId)
                 .page(new Page<>(current, size));
         return PageResult.of(
                 page.getTotal(),
@@ -55,7 +55,7 @@ public class TaskReportServiceImpl implements ITaskReportService {
     public boolean save(String userId, TaskReportDTO dto) {
         TaskReportPO po = new TaskReportPO();
         po.setId(dto.getId());
-        po.setUserId(Long.valueOf(userId));
+        po.setUserId(userId);
         return support.save(po);
     }
 
@@ -64,7 +64,7 @@ public class TaskReportServiceImpl implements ITaskReportService {
     public boolean update(String userId, TaskReportDTO dto) {
         TaskReportPO po = support.lambdaQuery()
                 .eq(TaskReportPO::getId, dto.getId())
-                .eq(TaskReportPO::getUserId, Long.valueOf(userId))
+                .eq(TaskReportPO::getUserId, userId)
                 .one();
         if (po == null) {
             throw new BizException(HmeBackendErrorCode.TASK_RECORD_NOT_FOUND_UPDATE);
@@ -78,7 +78,7 @@ public class TaskReportServiceImpl implements ITaskReportService {
     public boolean delete(String userId, Long id) {
         TaskReportPO po = support.lambdaQuery()
                 .eq(TaskReportPO::getId, id)
-                .eq(TaskReportPO::getUserId, Long.valueOf(userId))
+                .eq(TaskReportPO::getUserId, userId)
                 .one();
         if (po == null) {
             throw new BizException(HmeBackendErrorCode.TASK_RECORD_NOT_FOUND_DELETE);

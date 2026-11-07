@@ -409,8 +409,8 @@ const SkillLibrary: React.FC = () => {
   return (
     <div style={{ height: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column', padding: '16px' }}>
       {/* 头部 */}
-      <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
+      <div className="hm-page-head">
+        <div className="hm-page-head-text">
           <Title level={4} style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
             <CloudOutlined />
             云端技能库
@@ -422,9 +422,9 @@ const SkillLibrary: React.FC = () => {
             </Tooltip>
           </Text>
         </div>
-        <Button 
-          type="primary" 
-          icon={<PlusOutlined />} 
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
           onClick={handleCreate}
           size="large"
         >
@@ -433,10 +433,10 @@ const SkillLibrary: React.FC = () => {
       </div>
 
       {/* 技能列表 */}
-      <div style={{ flex: 1, overflowY: 'auto' }}>
+      <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
         {loading ? (
           <div style={{ textAlign: 'center', padding: '100px 0' }}>
-            <Spin size="large" tip="加载中..." />
+            <Spin size="large" description="加载中..." />
           </div>
         ) : skills.length === 0 ? (
           <Empty 
@@ -456,7 +456,7 @@ const SkillLibrary: React.FC = () => {
                   <Card
                     hoverable
                     style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
-                    bodyStyle={{ flex: 1, display: 'flex', flexDirection: 'column', padding: 16 }}
+                    styles={{ body: { flex: 1, display: 'flex', flexDirection: 'column', padding: 16 } }}
                     onClick={() => handleView(skill)}
                     actions={isBuiltin ? [
                       <Tooltip key="toggle" title={skill.enabled ? '禁用' : '启用'}>
@@ -530,16 +530,18 @@ const SkillLibrary: React.FC = () => {
                       </Tooltip>,
                     ]}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-                      <Space>
+                    <div className="hm-card-top" style={{ marginBottom: 12 }}>
+                      <div className="hm-card-head" style={{ flex: '1 1 96px' }}>
                         {isBuiltin ? (
-                          <CrownOutlined style={{ fontSize: 24, color: 'var(--td-highlight)' }} />
+                          <CrownOutlined className="hm-card-icon" style={{ fontSize: 24, color: 'var(--td-highlight)' }} />
                         ) : (
-                          <CloudOutlined style={{ fontSize: 24, color: 'var(--td-info-color)' }} />
+                          <CloudOutlined className="hm-card-icon" style={{ fontSize: 24, color: 'var(--td-info-color)' }} />
                         )}
-                        <Text strong style={{ fontSize: 16 }}>{skill.name}</Text>
-                      </Space>
-                      <Space direction="vertical" size={4} align="end">
+                        <Text strong className="hm-card-title" style={{ fontSize: 16 }} title={skill.name}>
+                          {skill.name}
+                        </Text>
+                      </div>
+                      <div className="hm-card-badges">
                         {isBuiltin && (
                           <Tag color="gold" style={{ fontSize: 11 }}>系统内置</Tag>
                         )}
@@ -548,7 +550,7 @@ const SkillLibrary: React.FC = () => {
                         <Tag color={skill.enabled ? 'green' : 'default'} style={{ fontSize: 11 }}>
                           {skill.enabled ? '已启用' : '已禁用'}
                         </Tag>
-                      </Space>
+                      </div>
                     </div>
 
                     <div style={{ flex: 1, marginBottom: 16 }}>

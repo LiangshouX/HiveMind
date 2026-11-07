@@ -33,7 +33,7 @@ import java.util.stream.Collectors;
  *
  * <p>支持 MCP/HTTP 双模式：</p>
  * <ul>
- *     <li><b>MCP 模式</b>：通过 MCP SSE 协议与 ReMe Docker 容器通信（首选）</li>
+ *     <li><b>MCP 模式</b>：通过 MCP 协议与 ReMe 服务通信（首选，默认 streamable HTTP {@code /mcp}）</li>
  *     <li><b>HTTP 模式</b>：通过 HTTP 直连 ReMe 服务（降级方案）</li>
  * </ul>
  *
@@ -76,19 +76,24 @@ public class TdAgentReMeService {
 
         // 尝试初始化 MCP 客户端
         TdAgentProperties.MCP mcpConfig = properties.getReme().getMcp();
+        String transport = mcpConfig.getTransport();
+        String endpointUrl = resolveEndpointUrl(mcpConfig, transport);
+
         this.mcpReMeClient = new McpReMeClient(
-                mcpConfig.getSse().getUrl(),
+                transport,
+                endpointUrl,
                 properties.getReme().getTimeoutSeconds()
         );
 
-        log.info("ReMe MCP config: enabled={}, sseUrl={}", mcpConfig.isEnabled(), mcpConfig.getSse().getUrl());
+        log.info("ReMe MCP config: enabled={}, transport={}, endpoint={}",
+                mcpConfig.isEnabled(), transport, endpointUrl);
 
         if (mcpConfig.isEnabled()) {
             boolean mcpReady = mcpReMeClient.initialize();
             this.useMcp = mcpReady;
             if (mcpReady) {
                 this.reMeClient = null;
-                log.info("ReMe: using MCP mode ({})", mcpConfig.getSse().getUrl());
+                log.info("ReMe: using MCP mode (transport={}, endpoint={})", transport, endpointUrl);
             } else {
                 log.warn("ReMe: MCP initialization failed, falling back to HTTP mode");
                 this.reMeClient = new ReMeClient(
@@ -105,6 +110,31 @@ public class TdAgentReMeService {
             );
             log.info("ReMe: using HTTP mode ({})", properties.getReme().getBaseUrl());
         }
+    }
+
+    /**
+     * 根据传输方式解析 MCP 端点 URL。
+     *
+     * <p>ReMe 0.4.2.x 使用 streamable HTTP（{@code /mcp}），旧版使用 SSE（{@code /sse}）。
+     * 当所选传输方式的 URL 未显式配置时，回退到 ReMe base-url 拼接默认路径。</p>
+     *
+     * @param mcpConfig MCP 配置
+     * @param transport 传输方式
+     * @return MCP 端点 URL
+     */
+    private String resolveEndpointUrl(TdAgentProperties.MCP mcpConfig, String transport) {
+        if (McpReMeClient.TRANSPORT_SSE.equals(transport)) {
+            String sseUrl = mcpConfig.getSse() == null ? null : mcpConfig.getSse().getUrl();
+            if (sseUrl != null && !sseUrl.isBlank()) {
+                return sseUrl;
+            }
+            return properties.getReme().getBaseUrl() + "/sse";
+        }
+        String httpUrl = mcpConfig.getStreamableHttp() == null ? null : mcpConfig.getStreamableHttp().getUrl();
+        if (httpUrl != null && !httpUrl.isBlank()) {
+            return httpUrl;
+        }
+        return properties.getReme().getBaseUrl() + "/mcp";
     }
 
     /**

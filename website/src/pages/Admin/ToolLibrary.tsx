@@ -27,7 +27,6 @@ interface ToolConfig {
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
-const { Panel } = Collapse;
 
 const riskLevelColors: Record<string, string> = {
   LOW: 'green',
@@ -272,8 +271,8 @@ const ToolLibrary: React.FC = () => {
     <div style={{ height: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column' }}>
       {/* 顶部操作栏 */}
       <div style={{ marginBottom: 16 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <div>
+        <div className="hm-page-head" style={{ marginBottom: 12 }}>
+          <div className="hm-page-head-text">
             <Title level={4} style={{ margin: 0 }}>工具库</Title>
             <Text type="secondary">
               管理智能体可用工具、风险等级和启用状态。禁用的工具将不会提供给智能体使用。
@@ -317,10 +316,10 @@ const ToolLibrary: React.FC = () => {
       <div style={{ flex: 1, display: 'flex', gap: 16, overflow: 'hidden' }}>
 
         {/* 左侧：工具卡片列表 */}
-        <div style={{ flex: 1, overflowY: 'auto' }}>
+        <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
           {loading ? (
             <div style={{ textAlign: 'center', padding: '40px 0' }}>
-              <Spin tip="加载中..." />
+              <Spin description="加载中..." />
             </div>
           ) : filteredTools.length === 0 ? (
             <Empty description="暂无工具" />
@@ -336,17 +335,19 @@ const ToolLibrary: React.FC = () => {
                       flexDirection: 'column',
                       opacity: tool.enabled ? 1 : 0.6
                     }}
-                    bodyStyle={{ flex: 1, display: 'flex', flexDirection: 'column' }}
+                    styles={{ body: { flex: 1, display: 'flex', flexDirection: 'column' } }}
                   >
                     {/* 工具名称和状态 */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-                      <Text strong style={{ fontSize: 14, flex: 1 }}>{tool.toolName}</Text>
-                      <Space>
+                    <div className="hm-card-top" style={{ marginBottom: 12 }}>
+                      <Text strong className="hm-card-title" style={{ fontSize: 14 }} title={tool.toolName}>
+                        {tool.toolName}
+                      </Text>
+                      <div className="hm-card-badges">
                         <Badge
                           status={tool.enabled ? 'success' : 'default'}
                           text={tool.enabled ? '已启用' : '已禁用'}
                         />
-                      </Space>
+                      </div>
                     </div>
 
                     {/* 风险等级 + 分类 + 沙箱状态 */}
@@ -380,28 +381,36 @@ const ToolLibrary: React.FC = () => {
                     {tool.examples && tool.examples.length > 0 && (
                       <Collapse
                         size="small"
+                        className="hm-tool-example-collapse"
                         style={{ marginBottom: 12, background: 'transparent' }}
-                      >
-                        <Panel header="使用示例" key="examples">
-                          {tool.examples.slice(0, 2).map((ex, idx) => (
-                            <div key={idx} style={{ marginBottom: 8 }}>
-                              <Text strong>{ex.title}</Text>
-                              <pre style={{
-                                background: 'var(--td-code-bg)',
-                                padding: '4px 8px',
-                                borderRadius: 4,
-                                fontSize: 12,
-                                overflow: 'auto',
-                                maxHeight: 60,
-                                color: 'var(--td-code-text)',
-                                border: '1px solid var(--td-code-border)'
-                              }}>
-                                {ex.input}
-                              </pre>
-                            </div>
-                          ))}
-                        </Panel>
-                      </Collapse>
+                        items={[
+                          {
+                            key: 'examples',
+                            label: '使用示例',
+                            children: (
+                              <>
+                                {tool.examples.slice(0, 2).map((ex, idx) => (
+                                  <div key={idx} style={{ marginBottom: 8 }}>
+                                    <Text strong>{ex.title}</Text>
+                                    <pre style={{
+                                      background: 'var(--td-code-bg)',
+                                      padding: '4px 8px',
+                                      borderRadius: 4,
+                                      fontSize: 12,
+                                      overflow: 'auto',
+                                      maxHeight: 60,
+                                      color: 'var(--td-code-text)',
+                                      border: '1px solid var(--td-code-border)'
+                                    }}>
+                                      {ex.input}
+                                    </pre>
+                                  </div>
+                                ))}
+                              </>
+                            ),
+                          },
+                        ]}
+                      />
                     )}
 
                     {/* 控制区 */}
@@ -414,13 +423,13 @@ const ToolLibrary: React.FC = () => {
                       gap: 8
                     }}>
                       {/* 风险等级选择 */}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Text style={{ fontSize: 12 }}>风险等级:</Text>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                        <Text style={{ fontSize: 12, whiteSpace: 'nowrap', flexShrink: 0 }}>风险等级:</Text>
                         <Select
                           value={tool.riskLevel}
                           onChange={val => handleRiskChange(tool.toolName, val)}
                           size="small"
-                          style={{ width: 120 }}
+                          style={{ width: 120, flexShrink: 0 }}
                         >
                           <Option value="LOW">低风险</Option>
                           <Option value="MEDIUM">中风险</Option>
@@ -430,8 +439,8 @@ const ToolLibrary: React.FC = () => {
                       </div>
 
                       {/* 审批开关 */}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Text style={{ fontSize: 12 }}>需要审批:</Text>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                        <Text style={{ fontSize: 12, whiteSpace: 'nowrap', flexShrink: 0 }}>需要审批:</Text>
                         <Switch
                           checked={tool.approvalRequired}
                           onChange={val => toggleApproval(tool.toolName, val)}
@@ -440,8 +449,8 @@ const ToolLibrary: React.FC = () => {
                       </div>
 
                       {/* 启用开关 */}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Text style={{ fontSize: 12 }}>启用工具:</Text>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                        <Text style={{ fontSize: 12, whiteSpace: 'nowrap', flexShrink: 0 }}>启用工具:</Text>
                         <Switch
                           checked={tool.enabled}
                           onChange={val => toggleEnable(tool.toolName, val)}

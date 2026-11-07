@@ -1,7 +1,7 @@
 @echo off
 REM ReMe MCP Server Startup Script (Windows)
 REM Usage: scripts\start_mcp.bat [transport] [log_level]
-REM Example: scripts\start_mcp.bat sse INFO
+REM Example: scripts\start_mcp.bat streamable-http INFO
 
 REM Set console to UTF-8 encoding to support Unicode characters
 chcp 65001 >nul
@@ -14,8 +14,9 @@ set "PROJECT_ROOT=%SCRIPT_DIR%.."
 set "ENV_FILE=%PROJECT_ROOT%\.env"
 
 REM Default parameters
+REM ReMe 0.4.2.x 默认在 /mcp 挂载 streamable HTTP MCP（新版 MCP 标准）
 set "MCP_TRANSPORT=%~1"
-if "%MCP_TRANSPORT%"=="" set "MCP_TRANSPORT=sse"
+if "%MCP_TRANSPORT%"=="" set "MCP_TRANSPORT=streamable-http"
 
 set "LOG_LEVEL=%~2"
 if "%LOG_LEVEL%"=="" set "LOG_LEVEL=INFO"

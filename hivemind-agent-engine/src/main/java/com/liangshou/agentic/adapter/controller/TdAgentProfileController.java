@@ -6,6 +6,7 @@ import com.liangshou.agentic.common.exceptions.HmeErrorCode;
 import com.liangshou.agentic.application.dto.BatchUpdateRequest;
 import com.liangshou.agentic.application.dto.ProfileListResponse;
 import com.liangshou.agentic.application.dto.ProfileUpdateRequest;
+import com.liangshou.agentic.common.utils.Result;
 import com.liangshou.agentic.domain.profile.model.AgentProfileDocument;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -20,6 +21,7 @@ import java.security.Principal;
 import java.text.DecimalFormat;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -65,7 +67,7 @@ public class TdAgentProfileController {
      * @return Profile 列表
      */
     @GetMapping
-    public ResponseEntity<List<ProfileListResponse>> listProfiles(Principal principal) {
+    public Result<List<ProfileListResponse>> listProfiles(Principal principal) {
         String userId = currentUserId(principal);
         log.debug("[Profile 列表] 获取用户 Profile 列表 - userId: {}", userId);
 
@@ -75,7 +77,7 @@ public class TdAgentProfileController {
                 .map(this::toProfileListResponse)
                 .collect(Collectors.toList());
 
-        return ResponseEntity.ok(response);
+        return Result.success(response);
     }
 
     /**
@@ -86,15 +88,15 @@ public class TdAgentProfileController {
      * @return Profile 文件
      */
     @GetMapping("/{filename}")
-    public ResponseEntity<ProfileListResponse> getProfile(
+    public Result<ProfileListResponse> getProfile(
             Principal principal,
             @PathVariable String filename) {
         String userId = currentUserId(principal);
         log.debug("[Profile 获取] 获取单个 Profile - userId: {}, filename: {}", userId, filename);
 
         return profileService.getProfile(userId, filename)
-                .map(profile -> ResponseEntity.ok(toProfileListResponse(profile)))
-                .orElse(ResponseEntity.notFound().build());
+                .map(profile -> Result.success(toProfileListResponse(profile)))
+                .orElseThrow(() -> new BizException(HmeErrorCode.PARAM_ERROR, "Profile 不存在: " + filename));
     }
 
     /**
@@ -106,7 +108,7 @@ public class TdAgentProfileController {
      * @return 更新结果
      */
     @PutMapping("/{filename}")
-    public ResponseEntity<ProfileListResponse> updateProfile(
+    public Result<ProfileListResponse> updateProfile(
             Principal principal,
             @PathVariable String filename,
             @Valid @RequestBody ProfileUpdateRequest request) {
@@ -116,7 +118,7 @@ public class TdAgentProfileController {
         if (!filename.equals(request.getFilename())) {
             log.warn("[Profile 更新] 路径参数和请求体中的 filename 不一致 - path: {}, body: {}",
                     filename, request.getFilename());
-            return ResponseEntity.badRequest().build();
+            throw new BizException(HmeErrorCode.PARAM_ERROR, "filename 与请求体不一致");
         }
 
         log.info("[Profile 更新] 更新 Profile - userId: {}, filename: {}", userId, filename);
@@ -124,11 +126,11 @@ public class TdAgentProfileController {
         try {
             AgentProfileDocument updated = profileService.updateProfile(
                     userId, filename, request.getContent(), request.isEnabled());
-            return ResponseEntity.ok(toProfileListResponse(updated));
+            return Result.success(toProfileListResponse(updated));
         } catch (IllegalArgumentException e) {
             log.warn("[Profile 更新] 参数校验失败 - userId: {}, filename: {}, error: {}",
                     userId, filename, e.getMessage());
-            return ResponseEntity.badRequest().build();
+            throw new BizException(HmeErrorCode.PARAM_ERROR, e.getMessage());
         }
     }
 
@@ -140,7 +142,7 @@ public class TdAgentProfileController {
      * @return 更新结果
      */
     @PutMapping("/batch")
-    public ResponseEntity<?> batchUpdateProfiles(
+    public Result<Map<String, Object>> batchUpdateProfiles(
             Principal principal,
             @Valid @RequestBody BatchUpdateRequest request) {
         String userId = currentUserId(principal);
@@ -159,13 +161,13 @@ public class TdAgentProfileController {
 
             int updatedCount = profileService.batchUpdateProfiles(userId, filenames, contents, enabled);
 
-            return ResponseEntity.ok(java.util.Map.of(
+            return Result.success(java.util.Map.of(
                     "updatedCount", updatedCount,
                     "updatedAt", Instant.now().toString()
             ));
         } catch (Exception e) {
             log.error("[Profile 批量更新] 批量更新失败 - userId: {}, error: {}", userId, e.getMessage(), e);
-            return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
+            throw new BizException(HmeErrorCode.PARAM_ERROR, e.getMessage());
         }
     }
 
@@ -177,7 +179,7 @@ public class TdAgentProfileController {
      * @return 重置结果
      */
     @PostMapping("/{filename}/reset")
-    public ResponseEntity<ProfileListResponse> resetProfile(
+    public Result<ProfileListResponse> resetProfile(
             Principal principal,
             @PathVariable String filename) {
         String userId = currentUserId(principal);
@@ -185,11 +187,11 @@ public class TdAgentProfileController {
 
         try {
             AgentProfileDocument reset = profileService.resetProfile(userId, filename);
-            return ResponseEntity.ok(toProfileListResponse(reset));
+            return Result.success(toProfileListResponse(reset));
         } catch (IllegalArgumentException e) {
             log.warn("[Profile 重置] 默认文件不存在 - userId: {}, filename: {}, error: {}",
                     userId, filename, e.getMessage());
-            return ResponseEntity.notFound().build();
+            throw new BizException(HmeErrorCode.PARAM_ERROR, e.getMessage());
         }
     }
 
@@ -228,7 +230,7 @@ public class TdAgentProfileController {
      * @return 上传结果
      */
     @PostMapping("/{filename}/upload")
-    public ResponseEntity<ProfileListResponse> uploadProfile(
+    public Result<ProfileListResponse> uploadProfile(
             Principal principal,
             @PathVariable String filename,
             @RequestParam("file") MultipartFile file) {
@@ -238,11 +240,11 @@ public class TdAgentProfileController {
         try {
             String content = new String(file.getBytes(), java.nio.charset.StandardCharsets.UTF_8);
             AgentProfileDocument updated = profileService.updateProfile(userId, filename, content, true);
-            return ResponseEntity.ok(toProfileListResponse(updated));
+            return Result.success(toProfileListResponse(updated));
         } catch (Exception e) {
             log.error("[Profile 上传] 上传失败 - userId: {}, filename: {}, error: {}",
                     userId, filename, e.getMessage(), e);
-            return ResponseEntity.badRequest().build();
+            throw new BizException(HmeErrorCode.PARAM_ERROR, e.getMessage());
         }
     }
 

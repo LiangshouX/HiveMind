@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS `sys_user` (
 -- 1. AI Agent通讯渠
 CREATE TABLE IF NOT EXISTS `sys_channels` (
   `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `user_id` BIGINT UNSIGNED NOT NULL COMMENT '登录的用户ID',
+  `user_id` VARCHAR(64) NOT NULL COMMENT '登录的用户ID（业务用户标识，与 sys_user.user_id 对齐）',
   `channel_name` VARCHAR(64) NOT NULL COMMENT '渠道名',
   `is_active` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否启用: 0-否, 1-是',
   `bot_prefix` VARCHAR(32) DEFAULT '@bot' COMMENT '机器人前缀',
@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS `sys_channels` (
 CREATE TABLE IF NOT EXISTS `agent_tasks` (
   `task_id` VARCHAR(64) NOT NULL COMMENT '任务ID, 如 JJC-20260228-E2E',
   `session_id` VARCHAR(64) DEFAULT NULL COMMENT '任务对应的session_id',
-  `user_id` BIGINT UNSIGNED NOT NULL COMMENT '登录的用户ID',
+  `user_id` VARCHAR(64) NOT NULL COMMENT '登录的用户ID（业务用户标识，与 sys_user.user_id 对齐）',
   `title` VARCHAR(255) DEFAULT NULL COMMENT '任务标题',
   `official_id` BIGINT UNSIGNED DEFAULT NULL COMMENT '当前负责Agent ID',
   `state` VARCHAR(32) NOT NULL DEFAULT 'PENDING' COMMENT '当前状态: PENDING/AGENT_TRIAGE/AGENT_PLANNER/AGENT_REVIEWER/ASSIGNED/DOING/PREVIEW/DONE/FINISH',
@@ -74,7 +74,7 @@ CREATE TABLE IF NOT EXISTS `agent_tasks` (
 -- 3. 任务报告/审批表
 CREATE TABLE IF NOT EXISTS `task_reports` (
   `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `user_id` BIGINT UNSIGNED NOT NULL COMMENT '任务所属的用户ID',
+  `user_id` VARCHAR(64) NOT NULL COMMENT '任务所属的用户ID（业务用户标识）',
   `task_id` VARCHAR(64) NOT NULL COMMENT '任务ID, 对应 agent_tasks 的任务id',
   `task_title` VARCHAR(255) DEFAULT NULL COMMENT '任务标题',
   `task_content` TEXT NOT NULL COMMENT '任务指令内容',
@@ -92,7 +92,7 @@ CREATE TABLE IF NOT EXISTS `scheduled_job` (
   `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `job_id` VARCHAR(64) NOT NULL COMMENT '任务ID',
   `job_name` VARCHAR(128) NOT NULL COMMENT '任务名称',
-  `user_id` BIGINT UNSIGNED NOT NULL COMMENT '任务所属的用户ID',
+  `user_id` VARCHAR(64) NOT NULL COMMENT '任务所属的用户ID（业务用户标识）',
   `is_activated` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否开启: 0-否, 1-是',
   `cron_config` VARCHAR(64) DEFAULT '0 8 * * *' COMMENT '定时任务cron表达式',
   `time_zone` VARCHAR(32) DEFAULT 'Asia/Shanghai' COMMENT '时区',
@@ -110,7 +110,7 @@ CREATE TABLE IF NOT EXISTS `scheduled_job` (
 -- 5. 定时任务执行记录
 CREATE TABLE IF NOT EXISTS `scheduled_job_run_record` (
   `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `user_id` BIGINT UNSIGNED NOT NULL COMMENT '任务所属的用户ID',
+  `user_id` VARCHAR(64) NOT NULL COMMENT '任务所属的用户ID（业务用户标识）',
   `job_id` VARCHAR(64) NOT NULL COMMENT '任务ID',
   `job_start_time` DATETIME NOT NULL COMMENT '任务开始执行时间',
   `job_finish_time` DATETIME DEFAULT NULL COMMENT '任务执行结束时间',
@@ -149,7 +149,7 @@ CREATE TABLE IF NOT EXISTS `sys_models` (
 -- 2. MCP配置表
 CREATE TABLE IF NOT EXISTS `sys_mcp` (
   `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `user_id` BIGINT UNSIGNED NOT NULL COMMENT '任务所属的用户ID',
+  `user_id` VARCHAR(64) NOT NULL COMMENT '任务所属的用户ID（业务用户标识）',
   `mcp_server` VARCHAR(128) NOT NULL COMMENT 'MCP Server',
   `mcp_server_type` VARCHAR(32) NOT NULL DEFAULT 'SYSTEM' COMMENT 'MCP类型: SYSTEM/CUSTOM',
   `mcp_tool` VARCHAR(128) DEFAULT NULL COMMENT 'MCP Server下对应的具体工具',

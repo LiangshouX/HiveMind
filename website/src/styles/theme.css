@@ -1,74 +1,110 @@
+/* ==========================================================================
+   HiveMind 主题变量层
+   --------------------------------------------------------------------------
+   约定：
+   1. 所有颜色必须来自本文件的语义变量，禁止在组件里写死十六进制色值；
+   2. 明暗两套取值都要保证可读性：
+      正文（--td-text-base / --td-text-secondary）≥ 4.5:1
+      次要文本（--td-text-tertiary）≥ 3:1
+      大标题 / 强调色（--td-highlight）≥ 3:1
+   3. 与 antd 主题（src/theme.ts）保持同一套品牌色：绯红主色 + 琉璃黄强调色。
+   ========================================================================== */
+
 :root, [data-theme="light"] {
-  /* 明亮主题 (Light Theme) */
-  /* 主色 (Primary) - 降低饱和度，提升明度，避免刺眼 */
-  --td-primary: #a3222e; /* 绯红 HSL(354, 65%, 39%) */
+  /* ---- 主色 (Primary) : 绯红 ---- */
+  --td-primary: #a3222e;
   --td-primary-hover: #851a24;
   --td-primary-active: #66141c;
   --td-primary-bg: rgba(163, 34, 46, 0.08);
+  --td-primary-text: #a3222e;
 
-  /* 功能色 (Functional / Highlight) */
-  --td-highlight: #b8912d; /* 琉璃黄 HSL(43, 61%, 45%) */
-  --td-highlight-hover: #997824;
-  --td-highlight-bg: rgba(184, 145, 45, 0.1);
+  /* ---- 强调色 (Highlight) : 琉璃黄 ---- */
+  /* 亮色底上必须用深一档的黄，否则金黄压白底读不清 */
+  --td-highlight: #8a6d18;
+  --td-highlight-hover: #6f5711;
+  --td-highlight-bg: rgba(184, 145, 45, 0.12);
+  /* 品牌渐变：两端都足够深，保证叠加白色文字可读 */
+  --td-brand-gradient: linear-gradient(135deg, #a3222e 0%, #8a6d18 100%);
 
-  /* 中性色 / 背景 (Neutral / Background) - 提升整体明度，区分层级 */
-  --td-bg-base: #f0f2f5; /* 整体背景 */
-  --td-bg-container: #ffffff; /* 卡片/容器背景 */
-  --td-bg-elevated: #ffffff; /* 悬浮/弹窗背景 */
-  --td-bg-transparent: rgba(255, 255, 255, 0.85);
+  /* ---- 背景层级 ---- */
+  --td-bg-base: #f0f2f5;          /* 页面底色 */
+  --td-bg-container: #ffffff;     /* 卡片 / 容器 */
+  --td-bg-elevated: #ffffff;      /* 悬浮层 / 弹层 */
+  --td-bg-overlay: #ffffff;       /* Popover / Drawer */
+  --td-surface-nested: #fafafa;   /* 嵌套表面（卡片内的小块） */
+  --td-surface-sunken: #f5f6f8;   /* 下沉表面（代码块、表头） */
+  --td-bg-transparent: rgba(255, 255, 255, 0.9);
+  --td-chat-panel-bg: rgba(255, 255, 255, 0.85);
+  --td-header-bg: rgba(240, 242, 245, 0.92);
+  --td-sider-bg: #ffffff;
 
-  /* 文本 (Text) - 确保高对比度 */
-  --td-text-base: #1f2024; /* 对比度 > 7:1 */
-  --td-text-secondary: #5c5f66; /* 对比度 > 4.5:1 */
-  --td-text-tertiary: #8a8d93;
-  --td-text-inverse: #ffffff; /* 反色文本 */
-  
-  /* 边框 (Border) */
-  --td-border-color: rgba(184, 145, 45, 0.3);
-  --td-border-light: rgba(184, 145, 45, 0.15);
+  /* ---- 文本层级 ---- */
+  --td-text-base: #1f2024;        /* 正文，≥ 7:1 */
+  --td-text-secondary: #52555c;  /* 次要正文，≥ 7:1 */
+  --td-text-tertiary: #6e7178;   /* 辅助说明，≥ 4.6:1 */
+  --td-text-quaternary: #9a9da3; /* 装饰性占位 */
+  --td-text-placeholder: #9a9da3;
+  --td-text-disabled: #b4b7bc;
+  --td-text-heading: #8a6d18;     /* 标题强调色，≥ 5.3:1 */
+  --td-text-inverse: #ffffff;
 
-  /* 阴影 (Shadow) */
-  --td-shadow-base: 0 4px 12px rgba(0, 0, 0, 0.05);
-  --td-shadow-elevated: 0 8px 24px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(184, 145, 45, 0.15);
+  /* ---- 边框 ---- */
+  --td-border-color: rgba(184, 145, 45, 0.34);
+  --td-border-light: rgba(184, 145, 45, 0.18);
+  --td-divider: rgba(31, 32, 36, 0.1);
+
+  /* ---- 阴影 ---- */
+  --td-shadow-base: 0 4px 12px rgba(0, 0, 0, 0.06);
+  --td-shadow-elevated: 0 8px 24px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(184, 145, 45, 0.15);
   --td-shadow-primary: 0 4px 12px rgba(163, 34, 46, 0.2);
 
-  /* 杂项 (Misc) */
-  --td-scrollbar-track: #f0f2f5;
-  --td-scrollbar-thumb: #c0c0c0;
-  --td-scrollbar-thumb-hover: #b8912d;
-  --td-pattern-color: rgba(184, 145, 45, 0.05);
-  
-  /* 交互反馈 (Interactive) - >15% 明度差异 */
-  --td-item-hover-bg: rgba(184, 145, 45, 0.08);
+  /* ---- 交互反馈 ---- */
+  --td-item-hover-bg: rgba(184, 145, 45, 0.1);
   --td-item-selected-bg: rgba(163, 34, 46, 0.1);
   --td-input-bg: #ffffff;
-  
+
+  /* ---- 语义色 ---- */
+  --td-success-color: #389e0d;
+  --td-success-bg: rgba(56, 158, 13, 0.1);
+  --td-warning-color: #b87a00;
+  --td-warning-bg: rgba(184, 122, 0, 0.1);
+  --td-danger-color: #cf1322;
+  --td-danger-bg: rgba(207, 19, 34, 0.08);
+  --td-info-color: #8a6d18;
+  --td-info-bg: rgba(184, 145, 45, 0.12);
+
+  /* ---- 中间过程气泡色调 ---- */
+  --td-tone-reasoning: #7c3aed;
+  --td-tone-reasoning-bg: rgba(124, 58, 237, 0.08);
+  --td-tone-tool: #2563eb;
+  --td-tone-tool-bg: rgba(37, 99, 235, 0.08);
+  --td-tone-approval: #b45309;
+  --td-tone-approval-bg: rgba(180, 83, 9, 0.09);
+  --td-tone-error: #dc2626;
+  --td-tone-error-bg: rgba(220, 38, 38, 0.08);
+  --td-tone-result: #047857;
+  --td-tone-result-bg: rgba(4, 120, 87, 0.08);
+
+  /* ---- 消息气泡 ---- */
   --td-msg-user-bg: linear-gradient(135deg, #a3222e 0%, #851a24 100%);
   --td-msg-user-text: #ffffff;
   --td-msg-ai-bg: #ffffff;
   --td-msg-ai-border: rgba(184, 145, 45, 0.3);
-  --td-chat-panel-bg: rgba(255, 255, 255, 0.8);
-  --td-header-bg: rgba(240, 242, 245, 0.85);
-  --td-sider-bg: #ffffff;
 
-  /* 代码预览 (Code Preview) */
-  --td-code-bg: #f5f5f5;
-  --td-code-border: #d9d9d9;
+  /* ---- 代码预览 ---- */
+  --td-code-bg: #f5f6f8;
+  --td-code-border: #d9dce1;
   --td-code-text: #24292f;
   --td-code-block-bg: #1e1e1e;
   --td-code-block-text: #d4d4d4;
 
-  /* 统计卡片 (Stat Cards) - 低饱和度背景 */
+  /* ---- 统计卡片 ---- */
   --td-stat-green-bg: #f6ffed;
   --td-stat-yellow-bg: #fffbe6;
   --td-stat-blue-bg: #e6f7ff;
   --td-stat-purple-bg: #f9f0ff;
 
-  /* 语义色 (Semantic Colors) */
-  --td-success-color: #52c41a;
-  --td-info-color: #1890ff;
-
-  /* 元数据卡片 (Metadata / FrontMatter) */
+  /* ---- 元数据卡片 ---- */
   --td-metadata-bg: linear-gradient(135deg, #f6f8fa 0%, #eef1f4 100%);
   --td-metadata-border: #d0d7de;
   --td-metadata-item-bg: #ffffff;
@@ -77,95 +113,123 @@
   --td-metadata-heading: #57606a;
   --td-metadata-accent: #0969da;
 
-  /* 嵌套表面 (Nested Surface) */
-  --td-surface-nested: #fafafa;
+  /* ---- 滚动条 / 纹理 ---- */
+  --td-scrollbar-track: #f0f2f5;
+  --td-scrollbar-thumb: #c0c0c0;
+  --td-scrollbar-thumb-hover: #8a6d18;
+  --td-pattern-color: rgba(184, 145, 45, 0.05);
 
-  /* 字体 */
+  /* ---- 字体 ---- */
   --td-font-mono: "Fira Code", "JetBrains Mono", source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
 }
 
 [data-theme="dark"] {
-  /* 暗黑主题 (Dark Theme) */
-  /* 主色 (Primary) - 稍微降低饱和度以避免在暗背景上过于刺眼 */
-  --td-primary: #b32934; /* 绯红 HSL(355, 63%, 43%) */
+  /* ---- 主色 (Primary) : 绯红 ---- */
+  --td-primary: #b32934;
   --td-primary-hover: #d1323f;
   --td-primary-active: #8f212a;
-  --td-primary-bg: rgba(179, 41, 52, 0.15);
+  --td-primary-bg: rgba(179, 41, 52, 0.16);
+  --td-primary-text: #e06872;
 
-  /* 功能色 (Functional / Highlight) */
-  --td-highlight: #c7a434; /* 琉璃黄 HSL(43, 59%, 49%) */
+  /* ---- 强调色 (Highlight) : 琉璃黄 ---- */
+  --td-highlight: #c7a434;
   --td-highlight-hover: #e0bb3f;
-  --td-highlight-bg: rgba(199, 164, 52, 0.1);
+  --td-highlight-bg: rgba(199, 164, 52, 0.12);
+  --td-brand-gradient: linear-gradient(135deg, #b32934 0%, #8a6d18 100%);
 
-  /* 中性色 / 背景 (Neutral / Background) - 提升暗部明度 5-10% */
-  --td-bg-base: #16171a; /* 整体背景 HSL(225, 8%, 9%) */
-  --td-bg-container: #1e1f24; /* 卡片背景 HSL(225, 9%, 13%) */
-  --td-bg-elevated: #282a30; /* 悬浮背景 HSL(225, 9%, 17%) */
-  --td-bg-transparent: rgba(22, 23, 26, 0.85);
+  /* ---- 背景层级 ---- */
+  --td-bg-base: #16171a;
+  --td-bg-container: #1e1f24;
+  --td-bg-elevated: #282a30;
+  --td-bg-overlay: #282a30;
+  --td-surface-nested: #232429;
+  --td-surface-sunken: #1a1b1f;
+  --td-bg-transparent: rgba(22, 23, 26, 0.9);
+  --td-chat-panel-bg: rgba(30, 31, 36, 0.7);
+  --td-header-bg: rgba(22, 23, 26, 0.88);
+  --td-sider-bg: #16171a;
 
-  /* 文本 (Text) */
-  --td-text-base: #ececec; /* 对比度 > 7:1 */
-  --td-text-secondary: #a8aab0; /* 对比度 > 4.5:1 */
-  --td-text-tertiary: #75777d;
+  /* ---- 文本层级 ---- */
+  --td-text-base: #ececec;
+  --td-text-secondary: #b6b8be;
+  --td-text-tertiary: #93959c;
+  --td-text-quaternary: #7a7c83;
+  --td-text-placeholder: #707279;
+  --td-text-disabled: #55575d;
+  --td-text-heading: #c7a434;
   --td-text-inverse: #16171a;
-  
-  /* 边框 (Border) */
-  --td-border-color: rgba(199, 164, 52, 0.2);
-  --td-border-light: rgba(199, 164, 52, 0.08);
 
-  /* 阴影 (Shadow) */
-  --td-shadow-base: 0 4px 12px rgba(0, 0, 0, 0.3);
-  --td-shadow-elevated: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(199, 164, 52, 0.15);
-  --td-shadow-primary: 0 4px 12px rgba(179, 41, 52, 0.3);
+  /* ---- 边框 ---- */
+  --td-border-color: rgba(199, 164, 52, 0.24);
+  --td-border-light: rgba(199, 164, 52, 0.12);
+  --td-divider: rgba(255, 255, 255, 0.1);
 
-  /* 杂项 (Misc) */
-  --td-scrollbar-track: #1e1f24;
-  --td-scrollbar-thumb: #444752;
-  --td-scrollbar-thumb-hover: #c7a434;
-  --td-pattern-color: rgba(199, 164, 52, 0.03);
-  
-  /* 交互反馈 (Interactive) */
-  --td-item-hover-bg: rgba(199, 164, 52, 0.08);
-  --td-item-selected-bg: rgba(179, 41, 52, 0.15);
-  --td-input-bg: #16171a;
-  
+  /* ---- 阴影 ---- */
+  --td-shadow-base: 0 4px 12px rgba(0, 0, 0, 0.35);
+  --td-shadow-elevated: 0 8px 32px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(199, 164, 52, 0.15);
+  --td-shadow-primary: 0 4px 12px rgba(179, 41, 52, 0.35);
+
+  /* ---- 交互反馈 ---- */
+  --td-item-hover-bg: rgba(199, 164, 52, 0.1);
+  --td-item-selected-bg: rgba(179, 41, 52, 0.18);
+  --td-input-bg: #1e1f24;
+
+  /* ---- 语义色 ---- */
+  --td-success-color: #5cb52a;
+  --td-success-bg: rgba(92, 181, 42, 0.14);
+  --td-warning-color: #d4a017;
+  --td-warning-bg: rgba(212, 160, 23, 0.14);
+  --td-danger-color: #e05252;
+  --td-danger-bg: rgba(224, 82, 82, 0.14);
+  --td-info-color: #c7a434;
+  --td-info-bg: rgba(199, 164, 52, 0.12);
+
+  /* ---- 中间过程气泡色调 ---- */
+  --td-tone-reasoning: #a78bfa;
+  --td-tone-reasoning-bg: rgba(167, 139, 250, 0.1);
+  --td-tone-tool: #60a5fa;
+  --td-tone-tool-bg: rgba(96, 165, 250, 0.1);
+  --td-tone-approval: #fbbf24;
+  --td-tone-approval-bg: rgba(251, 191, 36, 0.1);
+  --td-tone-error: #f87171;
+  --td-tone-error-bg: rgba(248, 113, 113, 0.1);
+  --td-tone-result: #34d399;
+  --td-tone-result-bg: rgba(52, 211, 153, 0.1);
+
+  /* ---- 消息气泡 ---- */
   --td-msg-user-bg: linear-gradient(135deg, #8f212a 0%, #6b1820 100%);
   --td-msg-user-text: #ffffff;
   --td-msg-ai-bg: rgba(40, 42, 48, 0.8);
   --td-msg-ai-border: rgba(199, 164, 52, 0.2);
-  --td-chat-panel-bg: rgba(30, 31, 36, 0.6);
-  --td-header-bg: rgba(22, 23, 26, 0.8);
-  --td-sider-bg: #16171a;
 
-  /* 代码预览 (Code Preview) */
-  --td-code-bg: #282a30;
+  /* ---- 代码预览 ---- */
+  --td-code-bg: #232429;
   --td-code-border: #3a3d45;
   --td-code-text: #e0e0e0;
   --td-code-block-bg: #0d1117;
   --td-code-block-text: #c9d1d9;
 
-  /* 统计卡片 (Stat Cards) - 低饱和度暗色背景 */
-  --td-stat-green-bg: rgba(82, 196, 26, 0.08);
-  --td-stat-yellow-bg: rgba(250, 173, 20, 0.08);
-  --td-stat-blue-bg: rgba(24, 144, 255, 0.08);
-  --td-stat-purple-bg: rgba(114, 46, 209, 0.08);
+  /* ---- 统计卡片 ---- */
+  --td-stat-green-bg: rgba(82, 196, 26, 0.1);
+  --td-stat-yellow-bg: rgba(250, 173, 20, 0.1);
+  --td-stat-blue-bg: rgba(24, 144, 255, 0.1);
+  --td-stat-purple-bg: rgba(114, 46, 209, 0.1);
 
-  /* 语义色 (Semantic Colors) */
-  --td-success-color: #49aa19;
-  --td-info-color: #177ddc;
-
-  /* 元数据卡片 (Metadata / FrontMatter) */
+  /* ---- 元数据卡片 ---- */
   --td-metadata-bg: linear-gradient(135deg, #1e1f24 0%, #282a30 100%);
   --td-metadata-border: #3a3d45;
   --td-metadata-item-bg: #282a30;
-  --td-metadata-label: #75777d;
+  --td-metadata-label: #93959c;
   --td-metadata-value: #ececec;
-  --td-metadata-heading: #a8aab0;
+  --td-metadata-heading: #b6b8be;
   --td-metadata-accent: #58a6ff;
 
-  /* 嵌套表面 (Nested Surface) */
-  --td-surface-nested: #282a30;
+  /* ---- 滚动条 / 纹理 ---- */
+  --td-scrollbar-track: #1e1f24;
+  --td-scrollbar-thumb: #444752;
+  --td-scrollbar-thumb-hover: #c7a434;
+  --td-pattern-color: rgba(199, 164, 52, 0.03);
 
-  /* 字体 */
+  /* ---- 字体 ---- */
   --td-font-mono: "Fira Code", "JetBrains Mono", source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
 }

@@ -1,5 +1,5 @@
 // Skill 云端存储 API 服务
-import { getJson, postJson, putJson } from './http';
+import { deleteJson, getJson, postJson, putJson } from './http';
 import type {
   CloudSkill,
   SkillCreateRequest,
@@ -94,12 +94,9 @@ export async function deleteCloudSkill(
   userId: string,
   skillId: string
 ): Promise<{ success: boolean }> {
-  return fetch(`${SKILL_CLOUD_BASE}/users/${userId}/${skillId}`, {
-    method: 'DELETE',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  }).then(res => res.json());
+  return deleteJson<{ success: boolean }>(
+    `${SKILL_CLOUD_BASE}/users/${userId}/${skillId}`
+  );
 }
 
 /**

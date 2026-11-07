@@ -128,6 +128,7 @@ public class TdAgentProviderRegistry {
                 .stream(modelProperties.isStream())
                 .enableThinking(modelProperties.isEnableThinking())
                 .additionalBodyParams(copyAdditionalBodyParams(provider.getGenerateKwargs()))
+                .contextWindow(model.getContextWindow())
                 .build();
     }
 
@@ -183,7 +184,60 @@ public class TdAgentProviderRegistry {
                 .stream(modelProperties.isStream())
                 .enableThinking(modelProperties.isEnableThinking())
                 .additionalBodyParams(copyAdditionalBodyParams(provider.getGenerateKwargs()))
+                .contextWindow(model.getContextWindow())
                 .build();
+    }
+
+    /**
+     * 解析模型声明的上下文窗口大小（tokens）。
+     *
+     * <p>解析顺序：</p>
+     * <ol>
+     *     <li>用户自建供应商（DB）中的模型描述符</li>
+     *     <li>内置供应商目录（{@code builtin_provider.json}）中的模型描述符</li>
+     * </ol>
+     *
+     * <p>与 {@link #resolveForUser} 不同，本方法不校验 API Key，因此不会因缺少密钥而抛异常；
+     * 未声明上下文窗口时返回 null，交由上层回退到全局配置或默认值。</p>
+     *
+     * @param userId     用户 ID，可为 null（仅查内置目录）
+     * @param providerId 供应商 ID，可为 null（使用内置目录默认供应商）
+     * @param modelId    模型 ID，可为 null（使用供应商的第一个模型）
+     * @return 上下文窗口大小；未声明时返回 null
+     */
+    public Integer resolveContextWindow(String userId, String providerId, String modelId) {
+        if (userId != null && !userId.isBlank()) {
+            try {
+                TdAgentProviderDescriptor provider = loadProviderFromDb(userId, providerId);
+                if (provider != null && provider.getModels() != null && !provider.getModels().isEmpty()) {
+                    String configuredModelId = firstNonBlank(modelId, provider.getModels().get(0).getId());
+                    TdAgentModelDescriptor model = resolveModel(provider, configuredModelId);
+                    if (model != null && model.getContextWindow() != null && model.getContextWindow() > 0) {
+                        return model.getContextWindow();
+                    }
+                }
+            } catch (Exception e) {
+                log.debug("[ProviderRegistry] 解析 DB 上下文窗口失败，回退内置目录 - error: {}", e.getMessage());
+            }
+        }
+
+        try {
+            ProviderCatalogSnapshot snapshot = currentSnapshot();
+            String resolvedProviderId = firstNonBlank(providerId, properties.getModel().getProviderId(), "dashscope");
+            TdAgentProviderDescriptor provider = snapshot.providersById().get(resolvedProviderId);
+            if (provider != null && provider.getModels() != null && !provider.getModels().isEmpty()) {
+                String configuredModelId = firstNonBlank(
+                        modelId, properties.getModel().getModelId(), properties.getModel().getModelName(),
+                        provider.getModels().get(0).getId());
+                TdAgentModelDescriptor model = resolveModel(provider, configuredModelId);
+                if (model != null && model.getContextWindow() != null && model.getContextWindow() > 0) {
+                    return model.getContextWindow();
+                }
+            }
+        } catch (Exception e) {
+            log.debug("[ProviderRegistry] 解析内置目录上下文窗口失败 - error: {}", e.getMessage());
+        }
+        return null;
     }
 
     /**
@@ -383,6 +437,7 @@ public class TdAgentProviderRegistry {
         resolved.setName(model.getName());
         resolved.setSupportsMultimodal(model.isSupportsMultimodal());
         resolved.setSupportsVideo(model.isSupportsVideo());
+        resolved.setContextWindow(model.getContextWindow());
         resolved.setProbeSource(model.getProbeSource());
         return resolved;
     }

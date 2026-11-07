@@ -258,8 +258,8 @@ const TaskTemplateLibrary: React.FC = () => {
     <div style={{ padding: '24px', background: 'var(--td-bg-container)', borderRadius: '16px', minHeight: '100%', border: '1px solid var(--td-border-light)' }}>
       {/* Header */}
       <div style={{ marginBottom: 32, borderBottom: '1px solid var(--td-border-light)', paddingBottom: '24px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
+        <div className="hm-page-head" style={{ marginBottom: 0 }}>
+          <div className="hm-page-head-text">
             <Title level={3} style={{ color: 'var(--td-highlight)', margin: 0 }}>
               工作台 · 任务模板
             </Title>
@@ -329,62 +329,47 @@ const TaskTemplateLibrary: React.FC = () => {
                 borderRadius: '12px',
                 overflow: 'hidden',
                 boxShadow: 'var(--td-shadow-base)',
-                position: 'relative',
               }}
               styles={{ body: { flex: 1, display: 'flex', flexDirection: 'column', padding: '20px' } }}
             >
-              {/* 系统内置标签 */}
-              {t.type === 'SYSTEM' && (
-                <div style={{
-                  position: 'absolute',
-                  top: 12,
-                  right: 12,
-                  zIndex: 1,
-                }}>
-                  <Tag color="gold" style={{ borderRadius: '4px' }}>系统内置</Tag>
-                </div>
-              )}
-
-              {/* 用户模板的操作按钮 */}
-              {t.type === 'USER' && (
-                <div style={{
-                  position: 'absolute',
-                  top: 8,
-                  right: 8,
-                  zIndex: 1,
-                  display: 'flex',
-                  gap: 4,
-                }}>
-                  <Button
-                    size="small"
-                    icon={<EditOutlined />}
-                    onClick={(e) => { e.stopPropagation(); openEditModal(t); }}
-                    style={{ background: 'var(--td-bg-container)', border: '1px solid var(--td-border-light)' }}
-                  />
-                  <Popconfirm
-                    title="确定删除此模板？"
-                    onConfirm={(e) => { e?.stopPropagation(); handleDeleteTemplate(t.templateId); }}
-                    okText="确定"
-                    cancelText="取消"
-                  >
-                    <Button
-                      size="small"
-                      danger
-                      icon={<DeleteOutlined />}
-                      onClick={(e) => e.stopPropagation()}
-                      style={{ background: 'var(--td-bg-container)', border: '1px solid var(--td-border-light)' }}
-                    />
-                  </Popconfirm>
-                </div>
-              )}
-
               <div
                 style={{ cursor: 'pointer' }}
                 onClick={() => openForm(t)}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-                  <span style={{ fontSize: 28, filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))' }}>{t.icon}</span>
-                  <Text strong style={{ fontSize: 18, color: 'var(--td-text-base)' }}>{t.name}</Text>
+                <div className="hm-card-head" style={{ marginBottom: 16, flexWrap: 'wrap', rowGap: 6 }}>
+                  <span className="hm-card-icon" style={{ fontSize: 28, filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))' }}>{t.icon}</span>
+                  <Text strong className="hm-card-title" style={{ fontSize: 18, color: 'var(--td-text-base)', flex: '1 1 100px', minWidth: 96 }} title={t.name}>
+                    {t.name}
+                  </Text>
+                  {/* 系统内置标签：随标题同行流式排布，不再绝对定位压住标题 */}
+                  {t.type === 'SYSTEM' && (
+                    <Tag color="gold" style={{ borderRadius: '4px', flexShrink: 0, marginInlineStart: 'auto' }}>系统内置</Tag>
+                  )}
+                  {/* 用户模板的操作按钮：与标题同行，标题过长时自动截断 */}
+                  {t.type === 'USER' && (
+                    <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                      <Button
+                        size="small"
+                        icon={<EditOutlined />}
+                        onClick={(e) => { e.stopPropagation(); openEditModal(t); }}
+                        style={{ background: 'var(--td-bg-container)', border: '1px solid var(--td-border-light)' }}
+                      />
+                      <Popconfirm
+                        title="确定删除此模板？"
+                        onConfirm={(e) => { e?.stopPropagation(); handleDeleteTemplate(t.templateId); }}
+                        okText="确定"
+                        cancelText="取消"
+                      >
+                        <Button
+                          size="small"
+                          danger
+                          icon={<DeleteOutlined />}
+                          onClick={(e) => e.stopPropagation()}
+                          style={{ background: 'var(--td-bg-container)', border: '1px solid var(--td-border-light)' }}
+                        />
+                      </Popconfirm>
+                    </div>
+                  )}
                 </div>
                 <Paragraph type="secondary" style={{ flex: 1, marginBottom: 24, fontSize: 14, lineHeight: 1.6, color: 'var(--td-text-secondary)' }}>
                   {t.description}
@@ -433,7 +418,7 @@ const TaskTemplateLibrary: React.FC = () => {
         onCancel={() => setFormTpl(null)}
         footer={null}
         width={650}
-        destroyOnClose
+        destroyOnHidden
         styles={{
           body: { background: 'var(--td-bg-container)', borderRadius: '0 0 12px 12px' },
           header: { background: 'transparent' }

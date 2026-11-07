@@ -25,7 +25,7 @@ public class ScheduledJobRunRecordServiceImpl implements IScheduledJobRunRecordS
     public ScheduledJobRunRecordVO getById(String userId, Long id) {
         ScheduledJobRunRecordPO po = support.lambdaQuery()
                 .eq(ScheduledJobRunRecordPO::getId, id)
-                .eq(ScheduledJobRunRecordPO::getUserId, Long.valueOf(userId))
+                .eq(ScheduledJobRunRecordPO::getUserId, userId)
                 .one();
         if (po == null) return null;
         ScheduledJobRunRecordVO vo = new ScheduledJobRunRecordVO();
@@ -36,7 +36,7 @@ public class ScheduledJobRunRecordServiceImpl implements IScheduledJobRunRecordS
     @Override
     public PageResult<ScheduledJobRunRecordVO> page(String userId, int current, int size) {
         Page<ScheduledJobRunRecordPO> page = support.lambdaQuery()
-                .eq(ScheduledJobRunRecordPO::getUserId, Long.valueOf(userId))
+                .eq(ScheduledJobRunRecordPO::getUserId, userId)
                 .page(new Page<>(current, size));
         return PageResult.of(
                 page.getTotal(),
@@ -55,7 +55,7 @@ public class ScheduledJobRunRecordServiceImpl implements IScheduledJobRunRecordS
     public boolean save(String userId, ScheduledJobRunRecordDTO dto) {
         ScheduledJobRunRecordPO po = new ScheduledJobRunRecordPO();
         po.setId(dto.getId());
-        po.setUserId(Long.valueOf(userId));
+        po.setUserId(userId);
         return support.save(po);
     }
 
@@ -64,7 +64,7 @@ public class ScheduledJobRunRecordServiceImpl implements IScheduledJobRunRecordS
     public boolean update(String userId, ScheduledJobRunRecordDTO dto) {
         ScheduledJobRunRecordPO po = support.lambdaQuery()
                 .eq(ScheduledJobRunRecordPO::getId, dto.getId())
-                .eq(ScheduledJobRunRecordPO::getUserId, Long.valueOf(userId))
+                .eq(ScheduledJobRunRecordPO::getUserId, userId)
                 .one();
         if (po == null) {
             throw new BizException(HmeBackendErrorCode.TASK_RECORD_NOT_FOUND_UPDATE);
@@ -78,7 +78,7 @@ public class ScheduledJobRunRecordServiceImpl implements IScheduledJobRunRecordS
     public boolean delete(String userId, Long id) {
         ScheduledJobRunRecordPO po = support.lambdaQuery()
                 .eq(ScheduledJobRunRecordPO::getId, id)
-                .eq(ScheduledJobRunRecordPO::getUserId, Long.valueOf(userId))
+                .eq(ScheduledJobRunRecordPO::getUserId, userId)
                 .one();
         if (po == null) {
             throw new BizException(HmeBackendErrorCode.TASK_RECORD_NOT_FOUND_DELETE);

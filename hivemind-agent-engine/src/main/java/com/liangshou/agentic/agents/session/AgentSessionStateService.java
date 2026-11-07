@@ -66,16 +66,23 @@ public class AgentSessionStateService {
      * @param paused  是否处于暂停状态
      */
     public void save(ConversationSessionContext context, ReActAgent agent, boolean paused) {
-        agentSessionStateRepository
-                .findByUserIdAndSessionId(context.getUserId(), context.getSessionId())
-                .ifPresent(
-                        document -> {
-                            document.setPaused(paused);
-                            document.setProviderId(context.getProviderId());
-                            document.setModelId(context.getModelId());
-                            document.setUpdatedAt(Instant.now());
-                            agentSessionStateRepository.save(document);
-                        });
+        String userId = context.getUserId();
+        String sessionId = context.getSessionId();
+        String docId = (userId == null ? "" : userId) + ":" + sessionId + ":state";
+
+        AgentSessionStateDocument document = agentSessionStateRepository
+                .findById(docId)
+                .orElseGet(() -> AgentSessionStateDocument.builder()
+                        .id(docId)
+                        .userId(userId == null ? "" : userId)
+                        .sessionId(sessionId)
+                        .build());
+
+        document.setPaused(paused);
+        document.setProviderId(context.getProviderId());
+        document.setModelId(context.getModelId());
+        document.setUpdatedAt(Instant.now());
+        agentSessionStateRepository.save(document);
     }
 
     /**

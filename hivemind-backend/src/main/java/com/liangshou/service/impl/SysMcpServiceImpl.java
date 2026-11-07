@@ -25,7 +25,7 @@ public class SysMcpServiceImpl implements ISysMcpService {
     public SysMcpVO getById(String userId, Long id) {
         SysMcpPO po = support.lambdaQuery()
                 .eq(SysMcpPO::getId, id)
-                .eq(SysMcpPO::getUserId, Long.valueOf(userId))
+                .eq(SysMcpPO::getUserId, userId)
                 .one();
         if (po == null) return null;
         SysMcpVO vo = new SysMcpVO();
@@ -36,7 +36,7 @@ public class SysMcpServiceImpl implements ISysMcpService {
     @Override
     public PageResult<SysMcpVO> page(String userId, int current, int size) {
         Page<SysMcpPO> page = support.lambdaQuery()
-                .eq(SysMcpPO::getUserId, Long.valueOf(userId))
+                .eq(SysMcpPO::getUserId, userId)
                 .page(new Page<>(current, size));
         return PageResult.of(
                 page.getTotal(),
@@ -55,7 +55,7 @@ public class SysMcpServiceImpl implements ISysMcpService {
     public boolean save(String userId, SysMcpDTO dto) {
         SysMcpPO po = new SysMcpPO();
         po.setId(dto.getId());
-        po.setUserId(Long.valueOf(userId));
+        po.setUserId(userId);
         return support.save(po);
     }
 
@@ -64,7 +64,7 @@ public class SysMcpServiceImpl implements ISysMcpService {
     public boolean update(String userId, SysMcpDTO dto) {
         SysMcpPO po = support.lambdaQuery()
                 .eq(SysMcpPO::getId, dto.getId())
-                .eq(SysMcpPO::getUserId, Long.valueOf(userId))
+                .eq(SysMcpPO::getUserId, userId)
                 .one();
         if (po == null) {
             throw new BizException(HmeBackendErrorCode.TASK_RECORD_NOT_FOUND_UPDATE);
@@ -78,7 +78,7 @@ public class SysMcpServiceImpl implements ISysMcpService {
     public boolean delete(String userId, Long id) {
         SysMcpPO po = support.lambdaQuery()
                 .eq(SysMcpPO::getId, id)
-                .eq(SysMcpPO::getUserId, Long.valueOf(userId))
+                .eq(SysMcpPO::getUserId, userId)
                 .one();
         if (po == null) {
             throw new BizException(HmeBackendErrorCode.TASK_RECORD_NOT_FOUND_DELETE);

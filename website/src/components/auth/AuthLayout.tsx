@@ -1,5 +1,6 @@
 import { LockOutlined, SafetyCertificateOutlined, UserOutlined } from "@ant-design/icons";
 import { Card, Space, Tag, Typography } from "antd";
+import ThemeToggle from "../ThemeToggle";
 
 const { Paragraph, Text, Title } = Typography;
 
@@ -13,6 +14,11 @@ interface AuthLayoutProps {
 export function AuthLayout({ title, subtitle, children, footer }: AuthLayoutProps) {
   return (
     <div className="auth-shell">
+      {/* 未登录态同样提供主题切换，避免跟随系统的用户在登录页无法调整主题 */}
+      <div className="auth-theme-toggle">
+        <ThemeToggle/>
+      </div>
+
       <div className="auth-hero">
         <div className="auth-hero-badge">HiveMind</div>
         <Title className="auth-hero-title">

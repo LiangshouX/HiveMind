@@ -91,6 +91,9 @@ const MainLayout: React.FC = () => {
                 collapsible
                 collapsed={collapsed}
                 width={240}
+                breakpoint="lg"
+                collapsedWidth={64}
+                onBreakpoint={broken => setCollapsed(broken)}
                 style={{
                     overflow: 'auto',
                     height: '100vh',
@@ -189,8 +192,8 @@ const MainLayout: React.FC = () => {
                             color: 'var(--td-highlight)'
                         }}
                     />
-                    <div style={{flex: 1}}/>
-                    <Space style={{paddingRight: 24}} size="large">
+                    <div style={{flex: 1, minWidth: 0}}/>
+                    <div className="hm-header-actions">
                         <ThemeToggle/>
                         {/* 用户登录/个人中心区域 */}
                         {authenticated ? (
@@ -217,7 +220,7 @@ const MainLayout: React.FC = () => {
                                 <Avatar
                                     size={32}
                                     style={{
-                                        background: 'linear-gradient(135deg, var(--td-primary), #c7a434)',
+                                        background: 'var(--td-brand-gradient)',
                                         color: 'var(--td-text-inverse)',
                                         fontWeight: 800,
                                         cursor: 'pointer'
@@ -240,13 +243,13 @@ const MainLayout: React.FC = () => {
                                 登录
                             </Button>
                         )}
-                        <Space>
-                            <Text style={{color: 'var(--td-text-secondary)'}}>当前模型：</Text>
-                            <Text strong style={{color: 'var(--td-highlight)'}}>
+                        <Space size={6} className="hm-model-indicator">
+                            <Text className="hm-model-label" style={{color: 'var(--td-text-secondary)'}}>当前模型：</Text>
+                            <Text strong ellipsis style={{color: 'var(--td-highlight)', maxWidth: 160}}>
                                 {defaultModel?.modelName || '未配置'}
                             </Text>
                         </Space>
-                    </Space>
+                    </div>
                 </Header>
                 <Content style={{margin: '24px 24px 0', overflow: 'initial'}}>
                     <div

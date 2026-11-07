@@ -4,7 +4,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.liangshou.agentic.application.ITokenUsageRecordService;
+import com.liangshou.agentic.application.dto.SessionTokenUsageDTO;
 import com.liangshou.agentic.infrastructure.mysql.po.TokenUsagePO;
+import com.liangshou.agentic.infrastructure.mysql.support.TokenPricing;
 import com.liangshou.agentic.infrastructure.mysql.support.TokenUsageSupport;
 import com.liangshou.agentic.infrastructure.mysql.support.dto.*;
 import lombok.extern.slf4j.Slf4j;
@@ -29,10 +31,14 @@ public class TokenUsageRecordServiceImpl implements ITokenUsageRecordService {
 
     private final TokenUsageSupport tokenUsageSupport;
     private final ObjectMapper objectMapper;
+    private final TokenPricing tokenPricing;
 
-    public TokenUsageRecordServiceImpl(TokenUsageSupport tokenUsageSupport, ObjectMapper objectMapper) {
+    public TokenUsageRecordServiceImpl(TokenUsageSupport tokenUsageSupport,
+                                       ObjectMapper objectMapper,
+                                       TokenPricing tokenPricing) {
         this.tokenUsageSupport = tokenUsageSupport;
         this.objectMapper = objectMapper;
+        this.tokenPricing = tokenPricing;
     }
 
     @Override
@@ -77,84 +83,76 @@ public class TokenUsageRecordServiceImpl implements ITokenUsageRecordService {
 
     @Override
     public TokenUsageSummaryDTO getSummary(String userId, LocalDate startDate, LocalDate endDate) {
-        Map<String, Object> result = tokenUsageSupport.getSummary(userId, startDate, endDate);
-        
-        TokenUsageSummaryDTO dto = new TokenUsageSummaryDTO();
-        dto.setStartDate(startDate);
-        dto.setEndDate(endDate);
-        
-        if (result.isEmpty()) {
-            dto.setTotalInputTokens(0L);
-            dto.setTotalOutputTokens(0L);
-            dto.setTotalTokens(0L);
-            dto.setTotalCalls(0L);
-            dto.setEstimatedCost(BigDecimal.ZERO);
-            return dto;
-        }
+        TokenUsageSummaryDTO dto = tokenUsageSupport.getSummary(userId, startDate, endDate);
 
-        dto.setTotalInputTokens(getLongValue(result, "totalInputTokens"));
-        dto.setTotalOutputTokens(getLongValue(result, "totalOutputTokens"));
-        dto.setTotalTokens(getLongValue(result, "totalTokens"));
-        dto.setTotalCalls(getLongValue(result, "totalCalls"));
-        // TODO: 根据模型单价计算费用
-        dto.setEstimatedCost(BigDecimal.ZERO);
-        
+        // 汇总费用按各模型单价累加（汇总行没有单一模型，需逐模型计算后求和）
+        BigDecimal totalCost = BigDecimal.ZERO;
+        for (TokenUsageByModelDTO byModel : tokenUsageSupport.getByModel(userId, startDate, endDate)) {
+            totalCost = totalCost.add(costOf(byModel.getModelProvider(), byModel.getModelName(),
+                    byModel.getInputTokens(), byModel.getOutputTokens()));
+        }
+        dto.setEstimatedCost(totalCost.setScale(2, RoundingMode.HALF_UP));
         return dto;
     }
 
     @Override
     public List<TokenUsageByModelDTO> getByModel(String userId, LocalDate startDate, LocalDate endDate) {
-        List<Map<String, Object>> results = tokenUsageSupport.getByModel(userId, startDate, endDate);
-        
-        return results.stream().map(result -> {
-            TokenUsageByModelDTO dto = new TokenUsageByModelDTO();
-            dto.setModelName((String) result.get("modelName"));
-            dto.setModelProvider((String) result.get("modelProvider"));
-            dto.setInputTokens(getLongValue(result, "inputTokens"));
-            dto.setOutputTokens(getLongValue(result, "outputTokens"));
-            dto.setTotalTokens(getLongValue(result, "totalTokens"));
-            dto.setCallCount(getLongValue(result, "callCount"));
-            // TODO: 根据模型单价计算费用
-            dto.setEstimatedCost(BigDecimal.ZERO);
-            return dto;
-        }).collect(Collectors.toList());
+        List<TokenUsageByModelDTO> list = tokenUsageSupport.getByModel(userId, startDate, endDate);
+        for (TokenUsageByModelDTO dto : list) {
+            dto.setEstimatedCost(costOf(dto.getModelProvider(), dto.getModelName(),
+                    dto.getInputTokens(), dto.getOutputTokens()));
+        }
+        return list;
     }
 
     @Override
     public List<TokenUsageByProviderDTO> getByProvider(String userId, LocalDate startDate, LocalDate endDate) {
-        List<Map<String, Object>> results = tokenUsageSupport.getByProvider(userId, startDate, endDate);
-        
-        return results.stream().map(result -> {
-            TokenUsageByProviderDTO dto = new TokenUsageByProviderDTO();
-            dto.setModelProvider((String) result.get("modelProvider"));
-            dto.setInputTokens(getLongValue(result, "inputTokens"));
-            dto.setOutputTokens(getLongValue(result, "outputTokens"));
-            dto.setTotalTokens(getLongValue(result, "totalTokens"));
-            dto.setCallCount(getLongValue(result, "callCount"));
-            dto.setModelCount(getLongValue(result, "modelCount"));
-            return dto;
-        }).collect(Collectors.toList());
+        return tokenUsageSupport.getByProvider(userId, startDate, endDate);
     }
 
     @Override
     public List<TokenUsageByDateDTO> getByDate(String userId, LocalDate startDate, LocalDate endDate) {
-        List<Map<String, Object>> results = tokenUsageSupport.getByDate(userId, startDate, endDate);
-        
-        return results.stream().map(result -> {
-            TokenUsageByDateDTO dto = new TokenUsageByDateDTO();
-            // DATE() 函数返回 LocalDate
-            Object dateObj = result.get("usageDate");
-            if (dateObj instanceof LocalDate) {
-                dto.setUsageDate((LocalDate) dateObj);
-            } else if (dateObj instanceof LocalDateTime) {
-                dto.setUsageDate(((LocalDateTime) dateObj).toLocalDate());
+        return tokenUsageSupport.getByDate(userId, startDate, endDate);
+    }
+
+    @Override
+    public SessionTokenUsageDTO summarizeSession(String userId, String sessionId) {
+        try {
+            List<TokenUsagePO> records = tokenUsageSupport.lambdaQuery()
+                    .eq(TokenUsagePO::getUserId, userId)
+                    .eq(TokenUsagePO::getSessionId, sessionId)
+                    .list();
+            long input = 0L;
+            long output = 0L;
+            long total = 0L;
+            long cached = 0L;
+            for (TokenUsagePO po : records) {
+                input += po.getInputTokens() == null ? 0L : po.getInputTokens();
+                output += po.getOutputTokens() == null ? 0L : po.getOutputTokens();
+                total += po.getTotalTokens() == null ? 0L : po.getTotalTokens();
+                cached += po.getCachedTokens() == null ? 0L : po.getCachedTokens();
             }
-            dto.setInputTokens(getLongValue(result, "inputTokens"));
-            dto.setOutputTokens(getLongValue(result, "outputTokens"));
-            dto.setTotalTokens(getLongValue(result, "totalTokens"));
-            dto.setCallCount(getLongValue(result, "callCount"));
-            return dto;
-        }).collect(Collectors.toList());
+            return SessionTokenUsageDTO.builder()
+                    .calls(records.size())
+                    .inputTokens(input)
+                    .outputTokens(output)
+                    .totalTokens(total)
+                    .cachedTokens(cached)
+                    .build();
+        } catch (Exception e) {
+            log.warn("[TokenUsage] 汇总会话 Token 用量失败 - userId: {}, sessionId: {}, error: {}",
+                    userId, sessionId, e.getMessage());
+            return SessionTokenUsageDTO.builder().build();
+        }
+    }
+
+    /**
+     * 计算一组 Token 的估算费用。
+     */
+    private BigDecimal costOf(String provider, String model, Long inputTokens, Long outputTokens) {
+        return tokenPricing.estimate(provider, model,
+                inputTokens == null ? 0L : inputTokens,
+                outputTokens == null ? 0L : outputTokens);
     }
 
     /**
@@ -209,15 +207,6 @@ public class TokenUsageRecordServiceImpl implements ITokenUsageRecordService {
             log.warn("[TokenUsage] 解析模型配置失败: {}", e.getMessage());
             return new ModelInfo("unknown", "unknown");
         }
-    }
-
-    private Long getLongValue(Map<String, Object> map, String key) {
-        Object value = map.get(key);
-        if (value == null) return 0L;
-        if (value instanceof Long) return (Long) value;
-        if (value instanceof Integer) return ((Integer) value).longValue();
-        if (value instanceof Number) return ((Number) value).longValue();
-        return Long.parseLong(value.toString());
     }
 
     private Integer getIntValue(Map<String, Object> map, String key, Integer defaultValue) {

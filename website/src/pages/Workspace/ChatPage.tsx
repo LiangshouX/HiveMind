@@ -1,4 +1,4 @@
-import {ConfigProvider, Layout, theme} from "antd";
+import {Layout} from "antd";
 import {LeftOutlined, RightOutlined} from "@ant-design/icons";
 import {Tooltip} from "antd";
 import {useNavigate} from "react-router-dom";
@@ -6,7 +6,6 @@ import {ConsoleSidebar} from "../../components/console/ConsoleSidebar.tsx";
 import {ConversationWorkspace} from "../../components/console/ConversationWorkspace.tsx";
 import {useAgentConsole} from "../../hooks/useAgentConsole.ts";
 import {useAuth} from "../../providers/AuthProvider.tsx";
-import {useTheme} from "../../providers/ThemeProvider.tsx";
 import {useResponsiveCollapse} from "../../hooks/useResponsiveCollapse.ts";
 
 const {Content} = Layout;
@@ -14,7 +13,6 @@ const {Content} = Layout;
 export function ChatPage() {
     const navigate = useNavigate();
     const {user} = useAuth();
-    const {isDarkMode} = useTheme();
     const {
         contextHolder,
         loadingSessions,
@@ -24,6 +22,8 @@ export function ChatPage() {
         input,
         groupedConversationItems,
         selectedModelId,
+        contextUsage,
+        compacting,
         setInput,
         selectModel,
         createNewSession,
@@ -32,6 +32,7 @@ export function ChatPage() {
         sendMessage,
         interruptCurrent,
         refreshSessions,
+        compactContext,
         handleApprovalAction,
     } = useAgentConsole(user!, {
         onNavigateToSession: (sessionId, replace) => {
@@ -52,19 +53,7 @@ export function ChatPage() {
     });
 
     return (
-        <ConfigProvider
-            theme={{
-                algorithm: isDarkMode ? theme.darkAlgorithm : theme.defaultAlgorithm,
-                token: {
-                    colorPrimary: "#b32934",
-                    colorBgBase: isDarkMode ? "#07111f" : "#f8f9fa",
-                    colorTextBase: isDarkMode ? "#f3f7ff" : "#2c3e50",
-                    borderRadius: 12,
-                    fontFamily:
-                        '"Noto Sans SC", "PingFang SC", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-                },
-            }}
-        >
+        <>
             {contextHolder}
             <Layout style={{
                 height: 'calc(100vh - 94px)',
@@ -169,11 +158,16 @@ export function ChatPage() {
                         activeSession={activeSession}
                         activeSessionId={activeSessionId}
                         selectedModelId={selectedModelId}
+                        contextUsage={contextUsage}
+                        compacting={compacting}
                         onInputChange={setInput}
                         onSelectModel={selectModel}
                         onRefreshSession={() => void refreshSessions(activeSessionId)}
                         onInterrupt={interruptCurrent}
                         onSend={sendMessage}
+                        onCompactContext={() =>
+                            activeSessionId ? void compactContext(activeSessionId) : undefined
+                        }
                         onApprove={() => handleApprovalAction("approve")}
                         onReject={() => handleApprovalAction("reject")}
                     />
@@ -187,6 +181,6 @@ export function ChatPage() {
                     border-color: var(--td-highlight) !important;
                 }
             `}</style>
-        </ConfigProvider>
+        </>
     );
 }

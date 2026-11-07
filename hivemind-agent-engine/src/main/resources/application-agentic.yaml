@@ -44,20 +44,34 @@ tdagent:
     top-k: 5
     mcp:
       enabled: ${REME_MCP_ENABLED:true}
-      transport: ${REME_MCP_TRANSPORT:sse}
+      # ReMe 0.4.2.x 在 /mcp 挂载 streamable HTTP MCP；旧版 ReMe 可切换为 sse
+      transport: ${REME_MCP_TRANSPORT:streamable-http}
+      streamable-http:
+        url: ${REME_MCP_URL:http://localhost:2333/mcp}
       sse:
         url: ${REME_MCP_SSE_URL:http://localhost:2333/sse}
   compaction:
+    # 上下文压缩总开关：关闭后既不会自动压缩，手动压缩接口也会跳过阈值判断
     enabled: true
+    # 触发模式：TOKEN（按上下文占用比例）| LEGACY（按字符数/消息数，兼容旧逻辑）
     trigger-mode: TOKEN
-    context-window-size: 0
-    threshold-ratio: 0.85
+    # 全局上下文窗口大小（tokens）。0 表示不覆盖，
+    # 由模型自身声明（内置供应商目录 provider/builtin_provider.json 的 contextWindow，
+    # 或用户自建供应商 models_json 的 contextWindow）决定；两者都没有时使用内置默认值。
+    context-window-size: ${TDAGENT_CONTEXT_WINDOW_SIZE:0}
+    # 压缩触发阈值（上下文窗口的百分比）。达到该比例即自动压缩。
+    threshold-ratio: ${TDAGENT_COMPACTION_THRESHOLD_RATIO:0.85}
+    # 输出预留 token 数，0 表示使用默认值 8192
     output-reserve-tokens: 0
+    # 前区保留比例（消息列表前 N% 的消息不压缩），默认 0.10
     head-ratio: 0.10
+    # 最小压缩间隔（压缩后至少再积累 N 条新消息才允许再次压缩）
     min-messages-since-compaction: 3
     trigger-message-count: 20
     trigger-character-count: 24000
+    # 压缩时保留的最近消息条数（保证对话连贯）
     keep-recent-messages: 6
+    # 压缩摘要最大字符数
     max-summary-characters: 2400
   streaming:
     enabled: true
@@ -72,3 +86,81 @@ tdagent:
         enabled: false
         accessKeyId: ""
         accessKeySecret: ""
+
+  # Token 单价表（单位：元 / 百万 Token），用于用量统计页的估算费用
+  # 匹配顺序：provider+model 精确匹配 → model 匹配 → provider 默认价
+  token-pricing:
+    enabled: true
+    currency: CNY
+    models:
+      # ---- 阿里云百炼 DashScope ----
+      - provider: dashscope
+        model: qwen-max
+        input: 2.4
+        output: 9.6
+      - provider: dashscope
+        model: qwen3-max
+        input: 2.4
+        output: 9.6
+      - provider: dashscope
+        model: qwen3.5-plus
+        input: 0.8
+        output: 3.2
+      - provider: dashscope
+        model: qwen-plus
+        input: 0.8
+        output: 2.4
+      # ---- DeepSeek ----
+      - provider: deepseek
+        model: deepseek-chat
+        input: 2.0
+        output: 8.0
+      - provider: deepseek
+        model: deepseek-reasoner
+        input: 4.0
+        output: 16.0
+      # ---- OpenAI 兼容 ----
+      - provider: openai
+        model: gpt-4o
+        input: 18.0
+        output: 72.0
+      - provider: openai
+        model: gpt-4o-mini
+        input: 1.1
+        output: 4.3
+      # ---- 本地部署（Ollama）：无 API Key，费用记 0 ----
+      - provider: ollama
+        input: 0.0
+        output: 0.0
+      # ---- 其他 OpenAI 兼容供应商（示例值，按厂商实际报价调整） ----
+      - provider: MiMo
+        model: mimo-v2.5-pro
+        input: 1.2
+        output: 4.8
+      - provider: moonshot
+        model: moonshot-v1-8k
+        input: 1.2
+        output: 4.8
+      - provider: zhipu
+        model: glm-4-flash
+        input: 0.6
+        output: 2.4
+      # ---- 兜底：按供应商的默认价（未列出的模型适用） ----
+      - provider: dashscope
+        input: 2.4
+        output: 9.6
+      - provider: deepseek
+        input: 2.0
+        output: 8.0
+      - provider: MiMo
+        input: 1.2
+        output: 4.8
+      - provider: moonshot
+        input: 1.2
+        output: 4.8
+      - provider: zhipu
+        input: 0.6
+        output: 2.4
+      - provider: ollama
+        input: 0.0
+        output: 0.0

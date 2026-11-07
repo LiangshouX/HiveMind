@@ -1,6 +1,7 @@
 package com.liangshou.agentic.agents.memory;
 
 import com.liangshou.agentic.agents.ConversationSessionContext;
+import com.liangshou.agentic.agents.TdAgentPromptService;
 import com.liangshou.agentic.agents.memory.compaction.CompactionResult;
 import com.liangshou.agentic.agents.memory.compaction.ContextCompressor;
 import com.liangshou.agentic.agents.memory.compaction.ContextWindowManager;
@@ -38,18 +39,21 @@ public class TdAgentMemoryManager {
     private final ContextCompressor compressor;
     private final TokenMeter tokenMeter;
     private final ContextWindowManager windowManager;
+    private final TdAgentPromptService promptService;
 
     public TdAgentMemoryManager(
             TdAgentProperties properties,
             TdAgentReMeService reMeService,
             ContextCompressor compressor,
             TokenMeter tokenMeter,
-            ContextWindowManager windowManager) {
+            ContextWindowManager windowManager,
+            TdAgentPromptService promptService) {
         this.properties = properties;
         this.reMeService = reMeService;
         this.compressor = compressor;
         this.tokenMeter = tokenMeter;
         this.windowManager = windowManager;
+        this.promptService = promptService;
     }
 
     /**
@@ -86,12 +90,17 @@ public class TdAgentMemoryManager {
             MongoConversationMemory memory) {
 
         List<Msg> history = memory.getMessages();
-        int totalTokens = tokenMeter.countTotalTokens(history)
+        int historyTokens = tokenMeter.countTotalTokens(history)
                 + tokenMeter.countTokens(memory.getCompressedSummary());
 
-        if (!windowManager.needsCompaction(totalTokens)) {
+        // 系统提示词的固定部分每次调用都会占用上下文窗口，必须计入阈值判定，
+        // 否则"对话本身还没满"时实际输入就已经超出模型窗口。
+        int overheadTokens = systemPromptOverheadTokens(context);
+        int totalTokens = historyTokens + overheadTokens;
+
+        if (!windowManager.needsCompaction(context, totalTokens)) {
             log.debug("[TdAgentMemoryManager] 未达到压缩阈值 - 当前: {}, 阈值: {}",
-                    totalTokens, windowManager.getCompactionThreshold());
+                    totalTokens, windowManager.getCompactionThreshold(context));
             return false;
         }
 
@@ -105,8 +114,9 @@ public class TdAgentMemoryManager {
             return false;
         }
 
-        log.info("[TdAgentMemoryManager] 触发 TOKEN 模式压缩 - 当前tokens: {}, 阈值: {}",
-                totalTokens, windowManager.getCompactionThreshold());
+        log.info("[TdAgentMemoryManager] 触发 TOKEN 模式压缩 - 当前tokens: {}, 阈值: {}, 窗口: {}",
+                totalTokens, windowManager.getCompactionThreshold(context),
+                windowManager.getContextWindowSize(context));
 
         CompactionResult result = compressor.compress(context, memory, history);
 
@@ -121,6 +131,21 @@ public class TdAgentMemoryManager {
         }
 
         return result.isCompacted();
+    }
+
+    /**
+     * 计算系统提示词固定部分占用的 token 数。
+     *
+     * <p>该部分与对话轮次无关，但每次调用都要送入模型，因此属于上下文占用的一部分。</p>
+     */
+    public int systemPromptOverheadTokens(ConversationSessionContext context) {
+        try {
+            String fixedPrompt = promptService.buildFixedPrompt(context);
+            return tokenMeter.countTokens(fixedPrompt);
+        } catch (Exception e) {
+            log.debug("[TdAgentMemoryManager] 计算系统提示词开销失败，按 0 计 - error: {}", e.getMessage());
+            return 0;
+        }
     }
 
     /**

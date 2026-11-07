@@ -1,10 +1,14 @@
 package com.liangshou.agentic.agents.memory.compaction;
 
+import com.liangshou.agentic.agents.ConversationSessionContext;
+import com.liangshou.agentic.agents.provider.TdAgentProviderRegistry;
+import com.liangshou.agentic.agents.provider.TdAgentResolvedModelConfig;
 import com.liangshou.agentic.common.config.TdAgentProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
 
 class ContextWindowManagerTest {
 
@@ -14,7 +18,9 @@ class ContextWindowManagerTest {
     @BeforeEach
     void setUp() {
         properties = new TdAgentProperties();
-        manager = new ContextWindowManager(properties);
+        // ProviderRegistry 仅为可选的模型级上下文窗口来源，mock 后 resolveContextWindow 返回 null，
+        // 正好覆盖"回退到全局配置 / 按模型名兜底"的分支
+        manager = new ContextWindowManager(properties, mock(TdAgentProviderRegistry.class));
     }
 
     @Test
@@ -99,5 +105,42 @@ class ContextWindowManagerTest {
     void getOutputReserve_configOverride_returnsConfigured() {
         properties.getCompaction().setOutputReserveTokens(16384);
         assertEquals(16384, manager.getOutputReserve());
+    }
+
+    @Test
+    void getThresholdRatio_outOfRange_fallsBackToDefault() {
+        properties.getCompaction().setThresholdRatio(1.5);
+        assertEquals(0.85, manager.getThresholdRatio(), 0.0001);
+
+        properties.getCompaction().setThresholdRatio(0);
+        assertEquals(0.85, manager.getThresholdRatio(), 0.0001);
+    }
+
+    @Test
+    void getContextWindowSize_withContext_usesResolvedModelWindow() {
+        // 会话级模型快照中的上下文窗口优先级最高
+        var resolved = TdAgentResolvedModelConfig.builder()
+                .providerId("dashscope")
+                .modelId("qwen3-max")
+                .contextWindow(100000)
+                .build();
+        var ctx = ConversationSessionContext.builder()
+                .userId("user1")
+                .sessionId("session1")
+                .resolvedModelConfig(resolved)
+                .build();
+
+        assertEquals(100000, manager.getContextWindowSize(ctx));
+    }
+
+    @Test
+    void getContextWindowSize_withContext_fallsBackToGlobalConfig() {
+        properties.getCompaction().setContextWindowSize(65536);
+        var ctx = ConversationSessionContext.builder()
+                .userId("user1")
+                .sessionId("session1")
+                .build();
+
+        assertEquals(65536, manager.getContextWindowSize(ctx));
     }
 }

@@ -57,6 +57,28 @@ export interface ConnectionTestResult {
   errorMessage?: string;
 }
 
+/**
+ * Built-in provider catalog entry (no API key — users bring their own).
+ */
+export interface ProviderCatalogEntry {
+  id: string;
+  name: string;
+  description?: string;
+  baseUrl: string;
+  providerType: string;
+  apiKeyPrefix?: string;
+  consoleUrl?: string;
+  apiKeyUrl?: string;
+  apiKeyRequired: boolean;
+  models: Array<{
+    id: string;
+    name: string;
+    supportsMultimodal?: boolean;
+    supportsVideo?: boolean;
+    contextWindow?: number;
+  }>;
+}
+
 // ── API Base ──
 
 const PROVIDER_BASE = "/providers";
@@ -161,4 +183,15 @@ export async function getDefaultModel(): Promise<ProviderVO> {
  */
 export async function initializeBuiltIn(): Promise<ProviderVO[]> {
   return postJson<ProviderVO[]>(`${PROVIDER_BASE}/initialize-built-in`, {});
+}
+
+/**
+ * Fetch the built-in provider catalog.
+ *
+ * The catalog never contains API keys — it only tells the user which
+ * providers are supported and how to reach them, so they can plug in
+ * their own key.
+ */
+export async function fetchProviderCatalog(): Promise<ProviderCatalogEntry[]> {
+  return getJson<ProviderCatalogEntry[]>(`${PROVIDER_BASE}/catalog`);
 }

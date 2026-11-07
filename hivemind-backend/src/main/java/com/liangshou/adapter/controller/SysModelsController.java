@@ -18,7 +18,7 @@ import lombok.RequiredArgsConstructor;
  */
 @Tag(name = "SysModels API", description = "SysModels 管理相关接口")
 @RestController
-@RequestMapping("/api/sys-modelss")
+@RequestMapping("/api/sys-models")
 @RequiredArgsConstructor
 public class SysModelsController {
 

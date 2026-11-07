@@ -11,6 +11,7 @@ import com.liangshou.infrastructure.datasource.support.ISysModelsSupport;
 import com.liangshou.service.IProviderService;
 import com.liangshou.service.ISysModelsService;
 import com.liangshou.service.dto.ConnectionTestResult;
+import com.liangshou.service.dto.ProviderCatalogDTO;
 import com.liangshou.service.dto.ProviderDTO;
 import com.liangshou.service.vo.ProviderVO;
 import lombok.RequiredArgsConstructor;
@@ -507,6 +508,79 @@ public class ProviderServiceImpl implements IProviderService {
                 .filter(m -> Boolean.TRUE.equals(m.getIsProviderActivated()))
                 .map(this::toProviderVO)
                 .collect(Collectors.toList());
+    }
+
+    // ======================== Built-in Catalog ========================
+
+    /**
+     * 获取内置供应商目录。
+     *
+     * <p>供前端「模型配置」页的快捷配置流程使用：用户选择清单中的供应商后，
+     * 系统自动填入 Base URL 与常用模型，用户只需填写自己的 API Key。</p>
+     *
+     * <p>目录<b>不包含任何 API Key</b> —— 平台不托管密钥，每个用户使用自己的 Key。</p>
+     *
+     * @return 供应商目录条目列表
+     */
+    @Override
+    public List<ProviderCatalogDTO> catalog() {
+        try {
+            List<Map<String, Object>> raw = loadBuiltInProviders();
+            List<ProviderCatalogDTO> catalog = new ArrayList<>(raw.size());
+            for (Map<String, Object> provider : raw) {
+                catalog.add(toCatalogDTO(provider));
+            }
+            return catalog;
+        } catch (Exception e) {
+            log.error("加载内置供应商目录失败", e);
+            throw new BizException(HmeBackendErrorCode.TASK_PROVIDER_NOT_FOUND, "加载供应商目录失败: " + e.getMessage());
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private ProviderCatalogDTO toCatalogDTO(Map<String, Object> provider) {
+        ProviderCatalogDTO dto = new ProviderCatalogDTO();
+        dto.setId((String) provider.get("id"));
+        dto.setName((String) provider.get("name"));
+        dto.setDescription((String) provider.get("description"));
+        dto.setBaseUrl((String) provider.get("baseUrl"));
+        dto.setProviderType("SYSTEM");
+        dto.setApiKeyPrefix((String) provider.get("apiKeyPrefix"));
+        dto.setConsoleUrl((String) provider.get("consoleUrl"));
+        dto.setApiKeyUrl((String) provider.get("apiKeyUrl"));
+
+        // 本地部署（如 Ollama）无需 API Key
+        boolean keyRequired = !"ollama".equalsIgnoreCase(dto.getId());
+        dto.setApiKeyRequired(keyRequired);
+
+        List<ProviderCatalogDTO.CatalogModel> models = new ArrayList<>();
+        Object modelsObj = provider.get("models");
+        if (modelsObj instanceof List<?> list) {
+            for (Object item : list) {
+                if (!(item instanceof Map)) {
+                    continue;
+                }
+                Map<String, Object> modelMap = (Map<String, Object>) item;
+                ProviderCatalogDTO.CatalogModel model = new ProviderCatalogDTO.CatalogModel();
+                model.setId((String) modelMap.get("id"));
+                model.setName((String) modelMap.get("name"));
+                model.setSupportsMultimodal(Boolean.TRUE.equals(modelMap.get("supportsMultimodal")));
+                model.setSupportsVideo(Boolean.TRUE.equals(modelMap.get("supportsVideo")));
+                Object contextWindow = modelMap.get("contextWindow");
+                if (contextWindow instanceof Number number) {
+                    model.setContextWindow(number.intValue());
+                } else if (contextWindow instanceof String text && !text.isBlank()) {
+                    try {
+                        model.setContextWindow(Integer.parseInt(text.trim()));
+                    } catch (NumberFormatException ignored) {
+                        // 非法值忽略，走默认上下文窗口
+                    }
+                }
+                models.add(model);
+            }
+        }
+        dto.setModels(models);
+        return dto;
     }
 
     // ======================== Private Helpers ========================

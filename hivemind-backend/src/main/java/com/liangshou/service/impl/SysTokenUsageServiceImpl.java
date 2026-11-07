@@ -25,7 +25,7 @@ public class SysTokenUsageServiceImpl implements ISysTokenUsageService {
     public SysTokenUsageVO getById(String userId, Long id) {
         SysTokenUsagePO po = support.lambdaQuery()
                 .eq(SysTokenUsagePO::getId, id)
-                .eq(SysTokenUsagePO::getUserId, Long.valueOf(userId))
+                .eq(SysTokenUsagePO::getUserId, userId)
                 .one();
         if (po == null) return null;
         SysTokenUsageVO vo = new SysTokenUsageVO();
@@ -36,7 +36,7 @@ public class SysTokenUsageServiceImpl implements ISysTokenUsageService {
     @Override
     public PageResult<SysTokenUsageVO> page(String userId, int current, int size) {
         Page<SysTokenUsagePO> page = support.lambdaQuery()
-                .eq(SysTokenUsagePO::getUserId, Long.valueOf(userId))
+                .eq(SysTokenUsagePO::getUserId, userId)
                 .page(new Page<>(current, size));
         return PageResult.of(
                 page.getTotal(),
@@ -55,7 +55,7 @@ public class SysTokenUsageServiceImpl implements ISysTokenUsageService {
     public boolean save(String userId, SysTokenUsageDTO dto) {
         SysTokenUsagePO po = new SysTokenUsagePO();
         po.setId(dto.getId());
-        po.setUserId(Long.valueOf(userId));
+        po.setUserId(userId);
         return support.save(po);
     }
 
@@ -64,7 +64,7 @@ public class SysTokenUsageServiceImpl implements ISysTokenUsageService {
     public boolean update(String userId, SysTokenUsageDTO dto) {
         SysTokenUsagePO po = support.lambdaQuery()
                 .eq(SysTokenUsagePO::getId, dto.getId())
-                .eq(SysTokenUsagePO::getUserId, Long.valueOf(userId))
+                .eq(SysTokenUsagePO::getUserId, userId)
                 .one();
         if (po == null) {
             throw new BizException(HmeBackendErrorCode.TASK_RECORD_NOT_FOUND_UPDATE);
@@ -78,7 +78,7 @@ public class SysTokenUsageServiceImpl implements ISysTokenUsageService {
     public boolean delete(String userId, Long id) {
         SysTokenUsagePO po = support.lambdaQuery()
                 .eq(SysTokenUsagePO::getId, id)
-                .eq(SysTokenUsagePO::getUserId, Long.valueOf(userId))
+                .eq(SysTokenUsagePO::getUserId, userId)
                 .one();
         if (po == null) {
             throw new BizException(HmeBackendErrorCode.TASK_RECORD_NOT_FOUND_DELETE);
